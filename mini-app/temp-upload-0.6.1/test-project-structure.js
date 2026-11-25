@@ -101,3 +101,23 @@ test('published communities and trips expose full descriptions and full-page act
   assert.match(html, /type:'community',id:c\.id/);
   assert.match(html, /type:'trip',id:trip\.id/);
 });
+
+
+test('production deployment requires a bot token and reports the correct release version', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
+  assert.match(server, /NODE_ENV === "production" && !botEnabled/);
+  assert.match(server, /BOT_TOKEN is required in production/);
+  assert.match(server, /version: "0.6.1"/);
+  assert.match(env, /NODE_ENV=production/);
+  assert.match(env, /BOT_TOKEN=paste_your_bot_token_here/);
+});
+
+test('uploaded images are stored outside the application code in the persistent upload directory', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
+  assert.match(server, /const UPLOADS_DIR = path\.resolve\(process\.env\.YUGORNO_UPLOAD_DIR/);
+  assert.match(server, /express\.static\(UPLOADS_DIR/);
+  assert.match(server, /writeFile\(path\.join\(UPLOADS_DIR, filename\)/);
+  assert.match(env, /YUGORNO_UPLOAD_DIR=\/data\/uploads/);
+});
