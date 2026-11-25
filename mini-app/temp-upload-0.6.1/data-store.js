@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const DATA_DIR = process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), 'data');
+const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), 'data'));
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [] };
 let writeQueue = Promise.resolve();
