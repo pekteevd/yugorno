@@ -12,7 +12,8 @@
 - Telegram Mini App SDK и серверная проверка initData.
 - API публикаций путешествий и сообществ.
 - Серверное сохранение профиля, привязанного к Telegram user ID.
-- JSON-хранилище в папке data/ (создаётся автоматически, не раздаётся как static).
+- JSON-хранилище в постоянном каталоге YUGORNO_DATA_DIR (не раздаётся как static).
+- Загруженные фотографии в YUGORNO_UPLOAD_DIR, отдельно от кода приложения и также на постоянном томе.
 
 ФОТОГРАФИИ
 -----------
@@ -31,8 +32,9 @@
 3. Запустить: npm start
 4. Проверить: http://localhost:3000/health
 
-Без BOT_TOKEN сайт и health-check запускаются, но Telegram auth и публикация
-данных отключены. Это позволяет безопасно проверить интерфейс локально.
+Без BOT_TOKEN сайт и health-check запускаются только в локальном режиме. В production
+сервер намеренно завершает запуск с понятной ошибкой, если BOT_TOKEN не задан.
+Для локального теста интерфейса можно не задавать токен.
 Если для локального теста нужен настоящий BOT_TOKEN, а действующий бот уже
 работает на Deployka, установите DISABLE_BOT_POLLING=true. Тогда локальный сервер
 сможет проверять Telegram initData и отправлять Bot API-уведомления, но не будет
@@ -42,7 +44,8 @@
 --------------------
 BOT_TOKEN                       Токен существующего бота, только в ENV.
 BOT_USERNAME                    Username бота без @.
-DISABLE_BOT_POLLING              true отключает Long Polling только в локальной копии.
+DISABLE_BOT_POLLING              true отключает Long Polling; используйте только если getUpdates обслуживает другой сервер.
+YUGORNO_UPLOAD_DIR               Каталог пользовательских фотографий (по умолчанию <YUGORNO_DATA_DIR>/uploads).
 PORT                            Порт HTTP-сервера (по умолчанию 3000).
 WEBAPP_URL                      Публичный HTTPS URL Mini App.
 TELEGRAM_AUTH_MAX_AGE_SECONDS    Возраст initData, по умолчанию 86400.
@@ -74,8 +77,10 @@ X-Telegram-Init-Data. Сервер самостоятельно проверяе
 
 ВАЖНО ПРО БОТА
 --------------
-Бот использует Long Polling. Не запускайте вторую копию сервера с тем же токеном,
-пока действующая копия работает на Deployka: это вызовет конфликт getUpdates.
+Бот использует Long Polling. Не запускайте вторую копию сервера с тем же токеном, пока действующая копия
+обслуживает getUpdates: это вызовет конфликт. Если переносите polling на новый сервер,
+убедитесь, что старый процесс остановлен. DISABLE_BOT_POLLING=true отключает polling,
+но не отключает проверку initData и отправку Bot API-уведомлений.
 Токен не включён в ZIP. Не добавляйте .env в GitHub.
 
 ОГРАНИЧЕНИЯ ЭТОЙ СБОРКИ
@@ -87,8 +92,11 @@ X-Telegram-Init-Data. Сервер самостоятельно проверяе
   при доступности чата владельца. Владельцу доступны просмотр откликов/участников,
   редактирование и снятие собственных публикаций.
 - Бронирования, личные сообщения и реальная географическая карта ещё не реализованы. Демонстрационные карточки не являются реальными турами.
-- Синхронизация JSON-хранилища с внешним постоянным томом зависит от настроек
-  хостинга. Перед production нужно проверить сохранность ./data на Deployka.
+- JSON-хранилище рассчитано на один активный процесс и требует постоянного тома.
+  Для Deployka укажите YUGORNO_DATA_DIR и YUGORNO_UPLOAD_DIR в подтверждённой
+  точке монтирования тома. Не запускайте несколько инстансов с этим JSON-хранилищем.
+- Проверка /health должна вернуть version 0.6.1. Проверка /api/status показывает,
+  настроен ли бот и включён ли Long Polling.
 
 ПРОВЕРКИ
 --------
@@ -119,3 +127,12 @@ Version 0.5.1 additions
 не принимается с внешних адресов. Перед production обязательно установить
 NODE_ENV=production и настроить BOT_TOKEN. Не включайте LOCAL_DEMO_MODE на
 публичном сервере.
+
+
+Version 0.6.1 deployment hardening
+- /health reports the actual release version 0.6.1.
+- Production refuses to start without BOT_TOKEN.
+- User uploads are stored outside the application code in YUGORNO_UPLOAD_DIR.
+- Persistent data and uploads can share the Deployka mounted volume.
+- HTTP server explicitly binds to 0.0.0.0 in hosted mode.
+- .env.example documents required production settings; never put real secrets in Git.
