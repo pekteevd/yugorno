@@ -1,0 +1,16 @@
+{
+  "name": "yugorno-bot",
+  "version": "0.6.1",
+  "private": true,
+  "description": "Telegram bot and responsive Mini App for Yugorno",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
