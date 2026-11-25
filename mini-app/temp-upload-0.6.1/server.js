@@ -8,6 +8,8 @@ import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommun
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), "data"));
+const UPLOADS_DIR = path.resolve(process.env.YUGORNO_UPLOAD_DIR || path.join(DATA_DIR, "uploads"));
 const BOT_TOKEN = process.env.BOT_TOKEN?.trim();
 const BOT_USERNAME = process.env.BOT_USERNAME?.replace(/^@/, "").trim() || "YugornoTravelBot";
 const WEBAPP_URL = process.env.WEBAPP_URL?.trim();
@@ -20,6 +22,9 @@ const botEnabled = Boolean(BOT_TOKEN && BOT_TOKEN !== TOKEN_PLACEHOLDER);
 const botPollingDisabled = process.env.DISABLE_BOT_POLLING === "true";
 const localDemoEnabled = process.env.NODE_ENV !== "production" && (process.env.LOCAL_DEMO_MODE === "true" || !botEnabled);
 const SESSION_SECRET = process.env.SESSION_SECRET?.trim() || (process.env.NODE_ENV !== "production" ? "local-yugorno-session-secret-change-before-deploy" : "");
+if (process.env.NODE_ENV === "production" && !botEnabled) {
+  throw new Error("BOT_TOKEN is required in production. Add it to the hosting environment before starting Yugorno.");
+}
 const waOtpChallenges = new Map();
 const waOtpCooldown = new Map();
 
@@ -31,7 +36,8 @@ app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   next();
 });
-app.use(express.static("public", { etag: true, maxAge: "1h" }));
+app.use("/uploads", express.static(UPLOADS_DIR, { etag: true, maxAge: "1d", fallthrough: false }));
+app.use(express.static(path.join(process.cwd(), "public"), { etag: true, maxAge: "1h" }));
 
 app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
   try {
@@ -41,16 +47,15 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
     const buffer = Buffer.from(match[2], "base64");
     if (!buffer.length || buffer.length > 5 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
     const ext = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" })[match[1]];
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
+    await mkdir(UPLOADS_DIR, { recursive: true });
     const filename = `${randomUUID()}${ext}`;
-    await writeFile(path.join(uploadsDir, filename), buffer, { flag: "wx" });
+    await writeFile(path.join(UPLOADS_DIR, filename), buffer, { flag: "wx", mode: 0o644 });
     res.status(201).json({ ok: true, imageUrl: `/uploads/${filename}` });
   } catch (error) { next(error); }
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "yugorno", version: "0.6.0" });
+  res.json({ ok: true, service: "yugorno", version: "0.6.1" });
 });
 
 app.get("/api/status", (_req, res) => {
@@ -353,7 +358,7 @@ async function startPolling() {
   }
 }
 
-const server = app.listen(PORT, localDemoEnabled && !botEnabled ? "127.0.0.1" : undefined, () => {
+const server = app.listen(PORT, localDemoEnabled && !botEnabled ? "127.0.0.1" : "0.0.0.0", () => {
   console.log(`Югорно server listening on port ${PORT}`);
   console.log(`Health check: /health`);
 });
