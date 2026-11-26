@@ -138,7 +138,7 @@ test('map places, impressions, moderation, routes and saves persist without expo
 
 test('map moderation queue returns pending place and impression records', async () => {
   const p = await store.createPlace(1201, { title: 'Водопад', category: 'Природа', lat: 55, lng: 46 });
-  const i = await store.createImpression(1202, p.id, { text: 'После дождя' });
+  const i = await store.createImpression(1201, p.id, { text: 'После дождя' });
   assert.equal((await store.listMapModerationQueue('places')).some(item => item.id === p.id), true);
   assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === i.id), true);
 });
