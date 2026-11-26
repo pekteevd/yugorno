@@ -116,6 +116,7 @@ test('uploaded images are stored outside the application code in the persistent 
   const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
   assert.match(server, /const UPLOADS_DIR = path\.resolve\(process\.env\.YUGORNO_UPLOAD_DIR/);
   assert.match(server, /express\.static\(UPLOADS_DIR/);
-  assert.match(server, /writeFile\(path\.join\(UPLOADS_DIR, filename\)/);
+  assert.match(server, /writeFile\(path\.join\(targetDir, filename\)/);
+  assert.match(server, /const targetDir = isPrivate \? PRIVATE_UPLOADS_DIR : UPLOADS_DIR/);
   assert.match(env, /YUGORNO_UPLOAD_DIR=\/data\/uploads/);
 });
