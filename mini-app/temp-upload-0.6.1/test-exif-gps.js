@@ -10,10 +10,10 @@ function buildJpegGps(lat, lng) {
   tiff.writeUInt16LE(4,26);
   const entries = [[1,2,2,0],[2,5,3,80],[3,2,2,0],[4,5,3,104]];
   entries.forEach((entry,i)=>{const p=28+i*12;tiff.writeUInt16LE(entry[0],p);tiff.writeUInt16LE(entry[1],p+2);tiff.writeUInt32LE(entry[2],p+4);tiff.writeUInt32LE(entry[3],p+8)});
-  tiff.write('N\\0',36,'ascii'); tiff.write('E\\0',60,'ascii');
+  tiff[36]=0x4e; tiff[37]=0; tiff[60]=0x45; tiff[61]=0;
   function writeDms(offset,value){const d=Math.floor(value),mFloat=(value-d)*60,m=Math.floor(mFloat),seconds=Math.round((mFloat-m)*60000);[d,m,seconds].forEach((v,i)=>{tiff.writeUInt32LE(v,offset+i*8);tiff.writeUInt32LE(i===2?1000:1,offset+i*8+4)})}
   writeDms(80,Math.abs(lat));writeDms(104,Math.abs(lng));
-  const exif=Buffer.concat([Buffer.from('Exif\\0\\0','binary'),tiff]);
+  const exif=Buffer.concat([Buffer.from([0x45,0x78,0x69,0x66,0,0]),tiff]);
   const segment=Buffer.alloc(4+exif.length);segment[0]=0xff;segment[1]=0xe1;segment.writeUInt16BE(exif.length+2,2);exif.copy(segment,4);
   return Buffer.concat([Buffer.from([0xff,0xd8]),segment,Buffer.from([0xff,0xd9])]);
 }
