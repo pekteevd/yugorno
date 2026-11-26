@@ -34,7 +34,7 @@ jobs:
             node --check "$file"
           done
       - name: Build Deployka container image
-        run: docker build -t yugorno-miniapp-ci .
+        run: docker build -f ../../../Dockerfile -t yugorno-miniapp-ci ../../../
       - name: Start server and check health endpoint
         env:
           NODE_ENV: development
