@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/.env
+**/.env.*
+**/.DS_Store
+**/npm-debug.log*
+yugorno_prototype*.zip
+*.png
+*.jpg
+*.jpeg
+*.webp
+mini-app/temp-upload-0.6.1/DEVELOPMENT_LOG.md
