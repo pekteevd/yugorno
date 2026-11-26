@@ -1,6 +1,9 @@
 name: Yugorno Mini App 0.6.1 checks
 
 on:
+  pull_request:
+    branches:
+      - temp-upload-miniapp-061
   push:
     branches:
       - temp-upload-miniapp-061
@@ -32,6 +35,9 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           for file in *.js; do
+            node --check "$file"
+          done
+          for file in public/*.js; do
             node --check "$file"
           done
       - name: Build Deployka container image
