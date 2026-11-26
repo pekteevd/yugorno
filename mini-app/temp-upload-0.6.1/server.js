@@ -67,7 +67,7 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
 app.get("/api/map-uploads/:filename", async (req, res, next) => {
   try {
     const filename = String(req.params.filename || "");
-    if (!/^[a-f0-9-]{36}\\.(?:jpg|png|webp)$/i.test(filename)) return res.sendStatus(404);
+    if (!/^[a-f0-9-]{36}\.(?:jpg|png|webp)$/i.test(filename)) return res.sendStatus(404);
     const initData = req.get("X-Telegram-Init-Data");
     const auth = initData ? validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS) : null;
     const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
