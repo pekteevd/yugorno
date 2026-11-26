@@ -80,8 +80,11 @@ async function showRouteForm(){
   places=(await api("/api/places")).items;
   if(places.length<2){showToast("Для маршрута сначала добавь два опубликованных места");return}
   const host=document.getElementById("map-form-host");
-  host.innerHTML='<form class="map-form" id="new-route-form"><label class="wide">Название маршрута<input name="title" maxlength="120" required></label><label>Передвижение<select name="transport"><option value="mixed">Смешанное</option><option value="walking">Пешком</option><option value="cycling">Велосипед</option><option value="driving">Автомобиль</option><option value="water">Вода</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000"></textarea></label><label class="wide">GPS-трек GPX (необязательно)<input name="gpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label><div class="map-track-note" id="gpx-status">Можно добавить GPS-трек. Без него маршрут будет состоять из списка остановок.</div><div class="wide map-muted">Отметь остановки в нужном порядке. Загруженный GPX-трек сохранит реальную геометрию маршрута.</div>'+places.map(p=>'<label><span><input type="checkbox" name="stopIds" value="'+safe(p.id)+'"> '+safe(p.title)+'</span></label>').join("")+'<button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="route-cancel">Отмена</button></form>';
-  let trackPoints=[];
+  host.innerHTML='<form class="map-form" id="new-route-form"><label class="wide">Название маршрута<input name="title" maxlength="120" required></label><label>Передвижение<select name="transport"><option value="mixed">Смешанное</option><option value="walking">Пешком</option><option value="cycling">Велосипед</option><option value="driving">Автомобиль</option><option value="water">Вода</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000"></textarea></label><label class="wide">GPS-трек GPX (необязательно)<input name="gpx" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label><div class="map-track-note" id="gpx-status">Можно добавить GPS-трек. Без него маршрут будет состоять из списка остановок.</div><div class="wide map-muted">Отметь остановки в нужном порядке. Загруженный GPX-трек сохранит реальную геометрию маршрута.</div>'+places.map(p=>'<label><span><input type="checkbox" name="stopIds" value="'+safe(p.id)+'"> '+safe(p.title)+'</span></label>').join("")+'<div class="wide map-legend" id="route-stop-order">Порядок остановок появится здесь после выбора.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="route-cancel">Отмена</button></form>';
+  let trackPoints=[],selectedStopIds=[];
+  const orderHost=document.getElementById("route-stop-order");
+  const renderStopOrder=()=>{orderHost.replaceChildren();if(!selectedStopIds.length){orderHost.textContent="Порядок остановок появится здесь после выбора.";return}selectedStopIds.forEach((id,index)=>{const chip=document.createElement("span");chip.className="map-chip";chip.textContent=(index+1)+". "+(places.find(place=>place.id===id)?.title||"Место");orderHost.append(chip)})};
+  document.querySelectorAll('#new-route-form input[name="stopIds"]').forEach(input=>input.addEventListener("change",()=>{if(input.checked){if(!selectedStopIds.includes(input.value))selectedStopIds.push(input.value)}else selectedStopIds=selectedStopIds.filter(id=>id!==input.value);renderStopOrder()}));
   document.getElementById("route-cancel").onclick=()=>host.replaceChildren();
   document.querySelector('#new-route-form input[name="gpx"]').onchange=async e=>{
    const file=e.target.files?.[0];if(!file){trackPoints=[];return}
@@ -91,7 +94,8 @@ async function showRouteForm(){
   document.getElementById("new-route-form").onsubmit=async e=>{
    e.preventDefault();const f=new FormData(e.currentTarget);
    try{
-    await api("/api/routes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:f.get("title"),transport:f.get("transport"),description:f.get("description"),stopIds:f.getAll("stopIds"),trackPoints})});
+    if(selectedStopIds.length<2)throw new Error("Выбери минимум два места и отметь их в нужной последовательности");
+    await api("/api/routes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:f.get("title"),transport:f.get("transport"),description:f.get("description"),stopIds:selectedStopIds,trackPoints})});
     host.replaceChildren();showToast("Маршрут отправлен на проверку");loadRoutes()
    }catch(err){showToast(err.message)}
   };
