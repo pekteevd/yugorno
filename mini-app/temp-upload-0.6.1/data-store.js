@@ -17,7 +17,7 @@ function cleanImageUrls(value) {
 }
 
 function normalizePlaceTitle(value) {
-  return cleanText(value, 120).toLocaleLowerCase("ru").replace(/ё/g, "е").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+  return cleanText(value, 120).toLocaleLowerCase("ru").replace(/ё/g, "е").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
 function distanceMeters(aLat, aLng, bLat, bLng) {
