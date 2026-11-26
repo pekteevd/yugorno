@@ -120,3 +120,14 @@ test('uploaded images are stored outside the application code in the persistent 
   assert.match(server, /const targetDir = isPrivate \? PRIVATE_UPLOADS_DIR : UPLOADS_DIR/);
   assert.match(env, /YUGORNO_UPLOAD_DIR=\/data\/uploads/);
 });
+
+
+test('loads the local EXIF GPS reader before the map interface and strips metadata by re-encoding', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  const parser = await readFile(new URL('./public/exif-gps.js', import.meta.url), 'utf8');
+  assert.ok(html.indexOf('/exif-gps.js') < html.indexOf('/map.js'));
+  assert.match(parser, /readPhotoGps/);
+  assert.match(map, /YugornoExifGps\?\.readPhotoGps/);
+  assert.match(map, /canvas\.toDataURL\("image\/jpeg",0\.82\)/);
+});
