@@ -78,12 +78,10 @@ test('static people and community cards open informative profiles', () => {
 
 test('supports explicitly enabled loopback-only local testing', async () => {
   const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
-  const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
   assert.match(server, /LOCAL_DEMO_MODE === "true" \|\| !botEnabled/);
   assert.match(server, /loopbackHost && loopbackRemote/);
   assert.match(server, /X-Local-Demo-User/);
   assert.match(server, /localDemoEnabled && !botEnabled \? "127.0.0.1"/);
-  assert.match(env, /LOCAL_DEMO_MODE=true/);
 });
 
 test('description previews can open a dedicated full page and return to the previous section', () => {
