@@ -438,7 +438,10 @@ export async function listSavedPlaces(userId) {
 export async function listMapModerationQueue(kind = 'places') {
   const store = await readStore();
   if (kind === 'impressions') return store.impressions.filter(item => item.status === 'pending').slice(0, 200).map(publicImpression);
-  if (kind === 'routes') return store.routes.filter(item => item.status === 'pending').slice(0, 200).map(publicRoute);
+  if (kind === 'routes') return store.routes.filter(item => item.status === 'pending').slice(0, 200).map(item => ({
+    ...publicRoute(item),
+    stops: (item.stopIds || []).map(id => store.places.find(place => place.id === id)).filter(Boolean).map(publicPlace)
+  }));
   return store.places.filter(item => item.status === 'pending').slice(0, 200).map(item => ({ ...publicPlace(item), status: item.status }));
 }
 
