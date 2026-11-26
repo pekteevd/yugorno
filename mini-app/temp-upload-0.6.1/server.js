@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -264,6 +264,84 @@ app.get("/api/my/trips/:id/interests", requireTelegramUser, async (req, res, nex
     if (!items) return res.status(404).json({ ok: false, error: "trip_not_found" });
     res.json({ ok: true, items });
   } catch (error) { next(error); }
+});
+
+
+const MAP_MODERATORS = new Set((process.env.YUGORNO_MODERATOR_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
+function requireMapModerator(req, res, next) {
+  if (!MAP_MODERATORS.has(String(req.telegramUser?.id))) return res.status(403).json({ ok: false, error: "moderator_required" });
+  next();
+}
+function authorLabel(user) {
+  return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username || "";
+}
+app.get("/api/places", async (req, res, next) => {
+  try {
+    const items = await listPlaces({ q: req.query.q, category: req.query.category, west: req.query.west, east: req.query.east, south: req.query.south, north: req.query.north });
+    res.json({ ok: true, items });
+  } catch (error) { next(error); }
+});
+app.get("/api/places/:id", async (req, res, next) => {
+  try {
+    const item = await getPlace(req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, item, impressions: await listImpressions(item.id) });
+  } catch (error) { next(error); }
+});
+app.get("/api/my/places", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.post("/api/places", requireTelegramUser, async (req, res, next) => {
+  try { res.status(201).json({ ok: true, item: await createPlace(req.telegramUser.id, req.body || {}, authorLabel(req.telegramUser)) }); }
+  catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.patch("/api/my/places/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await updatePlace(req.telegramUser.id, req.params.id, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.post("/api/places/:id/impressions", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await createImpression(req.telegramUser.id, req.params.id, req.body || {}, authorLabel(req.telegramUser));
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.status(201).json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.get("/api/routes", async (_req, res, next) => {
+  try { res.json({ ok: true, items: await listRoutes() }); } catch (error) { next(error); }
+});
+app.post("/api/routes", requireTelegramUser, async (req, res, next) => {
+  try { res.status(201).json({ ok: true, item: await createRoute(req.telegramUser.id, req.body || {}, authorLabel(req.telegramUser)) }); }
+  catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.post("/api/my/places/:id/save", requireTelegramUser, async (req, res, next) => {
+  try {
+    const result = await savePlace(req.telegramUser.id, req.params.id);
+    if (!result) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, result });
+  } catch (error) { next(error); }
+});
+app.delete("/api/my/places/:id/save", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, result: await unsavePlace(req.telegramUser.id, req.params.id) }); } catch (error) { next(error); }
+});
+app.get("/api/my/saved-places", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listSavedPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.patch("/api/moderation/places/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await moderatePlace(req.params.id, req.body?.status);
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.patch("/api/moderation/impressions/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await moderateImpression(req.params.id, req.body?.status);
+    if (!item) return res.status(404).json({ ok: false, error: "impression_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
 
 app.get("/api/profile", requireTelegramUser, async (req, res, next) => {

@@ -4,7 +4,7 @@ import path from 'node:path';
 
 const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), 'data'));
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
-const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [] };
+const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [] };
 let writeQueue = Promise.resolve();
 
 function cleanText(value, max = 500) {
@@ -24,7 +24,11 @@ async function readStore() {
       communities: Array.isArray(parsed.communities) ? parsed.communities : [],
       profiles: parsed.profiles && typeof parsed.profiles === 'object' && !Array.isArray(parsed.profiles) ? parsed.profiles : {},
       tripInterests: Array.isArray(parsed.tripInterests) ? parsed.tripInterests : [],
-      communityMembers: Array.isArray(parsed.communityMembers) ? parsed.communityMembers : []
+      communityMembers: Array.isArray(parsed.communityMembers) ? parsed.communityMembers : [],
+      places: Array.isArray(parsed.places) ? parsed.places : [],
+      impressions: Array.isArray(parsed.impressions) ? parsed.impressions : [],
+      routes: Array.isArray(parsed.routes) ? parsed.routes : [],
+      savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : []
     };
   } catch (error) {
     if (error.code === 'ENOENT') return structuredClone(EMPTY);
@@ -239,4 +243,158 @@ export async function listTripInterests(userId, tripId) {
       createdAt: entry.createdAt
     };
   });
+}
+
+
+// --- Map of discoveries: places, impressions, routes and saved places ---
+function publicPlace(item) {
+  const { authorId, exactLat, exactLng, ...safe } = item;
+  return { ...safe, author: item.authorName || "Участник Югорно" };
+}
+function publicImpression(item) {
+  const { authorId, ...safe } = item;
+  return { ...safe, author: item.authorName || "Участник Югорно" };
+}
+function publicRoute(item) {
+  const { authorId, ...safe } = item;
+  return { ...safe, author: item.authorName || "Участник Югорно" };
+}
+function validCoordinate(value, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= min && number <= max ? number : null;
+}
+function cleanPlaceInput(input = {}) {
+  const title = cleanText(input.title, 120);
+  const category = cleanText(input.category, 40);
+  const description = cleanText(input.description, 3000);
+  const region = cleanText(input.region, 120);
+  const lat = validCoordinate(input.lat, -90, 90);
+  const lng = validCoordinate(input.lng, -180, 180);
+  const accuracy = input.coordinateAccuracy === "approximate" ? "approximate" : "exact";
+  if (!title || !category || lat === null || lng === null) {
+    throw new TypeError("Укажите название, категорию и корректные координаты места");
+  }
+  return { title, category, description, region, lat, lng, coordinateAccuracy: accuracy };
+}
+export async function listPlaces(options = {}) {
+  const store = await readStore();
+  const q = cleanText(options.q, 120).toLocaleLowerCase("ru");
+  const category = cleanText(options.category, 40);
+  const west = validCoordinate(options.west, -180, 180), east = validCoordinate(options.east, -180, 180);
+  const south = validCoordinate(options.south, -90, 90), north = validCoordinate(options.north, -90, 90);
+  return store.places.filter(item => item.status === "published")
+    .filter(item => !category || item.category === category)
+    .filter(item => !q || [item.title, item.description, item.region, item.category].join(" ").toLocaleLowerCase("ru").includes(q))
+    .filter(item => west === null || east === null || south === null || north === null ||
+      (item.lng >= west && item.lng <= east && item.lat >= south && item.lat <= north))
+    .slice(0, 500).map(publicPlace);
+}
+export async function getPlace(placeId) {
+  const store = await readStore();
+  const item = store.places.find(place => place.id === placeId && place.status === "published");
+  return item ? publicPlace(item) : null;
+}
+export async function listMyPlaces(userId) {
+  const store = await readStore();
+  return store.places.filter(item => item.authorId === String(userId))
+    .map(item => ({ ...publicPlace(item), status: item.status }));
+}
+export async function createPlace(userId, input = {}, authorName = "") {
+  const data = cleanPlaceInput(input);
+  const now = new Date().toISOString();
+  const place = {
+    id: randomUUID(), ...data, authorId: String(userId),
+    authorName: cleanText(authorName, 100), status: "pending",
+    createdAt: now, updatedAt: now
+  };
+  return update(store => { store.places.push(place); return { ...publicPlace(place), status: place.status }; });
+}
+export async function updatePlace(userId, placeId, input = {}) {
+  return update(store => {
+    const place = store.places.find(item => item.id === placeId && item.authorId === String(userId));
+    if (!place || place.status === "hidden" || place.status === "archived") return null;
+    const data = cleanPlaceInput({ ...place, ...input });
+    Object.assign(place, data, { status: "pending", updatedAt: new Date().toISOString() });
+    return { ...publicPlace(place), status: place.status };
+  });
+}
+export async function moderatePlace(placeId, status) {
+  if (!["published", "rejected", "hidden", "archived"].includes(status)) throw new TypeError("Недопустимый статус публикации");
+  return update(store => {
+    const place = store.places.find(item => item.id === placeId);
+    if (!place) return null;
+    place.status = status; place.updatedAt = new Date().toISOString();
+    return { ...publicPlace(place), status: place.status };
+  });
+}
+export async function createImpression(userId, placeId, input = {}, authorName = "") {
+  const text = cleanText(input.text, 3000);
+  const photos = cleanImageUrls(input.photoUrls || (input.photoUrl ? [input.photoUrl] : []));
+  if (!text && !photos.length) throw new TypeError("Добавьте текст или фотографию впечатления");
+  return update(store => {
+    const place = store.places.find(item => item.id === placeId && (item.status === "published" || item.authorId === String(userId)));
+    if (!place) return null;
+    const impression = {
+      id: randomUUID(), placeId, text, photoUrls: photos,
+      authorId: String(userId), authorName: cleanText(authorName, 100),
+      status: "pending", createdAt: new Date().toISOString()
+    };
+    store.impressions.push(impression);
+    return { ...publicImpression(impression), status: impression.status };
+  });
+}
+export async function listImpressions(placeId) {
+  const store = await readStore();
+  return store.impressions.filter(item => item.placeId === placeId && item.status === "published").slice(0, 100).map(publicImpression);
+}
+export async function moderateImpression(impressionId, status) {
+  if (!["published", "rejected", "hidden", "archived"].includes(status)) throw new TypeError("Недопустимый статус публикации");
+  return update(store => {
+    const item = store.impressions.find(entry => entry.id === impressionId);
+    if (!item) return null;
+    item.status = status;
+    return { ...publicImpression(item), status };
+  });
+}
+export async function listRoutes() {
+  const store = await readStore();
+  return store.routes.filter(item => item.status === "published").slice(0, 200).map(publicRoute);
+}
+export async function createRoute(userId, input = {}, authorName = "") {
+  const title = cleanText(input.title, 120);
+  const description = cleanText(input.description, 3000);
+  const transport = cleanText(input.transport, 40) || "mixed";
+  const stopIds = Array.isArray(input.stopIds) ? [...new Set(input.stopIds.map(id => cleanText(id, 80)).filter(Boolean))].slice(0, 50) : [];
+  if (!title || stopIds.length < 2) throw new TypeError("Маршрут должен иметь название и не менее двух мест");
+  return update(store => {
+    const stops = stopIds.map(id => store.places.find(place => place.id === id && (place.status === "published" || place.authorId === String(userId))));
+    if (stops.some(item => !item)) throw new TypeError("Маршрут содержит недоступное место");
+    const route = {
+      id: randomUUID(), title, description, transport, stopIds,
+      authorId: String(userId), authorName: cleanText(authorName, 100),
+      status: "pending", createdAt: new Date().toISOString()
+    };
+    store.routes.push(route);
+    return { ...publicRoute(route), status: route.status, stops: stops.map(publicPlace) };
+  });
+}
+export async function savePlace(userId, placeId) {
+  return update(store => {
+    if (!store.places.some(item => item.id === placeId && item.status === "published")) return null;
+    const exists = store.savedPlaces.some(item => item.userId === String(userId) && item.placeId === placeId);
+    if (!exists) store.savedPlaces.push({ userId: String(userId), placeId, createdAt: new Date().toISOString() });
+    return { saved: true, alreadySaved: exists };
+  });
+}
+export async function unsavePlace(userId, placeId) {
+  return update(store => {
+    const before = store.savedPlaces.length;
+    store.savedPlaces = store.savedPlaces.filter(item => !(item.userId === String(userId) && item.placeId === placeId));
+    return { saved: false, removed: before !== store.savedPlaces.length };
+  });
+}
+export async function listSavedPlaces(userId) {
+  const store = await readStore();
+  const ids = new Set(store.savedPlaces.filter(item => item.userId === String(userId)).map(item => item.placeId));
+  return store.places.filter(item => ids.has(item.id) && item.status === "published").map(publicPlace);
 }
