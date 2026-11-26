@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -329,6 +329,8 @@ app.delete("/api/my/places/:id/save", requireTelegramUser, async (req, res, next
 app.get("/api/my/saved-places", requireTelegramUser, async (req, res, next) => {
   try { res.json({ ok: true, items: await listSavedPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
 });
+app.get("/api/moderation/places", requireTelegramUser, requireMapModerator, async (_req, res, next) => { try { res.json({ ok: true, items: await listMapModerationQueue("places") }); } catch (error) { next(error); } });
+app.get("/api/moderation/impressions", requireTelegramUser, requireMapModerator, async (_req, res, next) => { try { res.json({ ok: true, items: await listMapModerationQueue("impressions") }); } catch (error) { next(error); } });
 app.patch("/api/moderation/places/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => {
   try {
     const item = await moderatePlace(req.params.id, req.body?.status);
