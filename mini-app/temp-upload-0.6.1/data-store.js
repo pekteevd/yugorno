@@ -272,6 +272,10 @@ export async function listTripInterests(userId, tripId) {
 // --- Map of discoveries: places, impressions, routes and saved places ---
 function publicPlace(item) {
   const { authorId, exactLat, exactLng, ...safe } = item;
+  if (safe.coordinateAccuracy === "approximate") {
+    safe.lat = Math.round(Number(safe.lat) * 100) / 100;
+    safe.lng = Math.round(Number(safe.lng) * 100) / 100;
+  }
   return { ...safe, author: item.authorName || "Участник Югорно" };
 }
 function publicImpression(item) {
