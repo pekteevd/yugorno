@@ -13,7 +13,7 @@ function cleanText(value, max = 500) {
 
 function cleanImageUrls(value) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.slice(0, 8).map(url => cleanText(url, 500)).filter(url => /^\/uploads\/[a-zA-Z0-9._-]+$/.test(url)))];
+  return [...new Set(value.slice(0, 8).map(url => cleanText(url, 500)).filter(url => /^\/uploads\/[a-zA-Z0-9._-]+$/.test(url) || /^\/api\/map-uploads\/[a-f0-9-]{36}\.(?:jpg|png|webp)$/i.test(url)))];
 }
 
 function normalizePlaceTitle(value) {
@@ -450,4 +450,12 @@ export async function moderateRoute(routeId, status) {
     route.status = status;
     return { ...publicRoute(route), status };
   });
+}
+
+export async function canViewMapUpload(userId, filename, isModerator = false) {
+  const store = await readStore();
+  const url = `/api/map-uploads/${filename}`;
+  const impression = store.impressions.find(item => (item.photoUrls || []).includes(url));
+  if (!impression) return false;
+  return impression.status === "published" || impression.authorId === String(userId || "") || isModerator;
 }
