@@ -6,6 +6,8 @@ on:
       - temp-upload-miniapp-061
     paths:
       - "mini-app/temp-upload-0.6.1/**"
+      - "Dockerfile"
+      - ".dockerignore"
       - ".github/workflows/yugorno-miniapp-ci.yml"
   workflow_dispatch:
 
@@ -31,6 +33,8 @@ jobs:
           for file in *.js; do
             node --check "$file"
           done
+      - name: Build Deployka container image
+        run: docker build -t yugorno-miniapp-ci .
       - name: Start server and check health endpoint
         env:
           NODE_ENV: development
