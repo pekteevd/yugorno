@@ -4,12 +4,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, canViewMapUpload } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), "data"));
 const UPLOADS_DIR = path.resolve(process.env.YUGORNO_UPLOAD_DIR || path.join(DATA_DIR, "uploads"));
+const PRIVATE_UPLOADS_DIR = path.resolve(process.env.YUGORNO_PRIVATE_UPLOAD_DIR || path.join(DATA_DIR, "private-uploads"));
+const MAP_MODERATORS = new Set((process.env.YUGORNO_MODERATOR_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
 const BOT_TOKEN = process.env.BOT_TOKEN?.trim();
 const BOT_USERNAME = process.env.BOT_USERNAME?.replace(/^@/, "").trim() || "YugornoTravelBot";
 const WEBAPP_URL = process.env.WEBAPP_URL?.trim();
@@ -53,10 +55,29 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
     };
     if (!signatures[match[1]]) return res.status(400).json({ ok: false, error: "image_content_mismatch" });
     const ext = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" })[match[1]];
-    await mkdir(UPLOADS_DIR, { recursive: true });
+    const isPrivate = req.body?.private === true;
+    const targetDir = isPrivate ? PRIVATE_UPLOADS_DIR : UPLOADS_DIR;
+    await mkdir(targetDir, { recursive: true });
     const filename = `${randomUUID()}${ext}`;
-    await writeFile(path.join(UPLOADS_DIR, filename), buffer, { flag: "wx", mode: 0o644 });
-    res.status(201).json({ ok: true, imageUrl: `/uploads/${filename}` });
+    await writeFile(path.join(targetDir, filename), buffer, { flag: "wx", mode: 0o600 });
+    res.status(201).json({ ok: true, imageUrl: isPrivate ? `/api/map-uploads/${filename}` : `/uploads/${filename}` });
+  } catch (error) { next(error); }
+});
+
+app.get("/api/map-uploads/:filename", async (req, res, next) => {
+  try {
+    const filename = String(req.params.filename || "");
+    if (!/^[a-f0-9-]{36}\\.(?:jpg|png|webp)$/i.test(filename)) return res.sendStatus(404);
+    const initData = req.get("X-Telegram-Init-Data");
+    const auth = initData ? validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS) : null;
+    const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
+    const userId = auth?.ok && auth.user?.id ? String(auth.user.id) : phoneSession?.id || null;
+    const isModerator = MAP_MODERATORS.has(String(userId || ""));
+    const allowed = await canViewMapUpload(userId, filename, isModerator);
+    if (!allowed) return res.sendStatus(404);
+    const isPublic = await canViewMapUpload(null, filename, false);
+    res.setHeader("Cache-Control", isPublic ? "public, max-age=86400" : "private, no-store");
+    res.sendFile(path.join(PRIVATE_UPLOADS_DIR, filename), error => { if (error && !res.headersSent) next(error); });
   } catch (error) { next(error); }
 });
 
@@ -273,7 +294,6 @@ app.get("/api/my/trips/:id/interests", requireTelegramUser, async (req, res, nex
 });
 
 
-const MAP_MODERATORS = new Set((process.env.YUGORNO_MODERATOR_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
 function requireMapModerator(req, res, next) {
   if (!MAP_MODERATORS.has(String(req.telegramUser?.id))) return res.status(403).json({ ok: false, error: "moderator_required" });
   next();
