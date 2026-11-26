@@ -177,3 +177,12 @@ test('map impression photos remain private until publication', async () => {
   await store.moderateImpression(impression.id, 'published');
   assert.equal(await store.canViewMapUpload(null, filename, false), true);
 });
+
+
+test('approximate map coordinates are rounded before being returned publicly', async () => {
+  const place = await store.createPlace(1601, { title: 'Тихая поляна', category: 'Природа', lat: 56.123456, lng: 47.654321, coordinateAccuracy: 'approximate' });
+  assert.equal(place.lat, 56.12);
+  assert.equal(place.lng, 47.65);
+  const ownPlaces = await store.listMyPlaces(1601);
+  assert.equal(ownPlaces.find(item => item.id === place.id).lat, 56.12);
+});
