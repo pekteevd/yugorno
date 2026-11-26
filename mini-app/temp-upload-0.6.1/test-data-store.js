@@ -131,6 +131,9 @@ test('map places, impressions, moderation, routes and saves persist without expo
   assert.equal(route.status, 'pending');
   assert.equal(route.stops.length, 2);
   assert.equal((await store.listRoutes()).length, 0);
+  assert.equal((await store.listMapModerationQueue('routes')).some(item => item.id === route.id), true);
+  await store.moderateRoute(route.id, 'published');
+  assert.equal((await store.listRoutes())[0].stops.length, 2);
   await store.savePlace(1103, a.id);
   assert.equal((await store.listSavedPlaces(1103)).length, 1);
   await assert.rejects(() => store.createPlace(1, { title: 'Плохие координаты', category: 'Природа', lat: 120, lng: 0 }), TypeError);
