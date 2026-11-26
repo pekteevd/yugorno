@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -338,6 +338,8 @@ app.patch("/api/moderation/places/:id", requireTelegramUser, requireMapModerator
     res.json({ ok: true, item });
   } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
+app.get("/api/moderation/routes", requireTelegramUser, requireMapModerator, async (_req, res, next) => { try { res.json({ ok: true, items: await listMapModerationQueue("routes") }); } catch (error) { next(error); } });
+app.patch("/api/moderation/routes/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => { try { const item = await moderateRoute(req.params.id, req.body?.status); if (!item) return res.status(404).json({ ok: false, error: "route_not_found" }); res.json({ ok: true, item }); } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); } });
 app.patch("/api/moderation/impressions/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => {
   try {
     const item = await moderateImpression(req.params.id, req.body?.status);
