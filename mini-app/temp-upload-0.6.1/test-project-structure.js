@@ -131,3 +131,11 @@ test('loads the local EXIF GPS reader before the map interface and strips metada
   assert.match(map, /YugornoExifGps\?\.readPhotoGps/);
   assert.match(map, /canvas\.toDataURL\("image\/jpeg",0\.82\)/);
 });
+
+
+test('route builder preserves the order in which the user selects stops', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /selectedStopIds\.push\(input\.value\)/);
+  assert.match(map, /stopIds:selectedStopIds/);
+  assert.match(map, /route-stop-order/);
+});
