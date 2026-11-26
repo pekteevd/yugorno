@@ -145,3 +145,21 @@ test('map moderation queue returns pending place and impression records', async 
   assert.equal((await store.listMapModerationQueue('places')).some(item => item.id === p.id), true);
   assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === i.id), true);
 });
+
+
+test('prevents a nearby duplicate place with the same normalized title and category', async () => {
+  const first = await store.createPlace(1301, { title: 'Озеро Синее', category: 'Природа', lat: 56.1, lng: 47.2 });
+  await store.moderatePlace(first.id, 'published');
+  const duplicate = await store.createPlace(1302, { title: '  озеро   синее ', category: 'Природа', lat: 56.1001, lng: 47.2001 });
+  assert.equal(duplicate.duplicate, true);
+  assert.equal(duplicate.matches[0].id, first.id);
+});
+
+test('stores validated GPX track points with a route and rejects malformed tracks', async () => {
+  const a = await store.createPlace(1401, { title: 'Точка А', category: 'Природа', lat: 56.1, lng: 47.2 });
+  const b = await store.createPlace(1401, { title: 'Точка Б', category: 'Природа', lat: 56.2, lng: 47.3 });
+  const route = await store.createRoute(1401, { title: 'Трек', stopIds: [a.id, b.id], trackPoints: [{ lat: 56.1, lng: 47.2 }, { lat: 56.15, lng: 47.25 }, { lat: 56.2, lng: 47.3 }] });
+  assert.equal(route.trackPoints.length, 3);
+  assert.equal((await store.listMapModerationQueue('routes')).find(item => item.id === route.id).trackPoints.length, 3);
+  await assert.rejects(() => store.createRoute(1401, { title: 'Плохой трек', stopIds: [a.id, b.id], trackPoints: [{ lat: 120, lng: 47 }, { lat: 56, lng: 47 }] }), TypeError);
+});
