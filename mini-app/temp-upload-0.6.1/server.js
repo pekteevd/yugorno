@@ -46,6 +46,12 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
     if (!match) return res.status(400).json({ ok: false, error: "unsupported_image_format" });
     const buffer = Buffer.from(match[2], "base64");
     if (!buffer.length || buffer.length > 5 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
+    const signatures = {
+      "image/jpeg": buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+      "image/png": buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+      "image/webp": buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP"
+    };
+    if (!signatures[match[1]]) return res.status(400).json({ ok: false, error: "image_content_mismatch" });
     const ext = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" })[match[1]];
     await mkdir(UPLOADS_DIR, { recursive: true });
     const filename = `${randomUUID()}${ext}`;
@@ -292,8 +298,11 @@ app.get("/api/my/places", requireTelegramUser, async (req, res, next) => {
   try { res.json({ ok: true, items: await listMyPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
 });
 app.post("/api/places", requireTelegramUser, async (req, res, next) => {
-  try { res.status(201).json({ ok: true, item: await createPlace(req.telegramUser.id, req.body || {}, authorLabel(req.telegramUser)) }); }
-  catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+  try {
+    const item = await createPlace(req.telegramUser.id, req.body || {}, authorLabel(req.telegramUser));
+    if (item?.duplicate) return res.status(409).json({ ok: false, error: "Похожее место уже опубликовано рядом. Проверьте существующую точку перед повторным добавлением.", matches: item.matches });
+    res.status(201).json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
 app.patch("/api/my/places/:id", requireTelegramUser, async (req, res, next) => {
   try {
