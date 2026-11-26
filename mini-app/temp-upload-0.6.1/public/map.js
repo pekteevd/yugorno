@@ -150,11 +150,13 @@ async function parseGPX(file){
  return points;
 }
 function downloadGPX(route){
- const points=route.trackPoints?.length?route.trackPoints:(route.stops||[]).map(p=>({lat:p.lat,lng:p.lng})).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng)));
+ const hasTrack=Array.isArray(route.trackPoints)&&route.trackPoints.length>=2;
+ const points=hasTrack?route.trackPoints:(route.stops||[]).map(p=>({lat:p.lat,lng:p.lng})).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng)));
  if(points.length<2){showToast("Для экспорта недостаточно координат");return}
  const esc=value=>String(value||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c]));
- const trkpts=points.map(p=>'<trkpt lat="'+Number(p.lat)+'" lon="'+Number(p.lng)+'"></trkpt>').join("");
- const xml='<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Yugorno" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+esc(route.title)+'</name><trkseg>'+trkpts+'</trkseg></trk></gpx>';
+ const pointXml=points.map(p=>'<'+(hasTrack?'trkpt':'rtept')+' lat="'+Number(p.lat)+'" lon="'+Number(p.lng)+'"></'+(hasTrack?'trkpt':'rtept')+'>').join("");
+ const segment=hasTrack?'<trk><name>'+esc(route.title)+'</name><trkseg>'+pointXml+'</trkseg></trk>':'<rte><name>'+esc(route.title)+'</name>'+pointXml+'</rte>';
+ const xml='<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Yugorno" xmlns="http://www.topografix.com/GPX/1/1">'+segment+'</gpx>';
  const url=URL.createObjectURL(new Blob([xml],{type:"application/gpx+xml"})),a=document.createElement("a");a.href=url;a.download=(route.title||"yugorno-route").replace(/[^\p{L}\p{N}-]+/gu,"-")+".gpx";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function renderRouteOnMap(route){
@@ -162,12 +164,17 @@ function renderRouteOnMap(route){
  setTimeout(()=>{
   if(!map)return;
   if(routeLine)map.removeLayer(routeLine);
-  const points=route.trackPoints?.length?route.trackPoints:(route.stops||[]).map(p=>({lat:p.lat,lng:p.lng}));
-  const latlngs=points.filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))).map(p=>[Number(p.lat),Number(p.lng)]);
-  if(latlngs.length<2){showToast("У маршрута пока нет GPS-трека. Доступны только остановки.");return}
-  routeLine=L.polyline(latlngs,{color:"#d16a36",weight:5,opacity:.85}).addTo(map);
-  map.fitBounds(routeLine.getBounds(),{padding:[24,24]});
-  showToast("На карте показан маршрут: "+route.title);
+  if(Array.isArray(route.trackPoints)&&route.trackPoints.length>=2){
+   const latlngs=route.trackPoints.filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))).map(p=>[Number(p.lat),Number(p.lng)]);
+   if(latlngs.length>=2){
+    routeLine=L.polyline(latlngs,{color:"#d16a36",weight:5,opacity:.85}).addTo(map);
+    map.fitBounds(routeLine.getBounds(),{padding:[24,24]});
+    showToast("На карте показан GPS-трек: "+route.title);return;
+   }
+  }
+  const stops=(route.stops||[]).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))).map(p=>[Number(p.lat),Number(p.lng)]);
+  if(stops.length)map.fitBounds(L.latLngBounds(stops),{padding:[24,24]});
+  showToast("У маршрута нет GPS-трека. Показаны остановки без соединительной линии.");
  },120);
 }
 async function checkModerator(){
