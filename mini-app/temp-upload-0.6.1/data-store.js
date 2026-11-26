@@ -16,6 +16,29 @@ function cleanImageUrls(value) {
   return [...new Set(value.slice(0, 8).map(url => cleanText(url, 500)).filter(url => /^\/uploads\/[a-zA-Z0-9._-]+$/.test(url)))];
 }
 
+function normalizePlaceTitle(value) {
+  return cleanText(value, 120).toLocaleLowerCase("ru").replace(/ё/g, "е").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+}
+
+function distanceMeters(aLat, aLng, bLat, bLng) {
+  const rad = value => value * Math.PI / 180;
+  const dLat = rad(bLat - aLat), dLng = rad(bLng - aLng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function cleanTrackPoints(value) {
+  if (value == null) return [];
+  if (!Array.isArray(value) || value.length > 5000) throw new TypeError("GPS-трек должен содержать не более 5000 точек");
+  const points = value.map(point => ({
+    lat: validCoordinate(point?.lat, -90, 90),
+    lng: validCoordinate(point?.lng, -180, 180)
+  }));
+  if (points.some(point => point.lat === null || point.lng === null)) throw new TypeError("GPS-трек содержит некорректные координаты");
+  if (points.length === 1) throw new TypeError("GPS-трек должен содержать не менее двух точек");
+  return points;
+}
+
 async function readStore() {
   try {
     const parsed = JSON.parse(await readFile(DATA_FILE, 'utf8'));
@@ -301,13 +324,25 @@ export async function listMyPlaces(userId) {
 }
 export async function createPlace(userId, input = {}, authorName = "") {
   const data = cleanPlaceInput(input);
-  const now = new Date().toISOString();
-  const place = {
-    id: randomUUID(), ...data, authorId: String(userId),
-    authorName: cleanText(authorName, 100), status: "pending",
-    createdAt: now, updatedAt: now
-  };
-  return update(store => { store.places.push(place); return { ...publicPlace(place), status: place.status }; });
+  const normalizedTitle = normalizePlaceTitle(data.title);
+  return update(store => {
+    const matches = store.places
+      .filter(item => item.status === "published" || (item.status === "pending" && item.authorId === String(userId)))
+      .filter(item => item.category === data.category && normalizePlaceTitle(item.title) === normalizedTitle)
+      .map(item => ({ item, distance: distanceMeters(data.lat, data.lng, item.lat, item.lng) }))
+      .filter(match => match.distance <= 75)
+      .slice(0, 3)
+      .map(({ item, distance }) => ({ id: item.id, title: item.title, region: item.region, distanceMeters: Math.round(distance) }));
+    if (matches.length) return { duplicate: true, matches };
+    const now = new Date().toISOString();
+    const place = {
+      id: randomUUID(), ...data, authorId: String(userId),
+      authorName: cleanText(authorName, 100), status: "pending",
+      createdAt: now, updatedAt: now
+    };
+    store.places.push(place);
+    return { ...publicPlace(place), status: place.status };
+  });
 }
 export async function updatePlace(userId, placeId, input = {}) {
   return update(store => {
@@ -365,12 +400,13 @@ export async function createRoute(userId, input = {}, authorName = "") {
   const description = cleanText(input.description, 3000);
   const transport = cleanText(input.transport, 40) || "mixed";
   const stopIds = Array.isArray(input.stopIds) ? [...new Set(input.stopIds.map(id => cleanText(id, 80)).filter(Boolean))].slice(0, 50) : [];
+  const trackPoints = cleanTrackPoints(input.trackPoints);
   if (!title || stopIds.length < 2) throw new TypeError("Маршрут должен иметь название и не менее двух мест");
   return update(store => {
     const stops = stopIds.map(id => store.places.find(place => place.id === id && (place.status === "published" || place.authorId === String(userId))));
     if (stops.some(item => !item)) throw new TypeError("Маршрут содержит недоступное место");
     const route = {
-      id: randomUUID(), title, description, transport, stopIds,
+      id: randomUUID(), title, description, transport, stopIds, trackPoints,
       authorId: String(userId), authorName: cleanText(authorName, 100),
       status: "pending", createdAt: new Date().toISOString()
     };
