@@ -10,7 +10,7 @@ function buildJpegGps(lat, lng) {
   tiff.writeUInt16LE(4,26);
   const entries = [[1,2,2,0],[2,5,3,80],[3,2,2,0],[4,5,3,104]];
   entries.forEach((entry,i)=>{const p=28+i*12;tiff.writeUInt16LE(entry[0],p);tiff.writeUInt16LE(entry[1],p+2);tiff.writeUInt32LE(entry[2],p+4);tiff.writeUInt32LE(entry[3],p+8)});
-  tiff[36]=0x4e; tiff[37]=0; tiff[60]=0x45; tiff[61]=0;
+  tiff[36]=lat<0?0x53:0x4e; tiff[37]=0; tiff[60]=lng<0?0x57:0x45; tiff[61]=0;
   function writeDms(offset,value){const d=Math.floor(value),mFloat=(value-d)*60,m=Math.floor(mFloat),seconds=Math.round((mFloat-m)*60000);[d,m,seconds].forEach((v,i)=>{tiff.writeUInt32LE(v,offset+i*8);tiff.writeUInt32LE(i===2?1000:1,offset+i*8+4)})}
   writeDms(80,Math.abs(lat));writeDms(104,Math.abs(lng));
   const exif=Buffer.concat([Buffer.from([0x45,0x78,0x69,0x66,0,0]),tiff]);
@@ -26,4 +26,11 @@ test('reads GPS latitude and longitude from JPEG EXIF',()=>{
 });
 test('returns no coordinates for a photo without EXIF GPS',()=>{
   assert.equal(globalThis.YugornoExifGps.readGpsFromBytes(new Uint8Array([0xff,0xd8,0xff,0xd9])),null);
+});
+
+test('applies south and west hemisphere references as negative coordinates',()=>{
+  const result=globalThis.YugornoExifGps.readGpsFromBytes(new Uint8Array(buildJpegGps(-12.5,-77.25)));
+  assert.ok(result);
+  assert.ok(Math.abs(result.lat+12.5)<0.00001);
+  assert.ok(Math.abs(result.lng+77.25)<0.00001);
 });
