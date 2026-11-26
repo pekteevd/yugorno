@@ -135,14 +135,14 @@ async function uploadImage(file){
  const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
  canvas.getContext("2d").drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();
  const dataUrl=canvas.toDataURL("image/jpeg",0.82);
- const result=await api("/api/uploads/image",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({dataUrl})});
+ const result=await api("/api/uploads/image",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({dataUrl,private:true})});
  return result.imageUrl;
 }
 async function parseGPX(file){
  if(file.size>10*1024*1024)throw new Error("GPX-файл больше 10 МБ");
  const xml=await file.text(),doc=new DOMParser().parseFromString(xml,"application/xml");
  if(doc.querySelector("parsererror")||doc.documentElement.localName!=="gpx")throw new Error("Файл не является корректным GPX");
- const nodes=[...doc.querySelectorAll("trkpt, rtept")];
+ const nodes=[...doc.getElementsByTagName("*")].filter(node=>node.localName==="trkpt"||node.localName==="rtept");
  const points=nodes.map(node=>({lat:Number(node.getAttribute("lat")),lng:Number(node.getAttribute("lon"))}));
  if(points.length<2)throw new Error("В GPX не найден трек минимум из двух точек");
  if(points.length>5000)throw new Error("В GPX больше 5000 точек. Упростите трек перед загрузкой");
@@ -183,7 +183,11 @@ async function loadModeration(){
   const entries=[...p.items.map(item=>({...item,kind:"places",kindLabel:"Место"})),...i.items.map(item=>({...item,kind:"impressions",kindLabel:"Впечатление"})),...r.items.map(item=>({...item,kind:"routes",kindLabel:"Маршрут"}))];
   document.getElementById("map-side-title").textContent="Очередь модерации";
   const host=document.getElementById("map-side-content");
-  host.innerHTML=entries.length?entries.map(item=>'<div class="map-moderation"><div class="map-muted">'+item.kindLabel+'</div><strong>'+safe(item.title||item.text||"Без названия")+'</strong><p>'+safe(item.description||item.text||"")+'</p>'+(item.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img src="'+safe(url)+'" alt="Фото на проверке" loading="lazy"></a>').join("")+'<div class="map-muted">'+safe(item.region||"")+'</div><div class="map-moderation-actions"><button type="button" data-mod-kind="'+item.kind+'" data-mod-id="'+safe(item.id)+'" data-mod-status="published">Опубликовать</button><button type="button" data-mod-kind="'+item.kind+'" data-mod-id="'+safe(item.id)+'" data-mod-status="rejected">Отклонить</button></div></div>').join(""):'<div class="map-empty">Очередь пуста. Новых материалов на проверке нет.</div>';
+  host.querySelectorAll('img[data-private-image]').forEach(img=>{if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl)});
+  host.innerHTML=entries.length?entries.map(item=>'<div class="map-moderation"><div class="map-muted">'+item.kindLabel+'</div><strong>'+safe(item.title||item.text||"Без названия")+'</strong><p>'+safe(item.description||item.text||"")+'</p>'+(item.photoUrls||[]).map(url=>'<img data-private-image="'+safe(url)+'" alt="Фото на проверке" loading="lazy">').join("")+'<div class="map-muted">'+safe(item.region||"")+'</div><div class="map-moderation-actions"><button type="button" data-mod-kind="'+item.kind+'" data-mod-id="'+safe(item.id)+'" data-mod-status="published">Опубликовать</button><button type="button" data-mod-kind="'+item.kind+'" data-mod-id="'+safe(item.id)+'" data-mod-status="rejected">Отклонить</button></div></div>').join(""):'<div class="map-empty">Очередь пуста. Новых материалов на проверке нет.</div>';
+  for(const img of host.querySelectorAll("img[data-private-image]")){
+   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}}catch{}
+  }
   host.querySelectorAll("[data-mod-status]").forEach(button=>button.onclick=async()=>{
    button.disabled=true;
    try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});showToast(button.dataset.modStatus==="published"?"Материал опубликован":"Материал отклонён");loadModeration()}
