@@ -74,7 +74,8 @@ function findJpegExif(bytes) {
     if (marker === 0xe1 && dataLength >= 14 &&
         bytes[data] === 0x45 && bytes[data+1] === 0x78 && bytes[data+2] === 0x69 &&
         bytes[data+3] === 0x66 && bytes[data+4] === 0 && bytes[data+5] === 0) {
-      const gps = parseTiff(bytes, data + 6, dataLength - 6);\n      if (gps) return gps;
+      const gps = parseTiff(bytes, data + 6, dataLength - 6);
+      if (gps) return gps;
     }
     p += size;
   }
