@@ -398,3 +398,9 @@ export async function listSavedPlaces(userId) {
   const ids = new Set(store.savedPlaces.filter(item => item.userId === String(userId)).map(item => item.placeId));
   return store.places.filter(item => ids.has(item.id) && item.status === "published").map(publicPlace);
 }
+
+export async function listMapModerationQueue(kind = 'places') {
+  const store = await readStore();
+  if (kind === 'impressions') return store.impressions.filter(item => item.status === 'pending').slice(0, 200).map(publicImpression);
+  return store.places.filter(item => item.status === 'pending').slice(0, 200).map(item => ({ ...publicPlace(item), status: item.status }));
+}
