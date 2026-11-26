@@ -185,4 +185,7 @@ test('approximate map coordinates are rounded before being returned publicly', a
   assert.equal(place.lng, 47.65);
   const ownPlaces = await store.listMyPlaces(1601);
   assert.equal(ownPlaces.find(item => item.id === place.id).lat, 56.12);
+  await store.moderatePlace(place.id, 'published');
+  assert.equal((await store.listPlaces()).find(item => item.id === place.id).lng, 47.65);
+  assert.equal((await store.getPlace(place.id)).lat, 56.12);
 });
