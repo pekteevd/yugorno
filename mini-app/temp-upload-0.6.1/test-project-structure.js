@@ -139,3 +139,10 @@ test('route builder preserves the order in which the user selects stops', async 
   assert.match(map, /stopIds:selectedStopIds/);
   assert.match(map, /route-stop-order/);
 });
+
+
+test('GPS mismatch warnings use the Telegram confirmation dialog when available', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /window\.askConfirm/);
+  assert.match(map, /await askUserConfirmation/);
+});
