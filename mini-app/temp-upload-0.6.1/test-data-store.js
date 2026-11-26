@@ -109,3 +109,36 @@ test('backfills opaque ids for community memberships created by older versions',
   const migrated = JSON.parse(await readFile(file, 'utf8'));
   assert.equal(migrated.communityMembers.find(item => item.communityId === community.id).id, member.memberId);
 });
+
+
+test('map places, impressions, moderation, routes and saves persist without exposing owner ids', async () => {
+  const a = await store.createPlace(1101, { title: 'Озеро', category: 'Природа', lat: 56.1, lng: 47.2, coordinateAccuracy: 'approximate' }, 'Автор');
+  const b = await store.createPlace(1102, { title: 'Смотровая', category: 'Красивые места', lat: 56.2, lng: 47.3 }, 'Другой автор');
+  assert.equal(a.status, 'pending');
+  assert.equal((await store.listPlaces()).length, 0);
+  assert.ok(await store.moderatePlace(a.id, 'published'));
+  assert.ok(await store.moderatePlace(b.id, 'published'));
+  const publicPlace = await store.getPlace(a.id);
+  assert.equal(publicPlace.title, 'Озеро');
+  assert.equal(Object.hasOwn(publicPlace, 'authorId'), false);
+  assert.equal(Object.hasOwn(publicPlace, 'exactLat'), false);
+  const impression = await store.createImpression(1103, a.id, { text: 'Тихий берег' }, 'Гость');
+  assert.equal(impression.status, 'pending');
+  assert.equal((await store.listImpressions(a.id)).length, 0);
+  await store.moderateImpression(impression.id, 'published');
+  assert.equal((await store.listImpressions(a.id))[0].text, 'Тихий берег');
+  const route = await store.createRoute(1101, { title: 'Короткая прогулка', stopIds: [a.id, b.id], transport: 'walking' }, 'Автор');
+  assert.equal(route.status, 'pending');
+  assert.equal(route.stops.length, 2);
+  assert.equal((await store.listRoutes()).length, 0);
+  await store.savePlace(1103, a.id);
+  assert.equal((await store.listSavedPlaces(1103)).length, 1);
+  await assert.rejects(() => store.createPlace(1, { title: 'Плохие координаты', category: 'Природа', lat: 120, lng: 0 }), TypeError);
+});
+
+test('map moderation queue returns pending place and impression records', async () => {
+  const p = await store.createPlace(1201, { title: 'Водопад', category: 'Природа', lat: 55, lng: 46 });
+  const i = await store.createImpression(1202, p.id, { text: 'После дождя' });
+  assert.equal((await store.listMapModerationQueue('places')).some(item => item.id === p.id), true);
+  assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === i.id), true);
+});
