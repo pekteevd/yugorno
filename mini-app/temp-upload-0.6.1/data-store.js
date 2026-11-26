@@ -358,7 +358,7 @@ export async function moderateImpression(impressionId, status) {
 }
 export async function listRoutes() {
   const store = await readStore();
-  return store.routes.filter(item => item.status === "published").slice(0, 200).map(publicRoute);
+  return store.routes.filter(item => item.status === "published").slice(0, 200).map(item => ({ ...publicRoute(item), stops: item.stopIds.map(id => store.places.find(place => place.id === id && place.status === "published")).filter(Boolean).map(publicPlace) }));
 }
 export async function createRoute(userId, input = {}, authorName = "") {
   const title = cleanText(input.title, 120);
@@ -403,4 +403,14 @@ export async function listMapModerationQueue(kind = 'places') {
   const store = await readStore();
   if (kind === 'impressions') return store.impressions.filter(item => item.status === 'pending').slice(0, 200).map(publicImpression);
   return store.places.filter(item => item.status === 'pending').slice(0, 200).map(item => ({ ...publicPlace(item), status: item.status }));
+}
+
+export async function moderateRoute(routeId, status) {
+  if (!["published", "rejected", "hidden", "archived"].includes(status)) throw new TypeError("Недопустимый статус публикации");
+  return update(store => {
+    const route = store.routes.find(item => item.id === routeId);
+    if (!route) return null;
+    route.status = status;
+    return { ...publicRoute(route), status };
+  });
 }
