@@ -128,7 +128,7 @@ async function openPlace(id){
  }catch(e){showToast("Не удалось открыть место: "+e.message)}
 }
 async function uploadImage(file){
- if(!file||!/^image\\/(jpeg|png|webp)$/.test(file.type))throw new Error("Поддерживаются JPEG, PNG и WebP");
+ if(!file||!/^image\/(jpeg|png|webp)$/.test(file.type))throw new Error("Поддерживаются JPEG, PNG и WebP");
  if(file.size>5*1024*1024)throw new Error("Файл больше 5 МБ");
  if(typeof createImageBitmap!=="function")throw new Error("Браузер не поддерживает безопасную обработку изображения");
  const bitmap=await createImageBitmap(file),scale=Math.min(1,1800/Math.max(bitmap.width,bitmap.height));
@@ -155,7 +155,7 @@ function downloadGPX(route){
  const esc=value=>String(value||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c]));
  const trkpts=points.map(p=>'<trkpt lat="'+Number(p.lat)+'" lon="'+Number(p.lng)+'"></trkpt>').join("");
  const xml='<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Yugorno" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+esc(route.title)+'</name><trkseg>'+trkpts+'</trkseg></trk></gpx>';
- const url=URL.createObjectURL(new Blob([xml],{type:"application/gpx+xml"})),a=document.createElement("a");a.href=url;a.download=(route.title||"yugorno-route").replace(/[^\\p{L}\\p{N}-]+/gu,"-")+".gpx";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const url=URL.createObjectURL(new Blob([xml],{type:"application/gpx+xml"})),a=document.createElement("a");a.href=url;a.download=(route.title||"yugorno-route").replace(/[^\p{L}\p{N}-]+/gu,"-")+".gpx";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function renderRouteOnMap(route){
  if(activeMode!=="map")setMode("map");
