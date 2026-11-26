@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - temp-upload-miniapp-061
+      - 'feature/**'
     paths:
       - "mini-app/temp-upload-0.6.1/**"
       - "Dockerfile"
