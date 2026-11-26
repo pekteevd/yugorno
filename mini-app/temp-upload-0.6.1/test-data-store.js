@@ -163,3 +163,17 @@ test('stores validated GPX track points with a route and rejects malformed track
   assert.equal((await store.listMapModerationQueue('routes')).find(item => item.id === route.id).trackPoints.length, 3);
   await assert.rejects(() => store.createRoute(1401, { title: 'Плохой трек', stopIds: [a.id, b.id], trackPoints: [{ lat: 120, lng: 47 }, { lat: 56, lng: 47 }] }), TypeError);
 });
+
+
+test('map impression photos remain private until publication', async () => {
+  const place = await store.createPlace(1501, { title: 'Берег', category: 'Природа', lat: 55, lng: 46 });
+  await store.moderatePlace(place.id, 'published');
+  const filename = '123e4567-e89b-12d3-a456-426614174000.jpg';
+  const url = `/api/map-uploads/${filename}`;
+  const impression = await store.createImpression(1502, place.id, { text: 'Фото берега', photoUrls: [url] });
+  assert.equal(await store.canViewMapUpload(1502, filename, false), true);
+  assert.equal(await store.canViewMapUpload(9999, filename, false), false);
+  assert.equal(await store.canViewMapUpload(9999, filename, true), true);
+  await store.moderateImpression(impression.id, 'published');
+  assert.equal(await store.canViewMapUpload(null, filename, false), true);
+});
