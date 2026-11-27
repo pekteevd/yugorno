@@ -188,7 +188,7 @@ test('place geocoding is explicit, cached, throttled, and uses safe text renderi
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /photon\.komoot\.io\/api/);
   assert.match(map, /geocoderCache\.get\(cacheKey\)/);
-  assert.match(map, /geocoderCache\.set\(cacheKey,features\)/);
+  assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
   assert.match(map, /1100-\(Date\.now\(\)-geocoderLastRequest\)/);
   assert.match(map, /item\.textContent=label/);
   assert.match(map, /place-location-search.*onclick=searchPlaceLocation/s);
