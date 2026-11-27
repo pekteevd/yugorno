@@ -436,7 +436,7 @@ test('local publication cleanup is guarded, backed up and preserves the three fe
   assert.match(script, /copyFile\(dataFile, backupFile\)/);
   assert.match(script, /const publicationCollections = \["trips", "communities", "places", "impressions", "routes"\]/);
   assert.match(script, /\["karelia", "teriberka", "u-ilem"\]/);
-  assert.doesNotMatch(script, /store\\.profiles\\s*=/);
+  assert.doesNotMatch(script, /store\.profiles\s*=/);
   assert.match(script, /Резервная копия/);
 });
 
@@ -448,4 +448,32 @@ test('featured destinations can be edited only by configured admins or moderator
   assert.match(server, /app\.patch\("\/api\/admin\/destinations\/:slug", requireTelegramUser, requireMapModerator/);
   assert.match(server, /if \(role !== "admin" && role !== "moderator"\)/);
   assert.match(store, /const allowed = new Set\(DEFAULT_FEATURED_DESTINATIONS\.map\(item => item\.slug\)\)/);
+});
+
+
+test('public website supports guest browsing and authenticated account controls', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  assert.match(html, /Вы просматриваете Югорно как гость/);
+  assert.match(html, /function renderAccountState/);
+  assert.match(html, /function requestWhatsappCode/);
+  assert.match(html, /function verifyWhatsappCode/);
+  assert.match(html, /function logoutAccount/);
+  assert.match(html, /localStorage\.setItem\('yugorno-session'/);
+  assert.match(html, /X-Yugorno-Session/);
+  assert.match(html, /\['GET','HEAD'\]\.includes\(method\)/);
+  assert.match(map, /X-Yugorno-Session/);
+  assert.match(server, /app\.get\("\/api\/session"/);
+  assert.match(server, /whatsappAuthAvailable:/);
+});
+
+test('admin and moderator identities can be assigned to Telegram or WhatsApp accounts', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
+  assert.match(server, /MAP_ADMINS\.has\(id\)/);
+  assert.match(server, /MAP_MODERATORS\.has\(id\)/);
+  assert.match(server, /id: `wa:\$\{phone\}`/);
+  assert.match(env, /YUGORNO_ADMIN_IDS=/);
+  assert.match(env, /YUGORNO_MODERATOR_IDS=/);
 });
