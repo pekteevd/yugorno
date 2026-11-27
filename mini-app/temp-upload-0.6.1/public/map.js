@@ -468,9 +468,10 @@ function ownerEditor(title,body,onSubmit){
  const host=document.getElementById("map-form-host");
  releaseOwnerImages(host);
  host.innerHTML='<form class="map-form" id="owner-edit-form"><h4 class="wide">'+safe(title)+'</h4>'+body+'<button class="btn" type="submit">Сохранить изменения</button><button class="btn outline" type="button" id="owner-edit-cancel">Отмена</button></form>';
+ hydrateOwnerImages(host);
  const form=document.getElementById("owner-edit-form");
- document.getElementById("owner-edit-cancel").onclick=()=>host.replaceChildren();
- form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));host.replaceChildren();await loadMyPublications();await loadPlaces();showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
+ document.getElementById("owner-edit-cancel").onclick=()=>{releaseOwnerImages(host);host.replaceChildren()};
+ form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));releaseOwnerImages(host);host.replaceChildren();await loadMyPublications();await loadPlaces();showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
 }
 function editOwnPlace(place){
  const photos=place.photoUrls||[];
@@ -505,7 +506,7 @@ async function editOwnRoute(route){
 }
 function editOwnImpression(item){
  const photos=item.photoUrls||[];
- const body='<div class="wide map-muted">Место: '+safe(item.placeTitle||"")+'</div><label class="wide">Текст впечатления<textarea name="text" maxlength="3000">'+safe(item.text||"")+'</textarea></label><div class="wide map-moderation-gallery">'+photos.map(url=>'<img data-owner-private-image="'+safe(url)+'" alt="Текущее фото впечатления">').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
+ const body='<div class="wide map-muted">Место: '+safe(item.placeTitle||"")+'</div><label class="wide">Текст впечатления<textarea name="text" maxlength="3000">'+safe(item.text||"")+'</textarea></label><div class="wide map-moderation-gallery">'+photos.map((url,index)=>'<label><input type="checkbox" name="removePhotos" value="'+safe(url)+'"> Удалить фото '+(index+1)+'<img data-owner-private-image="'+safe(url)+'" alt="Текущее фото впечатления"></label>').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
  ownerEditor("Редактировать впечатление",body,async form=>{
   const urls=[...photos];const files=[...(form.getAll("photos")||[])].filter(file=>file&&file.size);
   if(urls.length+files.length>8)throw new Error("Всего можно сохранить не более 8 фотографий");
