@@ -313,6 +313,9 @@ function authorLabel(user) {
 app.get("/api/destinations", async (_req, res, next) => {
   try { res.json({ ok: true, items: await listFeaturedDestinations() }); } catch (error) { next(error); }
 });
+app.get("/api/admin/destinations", requireTelegramUser, requireMapModerator, async (_req, res, next) => {
+  try { res.json({ ok: true, items: await listFeaturedDestinations() }); } catch (error) { next(error); }
+});
 app.patch("/api/admin/destinations/:slug", requireTelegramUser, requireMapModerator, async (req, res, next) => {
   try {
     const item = await updateFeaturedDestination(req.params.slug, req.body || {});
