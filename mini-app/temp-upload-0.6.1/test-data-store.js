@@ -8,6 +8,26 @@ const temp = await mkdtemp(path.join(os.tmpdir(), 'yugorno-store-'));
 process.env.YUGORNO_DATA_DIR = temp;
 const store = await import(`./data-store.js?test=${Date.now()}`);
 
+test('stores trip dates price and capacity and allows owner updates', async () => {
+  const trip = await store.createTrip(102, { title: 'Север', place: 'Териберка', kind: 'Автопутешествие', startDate: '2027-01-10', endDate: '2027-01-15', price: '25 000 ₽', capacity: 6 });
+  assert.equal(trip.startDate, '2027-01-10');
+  assert.equal(trip.endDate, '2027-01-15');
+  assert.equal(trip.price, '25 000 ₽');
+  assert.equal(trip.capacity, 6);
+  const updated = await store.updateTrip(102, trip.id, { price: '30 000 ₽', capacity: 4 });
+  assert.equal(updated.price, '30 000 ₽');
+  assert.equal(updated.capacity, 4);
+});
+
+test('featured demo destinations remain available and can be edited by slug', async () => {
+  const before = await store.listFeaturedDestinations();
+  assert.deepEqual(before.map(item => item.slug).sort(), ['karelia', 'teriberka', 'u-ilem']);
+  const updated = await store.updateFeaturedDestination('teriberka', { title: 'Северное побережье', place: 'Териберка', details: 'Обновлённая программа' });
+  assert.equal(updated.title, 'Северное побережье');
+  assert.equal((await store.listFeaturedDestinations()).find(item => item.slug === 'teriberka').details, 'Обновлённая программа');
+  assert.equal(await store.updateFeaturedDestination('unknown', { title: 'x' }), null);
+});
+
 test('creates and lists published trips with escaped-as-text values preserved', async () => {
   const trip = await store.createTrip(101, { title: 'Лес <тропа>', place: 'Карелия', date: 'Июль', kind: 'Поход', description: 'Тихий маршрут' });
   assert.equal(trip.status, 'published');
