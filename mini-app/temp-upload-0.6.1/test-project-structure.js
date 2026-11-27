@@ -290,3 +290,16 @@ test('people tab shows the saved own profile and retains demo profile cards', as
   for (const name of ['Алексей', 'Марина', 'Илья']) assert.match(html, new RegExp(name));
   assert.doesNotMatch(html, /profile-discoverable|loadPeopleDirectory|\/api\/people/);
 });
+
+
+test('journey creation uses one clear set of responsive actions and consistent trip wording', () => {
+  const tripsSection = html.slice(html.indexOf('<section class="view" id="trips">'), html.indexOf('<section class="view" id="map">'));
+  assert.ok(tripsSection.length > 0, 'trips section should exist');
+  assert.match(tripsSection, /<div class="section-head"><h3>Путешествия<\\/h3><\\/div>/);
+  assert.doesNotMatch(tripsSection, /Создать путешествие/);
+  assert.match(tripsSection, /class="journey-create-actions"/);
+  for (const label of ['Создать маршрут', 'Создать встречу', 'Создать поездку']) assert.match(tripsSection, new RegExp(label));
+  assert.match(html, /\.journey-create-actions\\{display:grid;grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)/);
+  assert.match(html, /@media\\(max-width:560px\\)\\{\.journey-create-actions\\{grid-template-columns:1fr\\}\\}/);
+  assert.match(html, /onclick="openModal\\('trip'\\)">＋ Создать поездку<\\/button>/);
+});
