@@ -295,7 +295,11 @@ app.get("/api/my/trips/:id/interests", requireTelegramUser, async (req, res, nex
 
 
 function requireMapModerator(req, res, next) {
-  if (!MAP_MODERATORS.has(String(req.telegramUser?.id))) return res.status(403).json({ ok: false, error: "moderator_required" });
+  const userId = String(req.telegramUser?.id || "");
+  // Local administrator is available only in the explicitly local demo mode,
+  // whose authentication is already restricted to loopback requests above.
+  const localDemoAdmin = localDemoEnabled && userId === "local-tester";
+  if (!localDemoAdmin && !MAP_MODERATORS.has(userId)) return res.status(403).json({ ok: false, error: "moderator_required" });
   next();
 }
 function authorLabel(user) {
