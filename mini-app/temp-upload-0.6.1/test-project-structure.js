@@ -232,6 +232,9 @@ test('moderation cards show full place descriptions and group pending photos wit
   assert.match(map, /place\.photoUrls\|\|\[\]/);
   assert.match(map, /Дополнение к заявке на место/);
   assert.match(map, /actionMarkup\("places",place\.id\)/);
+  assert.match(map, /Просмотреть маршрут на карте/);
+  assert.match(map, /data-mod-preview-route/);
+  assert.match(map, /renderRouteOnMap\(route\)/);
   const placeModeration = map.slice(map.indexOf("const placeCards="), map.indexOf("const looseImpressions="));
   assert.doesNotMatch(placeModeration, /actionMarkup\("impressions"/);
   assert.match(map, /Фотографии места/);
@@ -303,5 +306,11 @@ test('journey creation uses one clear set of responsive actions and consistent t
   assert.ok(html.includes('.journey-create-actions .btn{width:100%;min-height:36px;padding:7px 10px;font-size:13px;line-height:1.2;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}'));
   assert.ok(html.includes('@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr;gap:7px}.journey-create-actions .btn{min-height:36px;justify-content:flex-start;padding:7px 12px}}'));
   for (const icon of ['🧭', '🤝', '🎒']) assert.ok(tripsSection.includes(icon), `creation action should include ${icon}`);
-  assert.ok(html.includes('onclick="openModal(\'trip\')">＋ Создать поездку</button>'));
+  assert.ok(!tripsSection.includes('Создать путешествие'));
+  assert.match(html, /f-meeting-date/);
+  assert.match(html, /f-meeting-time/);
+  assert.match(html, /Продолжительность:/);
+  assert.match(html, /inputmode="numeric" pattern="\\[0-9\\]\\*"/);
+  assert.match(html, /payload\.date=startDate&&endDate\?startDate\+' – '\+endDate/);
+  assert.match(html, /Дата окончания не может быть раньше даты начала/);
 });
