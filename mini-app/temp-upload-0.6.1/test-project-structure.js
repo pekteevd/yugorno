@@ -202,3 +202,17 @@ test('place geocoding is explicit, cached, throttled, and uses safe text renderi
   assert.match(map, /locationSearch\.onclick=event=>\{event\.preventDefault\(\);searchPlaceLocation\(\)\}/);
   assert.match(map, /locationQuery\.onkeydown=event=>\{if\(event\.key==="Enter"\)\{event\.preventDefault\(\);searchPlaceLocation\(\)\}\}/);
 });
+
+
+test('moderation cards show full place descriptions and group pending photos with their parent place', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /map-moderation-description/);
+  assert.match(map, /map-moderation-gallery/);
+  assert.match(map, /const impressionsByPlace=new Map\(\)/);
+  assert.match(map, /impressionsByPlace\.get\(place\.id\)/);
+  assert.match(map, /Автор не добавил описание\./);
+  assert.match(map, /Фотография или впечатление · отдельная проверка/);
+  assert.match(map, /data-mod-kind="impressions"/);
+  assert.match(map, /data-private-image=/);
+  assert.match(map, /Фото недоступно для просмотра/);
+});
