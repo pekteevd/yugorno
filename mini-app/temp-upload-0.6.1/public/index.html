@@ -548,11 +548,11 @@ async function loadServerProfile(){
 }
 
 function renderAccountState(role='guest',user=null,authMethod=''){
-  const labels={guest:'Гость',member:'Участник',moderator:'Модератор',admin:'Администратор'};
+  const labels={guest:'Гость',user:'Пользователь',moderator:'Модератор',admin:'Администратор'};
   const state=document.getElementById('account-state'),controls=document.getElementById('account-login-controls'),logout=document.getElementById('account-logout-button'),topButton=document.getElementById('account-access-button'),localLogin=document.getElementById('local-demo-login');
   const name=[user?.first_name,user?.last_name].filter(Boolean).join(' ')||(user?.username?'@'+user.username:'');
   const isGuest=role==='guest';
-  if(state)state.textContent=isGuest?'Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.':`Вход выполнен: ${name||'аккаунт'} · ${labels[role]||labels.member}`;
+  if(state)state.textContent=isGuest?'Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.':`Вход выполнен: ${name||'аккаунт'} · ${labels[role]||labels.user}`;
   if(controls)controls.hidden=!isGuest;
   if(logout)logout.hidden=isGuest||authMethod==='telegram';
   if(topButton)topButton.textContent=isGuest?'Войти':authMethod==='telegram'?'Telegram':labels[role]||'Аккаунт';
