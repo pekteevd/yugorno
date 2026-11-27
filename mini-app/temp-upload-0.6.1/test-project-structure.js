@@ -211,7 +211,8 @@ test('moderation cards show full place descriptions and group pending photos wit
   assert.match(map, /const impressionsByPlace=new Map\(\)/);
   assert.match(map, /impressionsByPlace\.get\(place\.id\)/);
   assert.match(map, /Автор не добавил описание\./);
-  assert.match(map, /Фотография или впечатление · отдельная проверка/);
+  assert.match(map, /Материал к этому месту · отдельная проверка/);
+  assert.match(map, /Фотография добавлена без текста\. Она показана в галерее выше\./);
   assert.match(map, /actionMarkup\("impressions",item\.id\)/);
   assert.match(map, /data-private-image=/);
   assert.match(map, /Фото недоступно для просмотра/);
