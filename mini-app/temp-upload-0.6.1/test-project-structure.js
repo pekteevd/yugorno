@@ -456,6 +456,11 @@ test('local publication cleanup removes only known test records and preserves us
   assert.ok(script.includes('Резервная копия'));
 });
 
+test('configured administrators can open private map uploads for moderation', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  assert.match(server, /const isModerator = isLocalDemoAdminRequest\(req\) \|\| MAP_ADMINS\.has\(String\(userId \|\| ""\)\) \|\| MAP_MODERATORS\.has\(String\(userId \|\| ""\)\)/);
+});
+
 test('featured destinations can be edited only by configured admins or moderators', async () => {
   const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
   const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
