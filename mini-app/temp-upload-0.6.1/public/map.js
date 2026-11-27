@@ -229,7 +229,7 @@ function useDeviceLocation(){
   finally{button.disabled=false}
  },error=>{button.disabled=false;showToast(error.code===1?"Разреши доступ к местоположению в браузере":error.code===2?"Не удалось определить местоположение":"Истекло время ожидания GPS")},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
-function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon с резервным OpenStreetMap Nominatim. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотография места (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
+function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon с резервным OpenStreetMap Nominatim. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотографии места (до 8 файлов, JPEG, PNG или WebP, каждый до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
 function bindAdd(){
  document.getElementById("map-add-btn").addEventListener("click",()=>{
   if(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}
@@ -243,24 +243,34 @@ function bindAdd(){
   document.getElementById("place-location-gps").onclick=useDeviceLocation;
   initPlacePickerMap();
   photoInput.onchange=async()=>{
-   photoGps=null;useGps.hidden=true;const file=photoInput.files?.[0];
-   if(!file){gpsStatus.textContent="Фотография не выбрана.";return}
-   gpsStatus.textContent="Проверяем GPS-метаданные на устройстве…";
-   photoGps=await window.YugornoExifGps?.readPhotoGps(file)||null;
-   if(photoGps){gpsStatus.textContent="В фотографии найдены координаты. Их можно использовать как точку места.";useGps.hidden=false}
-   else gpsStatus.textContent="GPS-координаты в фотографии не найдены. Выбери точку поиском, на карте или через GPS.";
+   photoGps=null;useGps.hidden=true;const files=[...(photoInput.files||[])];
+   if(!files.length){gpsStatus.textContent="Фотографии не выбраны.";return}
+   if(files.length>8){photoInput.value="";gpsStatus.textContent="Можно приложить не более 8 фотографий.";showToast("Можно приложить не более 8 фотографий");return}
+   gpsStatus.textContent="Проверяем GPS-метаданные фотографий на устройстве…";
+   for(const file of files){photoGps=await window.YugornoExifGps?.readPhotoGps(file)||null;if(photoGps)break}
+   if(photoGps){gpsStatus.textContent="В одной из фотографий найдены GPS-координаты. Их можно использовать как точку места.";useGps.hidden=false}
+   else if(selectedPlaceLocation){gpsStatus.textContent="В фотографиях нет GPS. Будет использована уже выбранная точка места."}
+   else{
+    gpsStatus.textContent="В фотографиях не найдены GPS-координаты. Нужно указать, где находится место: поиском, на карте или через GPS устройства.";
+    if(await askUserConfirmation("В выбранных фотографиях не найдены GPS-координаты. Хотите указать местоположение места сейчас?")){
+     document.getElementById("place-location-query")?.focus();
+     document.getElementById("place-location-map")?.scrollIntoView({behavior:"smooth",block:"center"});
+    }
+   }
   };
   useGps.onclick=()=>{if(!photoGps)return;try{selectPlaceLocation(photoGps.lat,photoGps.lng,"GPS из фотографии");form.elements.coordinateAccuracy.value="exact";gpsStatus.textContent="Точка из фотографии выбрана. Проверь её на карте."}catch(error){showToast(error.message)}};
   form.onsubmit=async event=>{
    event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
-   const f=new FormData(form),photo=f.get("photo");
+   const f=new FormData(form),photoFiles=f.getAll("photo").filter(file=>file&&file.size);
    try{
-    if(!selectedPlaceLocation)throw new Error("Сначала выбери точку поиска, на карте или через GPS");
+    if(photoFiles.length>8)throw new Error("Можно приложить не более 8 фотографий");
+    if(!selectedPlaceLocation)throw new Error("Сначала укажи, где находится место: выбери результат поиска, точку на карте или GPS устройства");
     const payload={title:f.get("title"),category:f.get("category"),lat:Number(f.get("lat")),lng:Number(f.get("lng")),region:f.get("region"),coordinateAccuracy:f.get("coordinateAccuracy"),description:f.get("description")};
-    if(photo?.size&&photoGps){const distance=distanceMeters(payload.lat,payload.lng,photoGps.lat,photoGps.lng);if(distance>250&&!(await askUserConfirmation("GPS фотографии отличается от выбранной точки примерно на "+Math.round(distance)+" м. Продолжить?")))return}
-    const created=await api("/api/places",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
-    if(photo?.size){try{const imageUrl=await uploadImage(photo);await api("/api/places/"+encodeURIComponent(created.item.id)+"/impressions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({text:"",photoUrls:[imageUrl]})});showToast("Место и фотография отправлены на модерацию")}catch(photoError){showToast("Место отправлено на модерацию, но фото не загрузилось: "+photoError.message)}}
-    else showToast("Место отправлено на модерацию");
+    if(photoFiles.length&&photoGps){const distance=distanceMeters(payload.lat,payload.lng,photoGps.lat,photoGps.lng);if(distance>250&&!(await askUserConfirmation("GPS одной из фотографий отличается от выбранной точки примерно на "+Math.round(distance)+" м. Продолжить?")))return}
+    payload.photoUrls=[];
+    for(const file of photoFiles)payload.photoUrls.push(await uploadImage(file));
+    await api("/api/places",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+    showToast(photoFiles.length?"Место и "+photoFiles.length+" фото отправлены одной заявкой на модерацию":"Место отправлено на модерацию");
     destroyPlacePicker();host.replaceChildren();loadMyPlaces();
    }catch(error){showToast(error.message)}
    finally{submit.disabled=false}
@@ -272,10 +282,11 @@ async function openPlace(id){
  try{
   const data=await api("/api/places/"+encodeURIComponent(id)),p=data.item;currentPlace=p;
   const impressions=data.impressions||[];
+  const placePhotoHtml=(p.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография места" loading="lazy"></a>').join("");
   const impressionHtml=impressions.map(i=>'<div class="map-place">'+(i.text?'<p>'+safe(i.text)+'</p>':'')+(i.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография впечатления" loading="lazy"></a>').join("")+'</div>').join("");
   const actions='<button type="button" class="btn outline" id="save-place">Сохранить</button><button type="button" class="btn outline" id="copy-coords">Координаты</button><button type="button" class="btn outline" id="open-nav">Навигатор</button>';
   document.getElementById("map-side-title").textContent=p.title;
-  document.getElementById("map-side-content").innerHTML='<div class="map-chip">'+iconFor(p.category)+' '+safe(p.category)+'</div><p>'+safe(p.description||"Описание пока не добавлено")+'</p><div class="map-muted">'+safe(p.region||"")+' · '+safe(p.author||"Автор")+'</div><div class="map-toolbar">'+actions+'</div><h4>Впечатления</h4>'+(impressionHtml||'<div class="map-muted">Пока нет опубликованных впечатлений</div>');
+  document.getElementById("map-side-content").innerHTML='<div class="map-chip">'+iconFor(p.category)+' '+safe(p.category)+'</div><p>'+safe(p.description||"Описание пока не добавлено")+'</p><div class="map-muted">'+safe(p.region||"")+' · '+safe(p.author||"Автор")+'</div><div class="map-toolbar">'+actions+'</div><h4>Фотографии места</h4>'+(placePhotoHtml?'<div class="map-moderation-gallery">'+placePhotoHtml+'</div>':'<div class="map-muted">Фотографии места не добавлены</div>')+'<h4>Впечатления</h4>'+(impressionHtml||'<div class="map-muted">Пока нет опубликованных впечатлений</div>');
   document.getElementById("save-place").onclick=async()=>{try{await api("/api/my/places/"+encodeURIComponent(id)+"/save",{method:"POST"});showToast("Место сохранено")}catch(e){showToast(e.message)}};
   document.getElementById("copy-coords").onclick=()=>navigator.clipboard?.writeText(p.lat+", "+p.lng).then(()=>showToast("Координаты скопированы"));
   document.getElementById("open-nav").onclick=()=>window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(p.lat+","+p.lng),"_blank","noopener");
@@ -359,23 +370,21 @@ async function loadModeration(){
   const [p,i,r]=await Promise.all([api("/api/moderation/places"),api("/api/moderation/impressions"),api("/api/moderation/routes")]);
   const pendingPlaces=p.items||[],pendingImpressions=i.items||[],pendingRoutes=r.items||[];
   const placeById=new Map(pendingPlaces.map(place=>[place.id,place]));
-  const impressionsByPlace=new Map();
-  for(const item of pendingImpressions){const key=item.placeId||"";if(!impressionsByPlace.has(key))impressionsByPlace.set(key,[]);impressionsByPlace.get(key).push(item)}
   const parentDetails=new Map();
-  await Promise.all([...impressionsByPlace.keys()].filter(id=>id&&!placeById.has(id)).map(async id=>{try{const data=await api("/api/places/"+encodeURIComponent(id));if(data.item)parentDetails.set(id,data.item)}catch{}}));
+  await Promise.all([...new Set(pendingImpressions.map(item=>item.placeId).filter(Boolean))].filter(id=>!placeById.has(id)).map(async id=>{try{const data=await api("/api/places/"+encodeURIComponent(id));if(data.item)parentDetails.set(id,data.item)}catch{}}));
   const host=document.getElementById("map-side-content");
   host.querySelectorAll('img[data-private-image]').forEach(img=>{if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl)});
   const imageMarkup=(urls)=>{const unique=[...new Set((urls||[]).filter(Boolean))];return unique.length?'<div class="map-moderation-gallery">'+unique.map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img data-private-image="'+safe(url)+'" alt="Фотография на модерации" loading="lazy"></a>').join("")+'</div>':'<div class="map-moderation-note">Фотографии не приложены.</div>'};
   const actionMarkup=(kind,id)=>'<div class="map-moderation-actions"><button type="button" data-mod-kind="'+kind+'" data-mod-id="'+safe(id)+'" data-mod-status="published">Опубликовать</button><button type="button" data-mod-kind="'+kind+'" data-mod-id="'+safe(id)+'" data-mod-status="rejected">Отклонить</button></div>';
   const placeCards=pendingPlaces.map(place=>{
-   const attached=impressionsByPlace.get(place.id)||[];
-   const photos=attached.flatMap(item=>item.photoUrls||[]);
-   const extras=attached.map(item=>'<div class="map-moderation-item"><h5>Материал к этому месту · отдельная проверка</h5>'+(item.text?'<p class="map-moderation-description">'+safe(item.text)+'</p>':'<div class="map-moderation-note">Фотография добавлена без текста. Она показана в галерее выше.</div>')+actionMarkup("impressions",item.id)+'</div>').join("");
+   const attached=place.pendingImpressions||[];
+   const photos=[...(place.photoUrls||[]),...attached.flatMap(item=>item.photoUrls||[])];
+   const extras=attached.map(item=>'<div class="map-moderation-item"><h5>Дополнение к заявке на место</h5>'+(item.text?'<p class="map-moderation-description">'+safe(item.text)+'</p>':'<div class="map-moderation-note">Фотография включена в общую заявку на место.</div>')+'</div>').join("");
    const lat=Number(place.lat),lng=Number(place.lng);
    const hasCoordinates=place.lat!==null&&place.lat!==undefined&&place.lat!==""&&place.lng!==null&&place.lng!==undefined&&place.lng!==""&&Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180;
    const coords=hasCoordinates?'<a href="https://www.openstreetmap.org/?mlat='+encodeURIComponent(lat)+'&mlon='+encodeURIComponent(lng)+'#map=16/'+encodeURIComponent(lat)+'/'+encodeURIComponent(lng)+'" target="_blank" rel="noopener">Открыть точку на карте ↗</a>':"";
    const mapPreview=hasCoordinates?(()=>{const padLat=0.004,padLng=Math.max(0.004,0.008/Math.max(0.2,Math.cos(lat*Math.PI/180)));const bbox=[lng-padLng,lat-padLat,lng+padLng,lat+padLat].map(value=>value.toFixed(6)).join(",");const src="https://www.openstreetmap.org/export/embed.html?bbox="+bbox+"&layer=mapnik&marker="+lat.toFixed(6)+","+lng.toFixed(6);return '<div class="map-moderation-map"><div class="map-moderation-map-title">Точка на карте</div><iframe src="'+safe(src)+'" title="Расположение места на карте" loading="lazy" referrerpolicy="no-referrer"></iframe></div>'})():'<div class="map-moderation-note">Координаты места не указаны. Проверить расположение пока нельзя.</div>';
-   return '<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Место · ожидает решения</span><span class="map-muted">'+safe(place.author||"Автор не указан")+'</span></div><strong class="map-moderation-title">'+safe(place.title||"Без названия")+'</strong><div class="map-moderation-meta">'+(place.category?'<span>'+safe(place.category)+'</span>':'')+(place.region?'<span>'+safe(place.region)+'</span>':'')+'</div><p class="map-moderation-description">'+safe(place.description||"Автор не добавил описание.")+'</p>'+mapPreview+imageMarkup(photos)+'<div class="map-moderation-meta">'+(coords?'<span>'+coords+'</span>':'')+'<span>Вложений на проверке: '+attached.length+'</span></div>'+actionMarkup("places",place.id)+(extras?'<h4>Связанные материалы</h4>'+extras:'')+'</article>';
+   return '<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Место · ожидает решения</span><span class="map-muted">'+safe(place.author||"Автор не указан")+'</span></div><strong class="map-moderation-title">'+safe(place.title||"Без названия")+'</strong><div class="map-moderation-meta">'+(place.category?'<span>'+safe(place.category)+'</span>':'')+(place.region?'<span>'+safe(place.region)+'</span>':'')+'</div><p class="map-moderation-description">'+safe(place.description||"Автор не добавил описание.")+'</p>'+mapPreview+imageMarkup(photos)+'<div class="map-moderation-meta">'+(coords?'<span>'+coords+'</span>':'')+'<span>Фотографий: '+photos.length+'</span></div>'+actionMarkup("places",place.id)+(extras?'<h4>Дополнения к заявке</h4>'+extras:'')+'</article>';
   });
   const looseImpressions=pendingImpressions.filter(item=>!placeById.has(item.placeId)).map(item=>{
    const parent=parentDetails.get(item.placeId),parentTitle=parent?.title||"Место из каталога";
