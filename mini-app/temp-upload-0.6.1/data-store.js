@@ -222,9 +222,11 @@ export async function saveProfile(userId, input) {
   return update(store => { store.profiles[String(userId)] = profile; return profile; });
 }
 
-export async function listPublicProfiles() {
+export async function listPublicProfiles(excludeUserId = '') {
   const store = await readStore();
-  return Object.values(store.profiles)
+  return Object.entries(store.profiles)
+    .filter(([userId]) => userId !== String(excludeUserId))
+    .map(([, profile]) => profile)
     .filter(profile => profile && profile.discoverable === true && cleanText(profile.name, 100))
     .map(profile => ({
       name: cleanText(profile.name, 100),
