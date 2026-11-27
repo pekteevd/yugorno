@@ -264,21 +264,16 @@ test('journey and map list cards render uploaded photos with a visual fallback',
   assert.match(map, /cover\?'<img class="map-place-photo"/);
 });
 
-test('people tab uses real profiles and explicit opt-in instead of invented demo cards', async () => {
+test('people tab shows the saved own profile and retains demo profile cards', async () => {
   const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
-  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
-  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
-  assert.match(html, /id="people-own-profile"/);
-  assert.match(html, /id="people-directory"/);
-  assert.match(html, /id="profile-discoverable"/);
-  assert.match(html, /function loadPeopleDirectory\(/);
-  assert.match(html, /telegramApi\('\/api\/people'\)/);
-  assert.doesNotMatch(html, /Алексей/);
-  assert.doesNotMatch(html, /Марина/);
-  assert.doesNotMatch(html, /Илья/);
-  assert.match(server, /app\.get\("\/api\/people", requireTelegramUser/);
-  assert.match(server, /listPublicProfiles\(_req\.telegramUser\.id\)/);
-  assert.match(store, /discoverable: input\.discoverable === true/);
-  assert.match(store, /profile\.discoverable === true/);
-  assert.match(store, /export async function listPublicProfiles\(/);
+  assert.match(html, /id="people-own-profile-card"/);
+  assert.match(html, /id="people-own-name"/);
+  assert.match(html, /id="people-own-meta"/);
+  assert.match(html, /id="people-own-interest"/);
+  assert.match(html, /id="people-own-avatar"/);
+  assert.match(html, /function renderOwnPeopleProfile\(/);
+  assert.match(html, /renderOwnPeopleProfile\(\{name,city:p\.city\|\|'',interest:p\.interest\|\|'',imageUrl:p\.imageUrl\|\|''\}\)/);
+  assert.match(html, /localStorage\.getItem\('yugorno-profile'\)/);
+  for (const name of ['Алексей', 'Марина', 'Илья']) assert.match(html, new RegExp(name));
+  assert.doesNotMatch(html, /profile-discoverable|loadPeopleDirectory|\/api\/people/);
 });
