@@ -73,7 +73,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
   <div class="side-note">Путешествия начинаются с людей.<br><br>Рабочая сборка Югорно · 0.6.1</div>
 </aside>
 <main>
-  <div class="top"><div><div class="eyebrow">Платформа путешествий и встреч</div><h1 id="page-title">Открывай. Знакомься. Путешествуй.</h1></div><div class="user"><div class="avatar">Ю</div><span>Гость Югорно</span></div></div>
+  <div class="top"><div><div class="eyebrow">Платформа путешествий и встреч</div><h1 id="page-title">Открывай. Знакомься. Путешествуй.</h1></div><div style="display:flex;align-items:center;gap:8px"><div class="user"><div class="avatar">Ю</div><span>Гость Югорно</span></div><button id="account-access-button" class="btn outline" type="button" onclick="openAccountAccess()">Войти</button></div></div>
   <section id="detail-page" class="detail-page" aria-live="polite"></section>
 
   <section class="view active" id="home">
@@ -155,6 +155,19 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 
   <section class="view" id="profile">
     <div class="section-head"><h3>Мой профиль</h3><span>Профиль участника Югорно</span></div>
+    <div class="panel" id="account-panel" style="max-width:650px;margin-bottom:16px">
+      <h3 style="margin:0 0 8px">Доступ к аккаунту</h3>
+      <p id="account-state" style="color:var(--muted);margin:0 0 12px">Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.</p>
+      <div id="account-login-controls">
+        <div class="field"><label for="account-phone">Номер телефона для входа</label><input id="account-phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00"></div>
+        <button class="btn outline" type="button" onclick="requestWhatsappCode()">Получить код</button>
+        <div class="field" id="account-code-field" hidden><label for="account-code">Код из WhatsApp</label><input id="account-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 цифр"></div>
+        <button class="btn" id="account-verify-button" type="button" onclick="verifyWhatsappCode()" hidden>Войти</button>
+        <p id="account-login-note" style="font-size:12px;color:var(--muted);margin:10px 0 0">Вход по номеру станет доступен после настройки WhatsApp на сервере. В Telegram вход выполняется автоматически.</p>
+        <div id="local-demo-login" hidden style="margin-top:12px"><button class="btn outline" type="button" onclick="loginLocalDemo()">Войти как локальный тестовый администратор</button></div>
+      </div>
+      <button class="btn outline" id="account-logout-button" type="button" onclick="logoutAccount()" hidden>Выйти из аккаунта</button>
+    </div>
     <div class="panel" style="max-width:650px"><div style="display:flex;align-items:center;gap:15px;margin-bottom:20px"><div class="avatar" id="profile-avatar" style="width:65px;height:65px;font-size:22px">К</div><div><h3 id="profile-display-name" style="margin:0">КУНДЫШ</h3><small id="profile-account-note" style="color:var(--muted)">Локальный администратор тестовой версии</small></div></div><div id="profile-summary"><div class="field"><label>Имя</label><div id="profile-summary-name">КУНДЫШ</div></div><div class="field"><label>Город или регион</label><div id="profile-summary-city">Не указан</div></div><div class="field"><label>Интересы</label><div id="profile-summary-interest">Не указаны</div></div><button class="btn" type="button" onclick="setProfileEditMode(true)">Редактировать профиль</button></div><div id="profile-edit-form" hidden><div class="field"><label>Фотография профиля</label><input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp"><small style="color:var(--muted)">JPG, PNG или WebP, до 5 МБ</small><img id="profile-photo-preview" alt="Предпросмотр фото профиля" style="display:none;width:88px;height:88px;object-fit:cover;border-radius:50%;margin-top:10px"></div><div class="field"><label>Как к вам обращаться</label><input id="profile-name" placeholder="Ваше имя"></div><div class="field"><label>Город или регион</label><input id="profile-city" placeholder="Например, Йошкар-Ола"></div><div class="field"><label>Что вам интересно</label><select id="profile-interest"><option>Авторские путешествия</option><option>Поиск попутчиков</option><option>Походы и природа</option><option>Культура и локальные места</option><option>Фестивали и события</option></select></div><button class="btn" type="button" onclick="saveProfile()">Сохранить изменения</button><button class="btn outline" type="button" onclick="setProfileEditMode(false)">Отмена</button></div><p style="font-size:12px;color:var(--muted);margin-top:12px">Локальный профиль хранится на этом компьютере. В Telegram он будет связан с аккаунтом участника.</p></div>
   </section>
 </main>
@@ -482,10 +495,17 @@ async function authenticateTelegram(tg){
   }
 }
 
-async function telegramApi(path, options={}){
+function yugornoAuthHeaders(){
   const initData=window.Telegram?.WebApp?.initData;
-  if(!initData&&!window.yugornoLocalDemo)throw new Error('Откройте приложение в Telegram');
-  const authHeaders=initData?{'X-Telegram-Init-Data':initData}:{'X-Local-Demo-User':'local-tester'};
+  if(initData)return {'X-Telegram-Init-Data':initData};
+  const sessionToken=localStorage.getItem('yugorno-session');
+  if(sessionToken)return {'X-Yugorno-Session':sessionToken};
+  if(window.yugornoLocalDemo)return {'X-Local-Demo-User':'local-tester'};
+  return {};
+}
+async function telegramApi(path, options={}){
+  const method=String(options.method||'GET').toUpperCase(),authHeaders=yugornoAuthHeaders();
+  if(!Object.keys(authHeaders).length&&!['GET','HEAD'].includes(method))throw new Error('Для этого действия нужно войти в аккаунт');
   const response=await fetch(path,{...options,headers:{...(options.headers||{}),...authHeaders}});
   const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Ошибка запроса');return result;
 }
@@ -527,17 +547,67 @@ async function loadServerProfile(){
   }
 }
 
+function renderAccountState(role='guest',user=null,authMethod=''){
+  const labels={guest:'Гость',member:'Участник',moderator:'Модератор',admin:'Администратор'};
+  const state=document.getElementById('account-state'),controls=document.getElementById('account-login-controls'),logout=document.getElementById('account-logout-button'),topButton=document.getElementById('account-access-button'),localLogin=document.getElementById('local-demo-login');
+  const name=[user?.first_name,user?.last_name].filter(Boolean).join(' ')||(user?.username?'@'+user.username:'');
+  const isGuest=role==='guest';
+  if(state)state.textContent=isGuest?'Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.':`Вход выполнен: ${name||'аккаунт'} · ${labels[role]||labels.member}`;
+  if(controls)controls.hidden=!isGuest;
+  if(logout)logout.hidden=isGuest||authMethod==='telegram';
+  if(topButton)topButton.textContent=isGuest?'Войти':authMethod==='telegram'?'Telegram':labels[role]||'Аккаунт';
+  if(localLogin)localLogin.hidden=!isGuest||!window.yugornoLocalDemoAvailable;
+  const note=document.getElementById('account-login-note');
+  if(note)note.textContent=window.yugornoWhatsappAuthAvailable?'На номер будет отправлен одноразовый код WhatsApp.':'Вход по номеру пока не настроен. В Telegram Mini App вход выполняется автоматически.';
+  const profileNote=document.getElementById('profile-account-note');
+  if(profileNote)profileNote.textContent=isGuest?'Гостевой просмотр':authMethod==='telegram'?'Аккаунт подтверждён Telegram':authMethod==='local-demo'?'Локальный тестовый режим':labels[role]||'Аккаунт подтверждён';
+  window.yugornoRole=role;window.yugornoIsModerator=role==='admin'||role==='moderator';
+}
+function openAccountAccess(){showView('profile');document.getElementById('account-phone')?.focus()}
+async function requestWhatsappCode(){
+  const phone=document.getElementById('account-phone').value.trim();if(!phone){toast('Укажите номер телефона в международном формате');return}
+  try{const response=await fetch('/api/auth/whatsapp/send-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Не удалось отправить код');document.getElementById('account-code-field').hidden=false;document.getElementById('account-verify-button').hidden=false;toast('Код отправлен в WhatsApp')}catch(error){toast(error.message||'Вход по телефону недоступен')}
+}
+async function verifyWhatsappCode(){
+  const phone=document.getElementById('account-phone').value.trim(),code=document.getElementById('account-code').value.trim();
+  try{const response=await fetch('/api/auth/whatsapp/verify-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,code})});const result=await response.json();if(!response.ok||!result.ok||!result.sessionToken)throw new Error(result.error||'Неверный код');localStorage.setItem('yugorno-session',result.sessionToken);window.yugornoTelegramUser=result.user;window.yugornoLocalDemo=false;await refreshAuthenticatedUI('whatsapp');toast('Вход выполнен')}catch(error){toast(error.message||'Не удалось войти')}
+}
+async function loginLocalDemo(){if(!window.yugornoLocalDemoAvailable)return;window.yugornoLocalDemo=true;window.yugornoTelegramUser={id:'local-tester',first_name:'Локальный тестировщик',username:'local-admin'};await refreshAuthenticatedUI('local-demo');toast('Выполнен вход в локальный тестовый режим')}
+async function logoutAccount(){
+  if(window.Telegram?.WebApp?.initData){toast('Telegram Mini App использует активный аккаунт Telegram. Для смены аккаунта переключите профиль в Telegram.');return}
+  localStorage.removeItem('yugorno-session');window.yugornoLocalDemo=false;window.yugornoTelegramUser=null;window.yugornoRole='guest';window.yugornoIsModerator=false;
+  document.getElementById('my-trip-list')?.replaceChildren();document.getElementById('my-community-list')?.replaceChildren();document.getElementById('my-trips-panel')?.setAttribute('hidden','');document.getElementById('my-communities-panel')?.setAttribute('hidden','');
+  renderAccountState('guest');await loadFeaturedDestinations();await loadPublishedTrips();await loadPublishedCommunities();await loadJourneyTab('points');toast('Вы вышли из аккаунта');
+}
+async function refreshAuthenticatedUI(authMethod=''){
+  const response=await fetch('/api/session',{headers:yugornoAuthHeaders(),cache:'no-store'}),session=await response.json();
+  if(!response.ok||!session.authenticated){renderAccountState('guest');return false}
+  window.yugornoTelegramUser=session.user;renderAccountState(session.role,session.user,authMethod||session.user.authMethod);
+  const displayName=[session.user.first_name,session.user.last_name].filter(Boolean).join(' ')||(session.user.username?'@'+session.user.username:'Путешественник');
+  const profileHeading=document.getElementById('profile-display-name');if(profileHeading)profileHeading.textContent=displayName;
+  await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();await loadFeaturedDestinations();await loadJourneyTab('points');return true;
+}
+async function authenticateTelegram(tg){
+  if(!tg?.initData)return;
+  try{const response=await fetch('/api/auth/telegram',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tg.initData})});const result=await response.json();if(!response.ok||!result.ok||!result.user)throw new Error('Telegram auth failed');window.yugornoTelegramUser=result.user;await refreshAuthenticatedUI('telegram')}
+  catch(error){console.warn('Не удалось подтвердить Telegram-пользователя:',error.message)}
+}
+(function initTelegramWebApp(){
+  const tg=window.Telegram?.WebApp;if(!tg)return;tg.ready();tg.expand();
+  document.documentElement.style.setProperty('--telegram-viewport-height',`${tg.viewportHeight||window.innerHeight}px`);
+  tg.onEvent?.('viewportChanged',()=>document.documentElement.style.setProperty('--telegram-viewport-height',`${tg.viewportHeight||window.innerHeight}px`));
+  if(tg.themeParams?.bg_color)document.documentElement.style.setProperty('--tg-bg',tg.themeParams.bg_color);
+  authenticateTelegram(tg);
+})();
 async function initLocalDemoMode(){
-  if(window.Telegram?.WebApp?.initData){await loadFeaturedDestinations();await loadJourneyTab('points');return}
   try{
-    const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)return;
-    const status=await response.json();if(!status.localDemoEnabled)return;
-    window.yugornoLocalDemo=true;window.yugornoTelegramUser={id:'local-tester',first_name:'КУНДЫШ',username:'local-admin'};await loadFeaturedDestinations();
-    const label=document.querySelector('.user span');if(label)label.textContent='КУНДЫШ';
-    const profileHeading=document.querySelector('#profile .panel h3');if(profileHeading)profileHeading.textContent='КУНДЫШ';const profileAvatar=document.querySelector('#profile .panel .avatar');if(profileAvatar)profileAvatar.textContent='К';
-    const note=document.querySelector('#profile .panel small');if(note)note.textContent='Локальный режим проверки. Данные хранятся только на этом компьютере.';
-    await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();await loadJourneyTab('points');
-  }catch(error){console.warn('Локальный режим недоступен:',error.message)}
+    const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)return;const status=await response.json();
+    window.yugornoLocalDemoAvailable=Boolean(status.localDemoEnabled);window.yugornoWhatsappAuthAvailable=Boolean(status.whatsappAuthAvailable);
+    if(window.Telegram?.WebApp?.initData){await loadFeaturedDestinations();await loadJourneyTab('points');return}
+    const sessionToken=localStorage.getItem('yugorno-session');
+    if(sessionToken){if(await refreshAuthenticatedUI('whatsapp'))return;localStorage.removeItem('yugorno-session')}
+    renderAccountState('guest');await loadFeaturedDestinations();await loadPublishedTrips();await loadPublishedCommunities();await loadJourneyTab('points');
+  }catch(error){console.warn('Не удалось инициализировать гостевой режим:',error.message)}
 }
 initLocalDemoMode();
 
