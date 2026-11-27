@@ -79,6 +79,8 @@ const tileLayers={
 function api(path,options={}){const headers={...(options.headers||{})};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
 function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function showToast(message){if(typeof window.toast==="function")window.toast(message);else console.info(message)}
+function hasOwnerSession(){return Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem("yugorno-session")||window.yugornoLocalDemo)}
+function requireOwnerSession(){if(hasOwnerSession())return true;showToast("Чтобы открыть корзину и управлять публикациями, войдите в аккаунт.");return false}
 async function askUserConfirmation(message){if(typeof window.askConfirm==="function")return window.askConfirm(message);return window.confirm(message)}
 
 function miniMapPreview(latValue,lngValue,label){
@@ -433,11 +435,13 @@ async function loadModeration(){
 }
 
 async function trashOwnerPublication(kind,id,title){
+ if(!requireOwnerSession())return;
  if(!await askUserConfirmation('Переместить «'+title+'» в корзину? Её можно будет восстановить.'))return;
  try{await api('/api/my/publications/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id),{method:'DELETE'});await loadMyPublications();await loadPlaces();routes=(await api('/api/routes')).items||[];if(activeMode==="routes")renderSide();window.loadJourneyTab?.("points",true);window.loadJourneyTab?.("routes",true);showToast('Публикация перемещена в корзину')}
  catch(error){showToast(error.message)}
 }
 async function loadMyTrash(){
+ if(!requireOwnerSession())return;
  try{
   const data=await api('/api/my/trash'),items=data.items||[],host=document.getElementById('map-side-content');
   document.getElementById('map-side-title').textContent='Корзина · '+items.length;
@@ -446,6 +450,7 @@ async function loadMyTrash(){
  }catch(error){showToast('Не удалось открыть корзину: '+error.message)}
 }
 async function loadMyPublications(){
+ if(!requireOwnerSession())return;
  try{
   const [p,r,i]=await Promise.all([api("/api/my/places"),api("/api/my/routes"),api("/api/my/impressions")]);
   const items=[
