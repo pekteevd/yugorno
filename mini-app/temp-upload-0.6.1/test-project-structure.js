@@ -208,6 +208,10 @@ test('moderation cards show full place descriptions and group pending photos wit
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /map-moderation-description/);
   assert.match(map, /map-moderation-gallery/);
+  assert.match(map, /map-moderation-map/);
+  assert.match(map, /export\\/embed\\.html\\?bbox=/);
+  assert.match(map, /marker=/);
+  assert.match(map, /Координаты места не указаны/);
   assert.match(map, /const impressionsByPlace=new Map\(\)/);
   assert.match(map, /impressionsByPlace\.get\(place\.id\)/);
   assert.match(map, /Автор не добавил описание\./);
