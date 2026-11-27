@@ -160,7 +160,9 @@ test('place creation selects coordinates by search, map click, or device GPS wit
   assert.match(map, /id="place-location-search"/);
   assert.match(map, /id="place-location-map"/);
   assert.match(map, /id="place-location-gps"/);
-  assert.match(map, /placePickerClickHandler=event=>/);\n  assert.match(map, /mouseEventToLatLng\(event\)/);\n  assert.match(map, /removeEventListener\("click",placePickerClickHandler\)/);
+  assert.match(map, /placePickerClickHandler=event=>/);
+  assert.match(map, /mouseEventToLatLng\(event\)/);
+  assert.match(map, /removeEventListener\("click",placePickerClickHandler\)/);
   assert.match(map, /navigator\.geolocation\.getCurrentPosition/);
   assert.match(map, /name="lat"><input type="hidden" name="lng"/);
   assert.doesNotMatch(map, /name="lat" type="number"[^>]*required/);
