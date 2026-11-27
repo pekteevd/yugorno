@@ -264,7 +264,7 @@ test('journey and map list cards render uploaded photos with a visual fallback',
   assert.match(map, /map-place-photo/);
   assert.match(map, /p\.photoUrls\?\.\[0\]/);
   assert.match(map, /const cover=r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)\?\.photoUrls\?\.\[0\];const preview=cover\?/);
-  assert.match(map, /cover\?'<img class="map-place-photo"/);
+  assert.match(map, /const preview=cover\?'<img class="map-place-photo"/);
 });
 
 test('journeys provide separate creation flows and moderator editing for demo destinations', async () => {
