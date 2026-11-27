@@ -419,15 +419,17 @@ test('map trash controls use the shared confirmation and toast helpers and publi
   assert.match(map, /data-trash-restore/);
 });
 
-test('server exposes explicit guest, member, moderator and admin session roles', async () => {
+test('server exposes explicit guest, user, moderator and admin session roles', async () => {
   const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
   const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
   assert.match(server, /YUGORNO_ADMIN_IDS/);
   assert.match(server, /function userRole\(userId\)/);
+  assert.match(server, /return "user"/);
   assert.match(server, /app\.get\("\/api\/session"/);
   assert.match(server, /role: "guest"/);
   assert.match(server, /role !== "admin" && role !== "moderator"/);
   assert.match(env, /YUGORNO_ADMIN_IDS=/);
+  assert.match(env, /YUGORNO_MODERATOR_IDS=/);
 });
 
 
