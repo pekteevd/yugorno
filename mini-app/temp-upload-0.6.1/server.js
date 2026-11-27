@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, listMyRoutes, updateRoute, listMyImpressions, updateImpression, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -339,6 +339,26 @@ app.get("/api/places/:id", async (req, res, next) => {
 });
 app.get("/api/my/places", requireTelegramUser, async (req, res, next) => {
   try { res.json({ ok: true, items: await listMyPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.get("/api/my/routes", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyRoutes(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.patch("/api/my/routes/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await updateRoute(req.telegramUser.id, req.params.id, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "route_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.get("/api/my/impressions", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyImpressions(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.patch("/api/my/impressions/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await updateImpression(req.telegramUser.id, req.params.id, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "impression_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
 app.post("/api/places", requireTelegramUser, async (req, res, next) => {
   try {
