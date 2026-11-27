@@ -260,4 +260,6 @@ test('journey and map list cards render uploaded photos with a visual fallback',
   assert.match(html, /journeyImage\(p\.photoUrls\?\.\[0\]/);
   assert.match(map, /map-place-photo/);
   assert.match(map, /p\.photoUrls\?\.\[0\]/);
+  assert.match(map, /r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)/);
+  assert.match(map, /cover\?'<img class="map-place-photo"/);
 });
