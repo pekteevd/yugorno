@@ -430,7 +430,7 @@ async function loadModeration(){
  }catch(error){showToast("Не удалось открыть очередь модерации: "+error.message)}
 }
 
-async async function trashOwnerPublication(kind,id,title){
+async function trashOwnerPublication(kind,id,title){
  if(!await askUserConfirmation('Переместить «'+title+'» в корзину? Её можно будет восстановить.'))return;
  try{await api('/api/my/publications/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id),{method:'DELETE'});await loadMyPublications();await loadPlaces();routes=(await api('/api/routes')).items||[];if(activeMode==="routes")renderSide();window.loadJourneyTab?.("points",true);window.loadJourneyTab?.("routes",true);showToast('Публикация перемещена в корзину')}
  catch(error){showToast(error.message)}
