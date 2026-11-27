@@ -325,15 +325,17 @@ async function submitModal(){
       result=await telegramApi(`/api/admin/destinations/${encodeURIComponent(activeDestinationSlug)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       await loadFeaturedDestinations();
     }else{
-      const isRoute=modalType==='route',isMeeting=modalType==='meeting',isTrip=modalType==='trip'||modalType==='edit-trip';
-      const editing=modalType==='edit-trip';
-      const endpoint=isRoute?'/api/routes':editing?`/api/my/trips/${encodeURIComponent(activeEditId)}`:'/api/trips';
+      const isRoute=modalType==='route',isMeeting=modalType==='meeting',isCommunity=modalType==='community'||modalType==='edit-community',isTrip=modalType==='trip'||modalType==='edit-trip';
+      const editing=modalType==='edit-trip'||modalType==='edit-community';
+      const endpoint=isRoute?'/api/routes':isCommunity?(editing?`/api/my/communities/${encodeURIComponent(activeEditId)}`:'/api/communities'):editing?`/api/my/trips/${encodeURIComponent(activeEditId)}`:'/api/trips';
       result=await telegramApi(endpoint,{method:editing?'PATCH':'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
       if(isRoute){journeyRoutes=[];await loadJourneyTab('routes',true)}
+      else if(isCommunity){await loadPublishedCommunities();await loadMyCommunities()}
       else{await loadPublishedTrips();await loadMyTrips();journeyTrips=[];await loadJourneyTab(isMeeting?'meetings':'trips',true)}
     }
     closeModal();
     if(modalType==='destination'){showView('home');toast('Карточка направления обновлена')}
+    else if(modalType==='community'||modalType==='edit-community'){showView('communities');toast('Сообщество сохранено')}
     else{showView('trips');toast(modalType==='route'?'Маршрут отправлен на модерацию':modalType==='meeting'?'Встреча опубликована':'Поездка опубликована')}
   }catch(error){toast(error.message||'Ошибка сохранения')}
 }
@@ -464,11 +466,11 @@ async function loadServerProfile(){
 }
 
 async function initLocalDemoMode(){
-  if(window.Telegram?.WebApp?.initData){await loadJourneyTab('points');return}
+  if(window.Telegram?.WebApp?.initData){await loadFeaturedDestinations();await loadJourneyTab('points');return}
   try{
     const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)return;
     const status=await response.json();if(!status.localDemoEnabled)return;
-    window.yugornoLocalDemo=true;window.yugornoTelegramUser={id:'local-tester',first_name:'КУНДЫШ',username:'local-admin'};
+    window.yugornoLocalDemo=true;window.yugornoTelegramUser={id:'local-tester',first_name:'КУНДЫШ',username:'local-admin'};await loadFeaturedDestinations();
     const label=document.querySelector('.user span');if(label)label.textContent='КУНДЫШ';
     const profileHeading=document.querySelector('#profile .panel h3');if(profileHeading)profileHeading.textContent='КУНДЫШ';const profileAvatar=document.querySelector('#profile .panel .avatar');if(profileAvatar)profileAvatar.textContent='К';
     const note=document.querySelector('#profile .panel small');if(note)note.textContent='Локальный режим проверки. Данные хранятся только на этом компьютере.';
