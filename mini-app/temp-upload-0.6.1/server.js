@@ -71,8 +71,8 @@ app.get("/api/map-uploads/:filename", async (req, res, next) => {
     const initData = req.get("X-Telegram-Init-Data");
     const auth = initData ? validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS) : null;
     const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
-    const userId = auth?.ok && auth.user?.id ? String(auth.user.id) : phoneSession?.id || null;
-    const isModerator = MAP_MODERATORS.has(String(userId || ""));
+    const userId = auth?.ok && auth.user?.id ? String(auth.user.id) : phoneSession?.id || (isLocalDemoAdminRequest(req) ? "local-tester" : null);
+    const isModerator = isLocalDemoAdminRequest(req) || MAP_MODERATORS.has(String(userId || ""));
     const allowed = await canViewMapUpload(userId, filename, isModerator);
     if (!allowed) return res.sendStatus(404);
     const isPublic = await canViewMapUpload(null, filename, false);
@@ -294,12 +294,16 @@ app.get("/api/my/trips/:id/interests", requireTelegramUser, async (req, res, nex
 });
 
 
+function isLocalDemoAdminRequest(req) {
+  const host = String(req.headers.host || '').split(':')[0].toLowerCase();
+  const remote = req.socket?.remoteAddress || '';
+  const loopbackHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  const loopbackRemote = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+  return localDemoEnabled && loopbackHost && loopbackRemote && req.get('X-Local-Demo-User') === 'local-tester';
+}
 function requireMapModerator(req, res, next) {
   const userId = String(req.telegramUser?.id || "");
-  // Local administrator is available only in the explicitly local demo mode,
-  // whose authentication is already restricted to loopback requests above.
-  const localDemoAdmin = localDemoEnabled && userId === "local-tester";
-  if (!localDemoAdmin && !MAP_MODERATORS.has(userId)) return res.status(403).json({ ok: false, error: "moderator_required" });
+  if (!isLocalDemoAdminRequest(req) && !MAP_MODERATORS.has(userId)) return res.status(403).json({ ok: false, error: "moderator_required" });
   next();
 }
 function authorLabel(user) {
