@@ -406,7 +406,75 @@ async function loadModeration(){
   });
  }catch(error){showToast("Не удалось открыть очередь модерации: "+error.message)}
 }
-function bindControls(){const saved=document.createElement("button");saved.type="button";saved.textContent="Сохранённое";saved.onclick=async()=>{try{const data=await api("/api/my/saved-places");document.getElementById("map-side-title").textContent="Сохранённые места";document.getElementById("map-side-content").innerHTML=data.items.length?data.items.map(p=>'<div class="map-place"><button type="button" data-place="'+safe(p.id)+'">'+safe(p.title)+'</button><div class="map-muted">'+safe(p.category)+'</div></div>').join(""):'<div class="map-empty">Пока ничего не сохранено</div>';document.getElementById("map-side-content").querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>openPlace(b.dataset.place))}catch(e){showToast(e.message)}};document.getElementById("map-add-btn").after(saved);document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));document.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>setLayer(b.dataset.layer)));document.getElementById("map-search-btn").onclick=loadPlaces;document.getElementById("map-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadPlaces()});document.getElementById("map-category").onchange=loadPlaces}
+
+async function loadMyPublications(){
+ try{
+  const [p,r,i]=await Promise.all([api("/api/my/places"),api("/api/my/routes"),api("/api/my/impressions")]);
+  const items=[
+   ...(p.items||[]).map(item=>({...item,ownerKind:"place"})),
+   ...(r.items||[]).map(item=>({...item,ownerKind:"route"})),
+   ...(i.items||[]).map(item=>({...item,ownerKind:"impression"}))
+  ].sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
+  const host=document.getElementById("map-side-content");
+  document.getElementById("map-side-title").textContent="Мои публикации · "+items.length;
+  host.innerHTML=items.length?items.map(item=>{
+   const cover=item.ownerKind==="place"?item.photoUrls?.[0]:item.ownerKind==="impression"?item.photoUrls?.[0]:item.stops?.find(stop=>stop.photoUrls?.[0])?.photoUrls?.[0];
+   const kind={place:"Точка",route:"Маршрут",impression:"Впечатление"}[item.ownerKind];
+   const image=cover?'<img class="map-place-photo" src="'+safe(cover)+'" alt="'+safe(item.title||item.placeTitle||kind)+'" loading="lazy">':'<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">'+(item.ownerKind==="route"?"🧭":item.ownerKind==="impression"?"📷":"📍")+'</div>';
+   const title=item.title||item.placeTitle||"Впечатление";
+   return '<article class="map-place map-place-card">'+image+'<strong>'+safe(title)+'</strong><div class="map-muted">'+kind+' · Статус: '+safe(item.status||"")+'</div><button type="button" class="btn outline" data-owner-edit="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'">Редактировать</button></article>';
+  }).join(""):'<div class="map-empty">Пока нет собственных публикаций.</div>';
+  host.querySelectorAll("[data-owner-edit]").forEach(button=>button.onclick=()=>{
+   const kind=button.dataset.ownerEdit,id=button.dataset.ownerId,item=items.find(entry=>entry.ownerKind===kind&&entry.id===id);
+   if(!item)return;
+   if(kind==="place")editOwnPlace(item);
+   else if(kind==="route")editOwnRoute(item);
+   else editOwnImpression(item);
+  });
+ }catch(error){showToast("Не удалось загрузить ваши публикации: "+error.message)}
+}
+function ownerEditor(title,body,onSubmit){
+ const host=document.getElementById("map-form-host");
+ host.innerHTML='<form class="map-form" id="owner-edit-form"><h4 class="wide">'+safe(title)+'</h4>'+body+'<button class="btn" type="submit">Сохранить изменения</button><button class="btn outline" type="button" id="owner-edit-cancel">Отмена</button></form>';
+ const form=document.getElementById("owner-edit-form");
+ document.getElementById("owner-edit-cancel").onclick=()=>host.replaceChildren();
+ form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));host.replaceChildren();await loadMyPublications();await loadPlaces();showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
+}
+function editOwnPlace(place){
+ const photos=place.photoUrls||[];
+ const body='<label>Название<input name="title" maxlength="120" required value="'+safe(place.title)+'"></label><label>Категория<select name="category">'+categories.map(category=>'<option'+(category===place.category?' selected':'')+'>'+safe(category)+'</option>').join("")+'</select></label><label class="wide">Регион<input name="region" maxlength="120" value="'+safe(place.region||"")+'"></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(place.description||"")+'</textarea></label><div class="wide map-muted">Координаты: '+Number(place.lat).toFixed(5)+', '+Number(place.lng).toFixed(5)+' · Чтобы изменить расположение, используйте выбор точки при создании новой версии места.</div><div class="wide map-moderation-gallery">'+photos.map(url=>'<img src="'+safe(url)+'" alt="Текущее фото">').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
+ ownerEditor("Редактировать точку",body,async form=>{
+  const urls=[...photos];const files=[...(form.getAll("photos")||[])].filter(file=>file&&file.size);
+  if(urls.length+files.length>8)throw new Error("Всего можно сохранить не более 8 фотографий");
+  for(const file of files)urls.push(await uploadImage(file));
+  await api("/api/my/places/"+encodeURIComponent(place.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:form.get("title"),category:form.get("category"),region:form.get("region"),description:form.get("description"),lat:place.lat,lng:place.lng,coordinateAccuracy:place.coordinateAccuracy,photoUrls:urls})});
+ });
+}
+function editOwnRoute(route){
+ const selected=new Set(route.stopIds||[]);
+ const body='<label class="wide">Название маршрута<input name="title" maxlength="120" required value="'+safe(route.title)+'"></label><label>Передвижение<select name="transport"><option value="mixed">Смешанное</option><option value="walking">Пешком</option><option value="cycling">Велосипед</option><option value="driving">Автомобиль</option><option value="water">По воде</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(route.description||"")+'</textarea></label><div class="wide map-muted">Выберите остановки в нужном порядке. Существующий GPS-трек сохранится, если не загружать новый GPX.</div>'+places.map(place=>'<label><span><input type="checkbox" name="stopIds" value="'+safe(place.id)+'" '+(selected.has(place.id)?"checked":"")+'> '+safe(place.title)+'</span></label>').join("")+'<label class="wide">Заменить GPS-трек файлом GPX (необязательно)<input name="gpx" type="file" accept=".gpx,application/gpx+xml"></label>';
+ ownerEditor("Редактировать маршрут",body,async form=>{
+  const stopIds=form.getAll("stopIds");
+  if(stopIds.length<2)throw new Error("В маршруте должно быть не менее двух остановок");
+  const payload={title:form.get("title"),transport:form.get("transport"),description:form.get("description"),stopIds};
+  const file=form.get("gpx");
+  if(file?.size){payload.trackPoints=await parseGPX(file)}
+  await api("/api/my/routes/"+encodeURIComponent(route.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+ });
+ const select=document.querySelector('#owner-edit-form select[name="transport"]');if(select)select.value=route.transport||"mixed";
+}
+function editOwnImpression(item){
+ const photos=item.photoUrls||[];
+ const body='<div class="wide map-muted">Место: '+safe(item.placeTitle||"")+'</div><label class="wide">Текст впечатления<textarea name="text" maxlength="3000">'+safe(item.text||"")+'</textarea></label><div class="wide map-moderation-gallery">'+photos.map(url=>'<img src="'+safe(url)+'" alt="Текущее фото впечатления">').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
+ ownerEditor("Редактировать впечатление",body,async form=>{
+  const urls=[...photos];const files=[...(form.getAll("photos")||[])].filter(file=>file&&file.size);
+  if(urls.length+files.length>8)throw new Error("Всего можно сохранить не более 8 фотографий");
+  for(const file of files)urls.push(await uploadImage(file));
+  await api("/api/my/impressions/"+encodeURIComponent(item.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({text:form.get("text"),photoUrls:urls})});
+ });
+}
+
+function bindControls(){const saved=document.createElement("button");saved.type="button";saved.textContent="Сохранённое";saved.onclick=async()=>{try{const data=await api("/api/my/saved-places");document.getElementById("map-side-title").textContent="Сохранённые места";document.getElementById("map-side-content").innerHTML=data.items.length?data.items.map(p=>'<div class="map-place"><button type="button" data-place="'+safe(p.id)+'">'+safe(p.title)+'</button><div class="map-muted">'+safe(p.category)+'</div></div>').join(""):'<div class="map-empty">Пока ничего не сохранено</div>';document.getElementById("map-side-content").querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>openPlace(b.dataset.place))}catch(e){showToast(e.message)}};document.getElementById("map-add-btn").after(saved);const mine=document.createElement("button");mine.type="button";mine.textContent="Мои публикации";mine.onclick=loadMyPublications;document.getElementById("map-add-btn").after(mine);document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));document.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>setLayer(b.dataset.layer)));document.getElementById("map-search-btn").onclick=loadPlaces;document.getElementById("map-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadPlaces()});document.getElementById("map-category").onchange=loadPlaces}
 window.YugornoMap={openPlace:id=>{if(typeof window.showView==="function")window.showView("map");setTimeout(()=>openPlace(id),140)},showRoute:async id=>{try{routes=(await api("/api/routes")).items;const route=routes.find(item=>item.id===id);if(!route)return;if(typeof window.showView==="function")window.showView("map");setTimeout(()=>renderRouteOnMap(route),180)}catch(error){showToast("Не удалось открыть маршрут: "+error.message)}},refreshPlaces:()=>loadPlaces()};
 async function boot(){try{await ensureLeaflet();if(!window.L.markerClusterGroup){for(const [key,url] of [["mc","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"],["mcd","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"]]){const link=document.createElement("link");link.rel="stylesheet";link.href=url;link.dataset[key]="1";document.head.append(link)}await loadScript("https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")}initMap();bindControls();bindAdd();checkModerator();setLayer("standard");await loadPlaces();document.querySelector('[data-mode="map"]').classList.add("active");document.querySelectorAll('.nav button[data-view="map"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>{map?.invalidateSize();loadPlaces()},100)));}catch(e){document.getElementById("yugorno-map").innerHTML='<div class="map-empty">Не удалось загрузить карту. Проверь подключение к интернету.</div>';console.error(e)}}
 boot();
