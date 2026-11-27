@@ -263,3 +263,22 @@ test('journey and map list cards render uploaded photos with a visual fallback',
   assert.match(map, /r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)/);
   assert.match(map, /cover\?'<img class="map-place-photo"/);
 });
+
+test('people tab uses real profiles and explicit opt-in instead of invented demo cards', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(html, /id="people-own-profile"/);
+  assert.match(html, /id="people-directory"/);
+  assert.match(html, /id="profile-discoverable"/);
+  assert.match(html, /function loadPeopleDirectory\(/);
+  assert.match(html, /telegramApi\('\/api\/people'\)/);
+  assert.doesNotMatch(html, /Алексей/);
+  assert.doesNotMatch(html, /Марина/);
+  assert.doesNotMatch(html, /Илья/);
+  assert.match(server, /app\.get\("\/api\/people", requireTelegramUser/);
+  assert.match(server, /listPublicProfiles\(_req\.telegramUser\.id\)/);
+  assert.match(store, /discoverable: input\.discoverable === true/);
+  assert.match(store, /profile\.discoverable === true/);
+  assert.match(store, /export async function listPublicProfiles\(/);
+});
