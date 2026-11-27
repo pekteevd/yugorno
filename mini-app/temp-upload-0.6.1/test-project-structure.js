@@ -148,6 +148,12 @@ test('GPS mismatch warnings use the Telegram confirmation dialog when available'
 });
 
 
+
+test('server permits geolocation only for the same-origin app while keeping camera and microphone disabled', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  assert.match(server, /Permissions-Policy", "camera=\(\), microphone=\(\), geolocation=\(self\)"/);
+});
+
 test('place creation selects coordinates by search, map click, or device GPS without manual coordinate entry', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /id="place-location-query"/);
