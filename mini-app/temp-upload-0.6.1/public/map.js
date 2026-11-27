@@ -447,7 +447,7 @@ async function loadMyPublications(){
    const fallback=item.ownerKind==="impression"?miniMapPreview(item.placeLat,item.placeLng,item.placeTitle):"";
    const image=cover?'<img class="map-place-photo" data-owner-private-image="'+safe(cover)+'" alt="'+safe(item.title||item.placeTitle||kind)+'" loading="lazy">':(fallback||'<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">'+(item.ownerKind==="route"?"🧭":item.ownerKind==="impression"?"📷":"📍")+'</div>');
    const title=item.title||item.placeTitle||"Впечатление";
-   return '<article class="map-place map-place-card">'+image+'<strong>'+safe(title)+'</strong><div class="map-muted">'+kind+' · Статус: '+safe(item.status||"")+'</div><button type="button" class="btn outline" data-owner-edit="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'">Редактировать</button></article>';
+   return '<article class="map-place map-place-card">'+image+'<strong>'+safe(title)+'</strong><div class="map-muted">'+kind+' · Статус: '+safe(item.status||"")+'</div>'+((item.status==="hidden"||item.status==="archived")?'<div class="map-muted">Редактирование недоступно для скрытой или архивной публикации.</div>':'<button type="button" class="btn outline" data-owner-edit="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'">Редактировать</button>')+'</article>';
   }).join(""):'<div class="map-empty">Пока нет собственных публикаций.</div>';
   hydrateOwnerImages(host);
   host.querySelectorAll("[data-owner-edit]").forEach(button=>button.onclick=()=>{
