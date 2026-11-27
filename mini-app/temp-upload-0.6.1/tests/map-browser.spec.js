@@ -36,9 +36,9 @@ try {
   const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   assert.equal(response?.status(), 200, "Mini App should return HTTP 200");
   await page.locator('[data-view="map"]').click();
-  await page.locator("#yugorno-map .leaflet-container").waitFor({ state: "attached", timeout: 15000 });
+  await page.locator("#yugorno-map.leaflet-container").waitFor({ state: "attached", timeout: 15000 });
   await page.locator("#map-add-btn").click();
-  const picker = page.locator("#place-location-map .leaflet-container");
+  const picker = page.locator("#place-location-map.leaflet-container");
   await picker.waitFor({ state: "visible", timeout: 15000 });
 
   // Exercise the real Leaflet map click path and verify that the hidden form fields are populated.
