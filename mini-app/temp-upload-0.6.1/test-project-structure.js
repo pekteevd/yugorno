@@ -191,6 +191,6 @@ test('place geocoding is explicit, cached, throttled, and uses safe text renderi
   assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
   assert.match(map, /1100-\(Date\.now\(\)-geocoderLastRequest\)/);
   assert.match(map, /item\.textContent=label/);
-  assert.match(map, /locationSearch\.addEventListener\("click",event=>\{event\.preventDefault\(\);searchPlaceLocation\(\)\}\)/);
-  assert.match(map, /locationQuery\.addEventListener\("keydown",event=>\{if\(event\.key==="Enter"\)\{event\.preventDefault\(\);searchPlaceLocation\(\)\}\}\)/);
+  assert.match(map, /locationSearch\.onclick=event=>\{event\.preventDefault\(\);searchPlaceLocation\(\)\}/);
+  assert.match(map, /locationQuery\.onkeydown=event=>\{if\(event\.key==="Enter"\)\{event\.preventDefault\(\);searchPlaceLocation\(\)\}\}/);
 });
