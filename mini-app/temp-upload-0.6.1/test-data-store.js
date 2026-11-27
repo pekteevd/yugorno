@@ -139,11 +139,17 @@ test('map places, impressions, moderation, routes and saves persist without expo
   await assert.rejects(() => store.createPlace(1, { title: 'Плохие координаты', category: 'Природа', lat: 120, lng: 0 }), TypeError);
 });
 
-test('map moderation queue returns pending place and impression records', async () => {
+test('pending place and its attached impressions are reviewed together while published-place impressions stay separate', async () => {
   const p = await store.createPlace(1201, { title: 'Водопад', category: 'Природа', lat: 55, lng: 46 });
-  const i = await store.createImpression(1201, p.id, { text: 'После дождя' });
-  assert.equal((await store.listMapModerationQueue('places')).some(item => item.id === p.id), true);
-  assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === i.id), true);
+  const attached = await store.createImpression(1201, p.id, { text: 'После дождя' });
+  const placeQueue = await store.listMapModerationQueue('places');
+  assert.equal(placeQueue.some(item => item.id === p.id), true);
+  assert.equal(placeQueue.find(item => item.id === p.id).pendingImpressions.some(item => item.id === attached.id), true);
+  assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === attached.id), false);
+  await store.moderatePlace(p.id, 'published');
+  assert.equal((await store.listImpressions(p.id)).some(item => item.id === attached.id), true);
+  const later = await store.createImpression(1202, p.id, { text: 'Позднее впечатление' });
+  assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === later.id), true);
 });
 
 
@@ -162,6 +168,21 @@ test('stores validated GPX track points with a route and rejects malformed track
   assert.equal(route.trackPoints.length, 3);
   assert.equal((await store.listMapModerationQueue('routes')).find(item => item.id === route.id).trackPoints.length, 3);
   await assert.rejects(() => store.createRoute(1401, { title: 'Плохой трек', stopIds: [a.id, b.id], trackPoints: [{ lat: 120, lng: 47 }, { lat: 56, lng: 47 }] }), TypeError);
+});
+
+
+test('initial place photos are private and follow the place moderation decision', async () => {
+  const filename = '223e4567-e89b-12d3-a456-426614174000.jpg';
+  const url = \`/api/map-uploads/\${filename}\`;
+  const place = await store.createPlace(1551, { title: 'Лесная поляна', category: 'Природа', lat: 55.2, lng: 46.3, photoUrls: [url] });
+  assert.deepEqual(place.photoUrls, [url]);
+  assert.equal(await store.canViewMapUpload(1551, filename, false), true);
+  assert.equal(await store.canViewMapUpload(1552, filename, false), false);
+  const queued = (await store.listMapModerationQueue('places')).find(item => item.id === place.id);
+  assert.deepEqual(queued.photoUrls, [url]);
+  await store.moderatePlace(place.id, 'published');
+  assert.equal(await store.canViewMapUpload(null, filename, false), true);
+  assert.deepEqual((await store.getPlace(place.id)).photoUrls, [url]);
 });
 
 
