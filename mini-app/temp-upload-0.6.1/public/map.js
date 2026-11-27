@@ -76,7 +76,7 @@ const tileLayers={
  satellite:{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",attr:'Tiles © <a href="https://www.esri.com/">Esri</a>'},
  terrain:{url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",attr:'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, style © <a href="https://opentopomap.org/">OpenTopoMap</a>'}
 };
-function api(path,options={}){const initData=window.Telegram?.WebApp?.initData;const headers={...(options.headers||{})};if(initData)headers["X-Telegram-Init-Data"]=initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
+function api(path,options={}){const headers={...(options.headers||{})};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
 function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function showToast(message){if(typeof window.toast==="function")window.toast(message);else console.info(message)}
 async function askUserConfirmation(message){if(typeof window.askConfirm==="function")return window.askConfirm(message);return window.confirm(message)}
@@ -421,7 +421,7 @@ async function loadModeration(){
   document.getElementById("map-side-title").textContent="Очередь модерации · "+cards.length;
   host.innerHTML=cards.length?cards.join(""):'<div class="map-empty">Очередь пуста. Новых материалов на проверке нет.</div>';
   for(const img of host.querySelectorAll("img[data-private-image]")){
-   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}else{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Фото недоступно для просмотра</span>');img.closest("a")?.remove()}}catch{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Не удалось загрузить фото</span>');img.closest("a")?.remove()}
+   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}else{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Фото недоступно для просмотра</span>');img.closest("a")?.remove()}}catch{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Не удалось загрузить фото</span>');img.closest("a")?.remove()}
   }
   host.querySelectorAll("[data-mod-preview-route]").forEach(button=>button.onclick=()=>{const route=pendingRoutes.find(item=>item.id===button.dataset.modPreviewRoute);if(route)renderRouteOnMap(route)});
   host.querySelectorAll("[data-mod-status]").forEach(button=>button.onclick=async()=>{
@@ -479,7 +479,7 @@ function releaseOwnerImages(host){host?.querySelectorAll("img[data-owner-object-
 async function hydrateOwnerImages(host){
  for(const img of host.querySelectorAll("img[data-owner-private-image]")){
   try{
-   const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";
+   const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";
    const response=await fetch(img.dataset.ownerPrivateImage,{headers});
    if(!response.ok)throw new Error("Фото недоступно");
    const url=URL.createObjectURL(await response.blob());img.src=url;img.dataset.ownerObjectUrl=url;
