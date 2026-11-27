@@ -110,6 +110,11 @@ export async function updateTrip(userId, tripId, input) {
     if (Object.hasOwn(input, 'capacity')) trip.capacity = Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0));
     if (Object.hasOwn(input, 'imageUrl')) trip.imageUrl = cleanText(input.imageUrl, 500);
     if (Object.hasOwn(input, 'imageUrls')) { trip.imageUrls = cleanImageUrls(input.imageUrls); trip.imageUrl = trip.imageUrls[0] || ''; }
+    if (Object.hasOwn(input, 'lat') || Object.hasOwn(input, 'lng')) {
+      trip.lat = validCoordinate(input.lat, -90, 90);
+      trip.lng = validCoordinate(input.lng, -180, 180);
+      if (trip.lat === null || trip.lng === null) { trip.lat = null; trip.lng = null; }
+    }
     if (!trip.title || !trip.place || !trip.kind) throw new TypeError('title, place and kind are required');
     trip.updatedAt = new Date().toISOString();
     return { ...trip };
@@ -130,7 +135,7 @@ export async function createTrip(userId, input) {
   const trip = {
     id: randomUUID(), authorId: String(userId), title: cleanText(input.title, 120),
     place: cleanText(input.place, 160), date: cleanText(input.date, 100),
-    kind: cleanText(input.kind, 60), description: cleanText(input.description, 1200), startDate: cleanText(input.startDate, 40), endDate: cleanText(input.endDate, 40), price: cleanText(input.price, 120), capacity: Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0)), imageUrl: cleanText(input.imageUrl, 500), imageUrls: cleanImageUrls(input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : [])),
+    kind: cleanText(input.kind, 60), description: cleanText(input.description, 1200), startDate: cleanText(input.startDate, 40), endDate: cleanText(input.endDate, 40), price: cleanText(input.price, 120), capacity: Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0)), lat: validCoordinate(input.lat, -90, 90), lng: validCoordinate(input.lng, -180, 180), imageUrl: cleanText(input.imageUrl, 500), imageUrls: cleanImageUrls(input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : [])),
     createdAt: new Date().toISOString(), status: 'published'
   };
   if (!trip.title || !trip.place || !trip.kind) throw new TypeError('title, place and kind are required');
@@ -292,6 +297,7 @@ function publicRoute(item) {
   return { ...safe, author: item.authorName || "Участник Югорно" };
 }
 function validCoordinate(value, min, max) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= min && number <= max ? number : null;
 }
