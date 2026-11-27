@@ -353,6 +353,9 @@ test('journey and map cards use photo covers or genuine coordinate-based preview
   assert.match(map, /routeSchematic\(r\)/);
   assert.match(html, /f-existing-photo-gallery/);
   assert.match(html, /f-remove-photo/);
+  assert.match(html, /function journeyFirstPhoto\(item\)/);
+  assert.match(html, /const image=photo\?journeyImage\(photo,r\.title\):\(journeyRouteMap\(r\)/);
+  assert.match(html, /image:photo\?journeyImage\(photo,t\.title\):\(journeyPointMap\(t\)/);
 });
 
 test('meetings require a selected map location and retain coordinates while editing', async () => {
