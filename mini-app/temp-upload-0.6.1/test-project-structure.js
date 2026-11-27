@@ -260,10 +260,10 @@ test('journeys expose points, routes, meetings and trips using the existing publ
 test('journey and map list cards render uploaded photos with a visual fallback', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(html, /journey-card-image/);
-  assert.match(html, /p\.photoUrls\?\.\[0\]\?journeyImage\(p\.photoUrls\[0\]/);
+  assert.match(html, /function journeyFirstPhoto\(item\)/);\n  assert.match(html, /item\?\.imageUrl\|\|item\?\.imageUrls\?\.\[0\]\|\|item\?\.photoUrls\?\.\[0\]/);
   assert.match(map, /map-place-photo/);
   assert.match(map, /p\.photoUrls\?\.\[0\]/);
-  assert.match(map, /r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)/);
+  assert.match(map, /const cover=r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)\?\.photoUrls\?\.\[0\];const preview=cover\?/);
   assert.match(map, /cover\?'<img class="map-place-photo"/);
 });
 
