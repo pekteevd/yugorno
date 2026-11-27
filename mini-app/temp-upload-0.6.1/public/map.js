@@ -213,8 +213,8 @@ function bindAdd(){
   const host=document.getElementById("map-form-host");destroyPlacePicker();host.innerHTML=formMarkup();
   const form=document.getElementById("new-place-form"),photoInput=form.querySelector('input[name="photo"]'),gpsStatus=document.getElementById("new-place-photo-gps"),useGps=document.getElementById("new-place-use-gps");
   const locationSearch=document.getElementById("place-location-search"),locationQuery=document.getElementById("place-location-query");
-  locationSearch.addEventListener("click",event=>{event.preventDefault();searchPlaceLocation()});
-  locationQuery.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}});
+  locationSearch.onclick=event=>{event.preventDefault();searchPlaceLocation()};
+  locationQuery.onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}};
   let photoGps=null;
   document.getElementById("map-form-cancel").onclick=()=>{destroyPlacePicker();host.replaceChildren()};
   document.getElementById("place-location-gps").onclick=useDeviceLocation;
