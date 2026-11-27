@@ -35,6 +35,9 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 @media(max-width:850px){.app{display:block}aside{padding:13px 15px;gap:10px}.brand{display:flex;align-items:baseline;gap:10px}.brand-name{font-size:22px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;padding:9px 12px;font-size:13px}.side-note{display:none}main{padding:22px 16px 45px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:290px;padding:23px}.hero h2{font-size:29px}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.feature-row{grid-template-columns:1fr}.top h1{font-size:25px}.user span{display:none}.hero{min-height:330px}.row-card{align-items:flex-start}.row-img{width:85px;height:85px}}
 
+.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+.journey-create-actions .btn{width:100%;min-height:44px}
+@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr}}
 .journey-tabs button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--forest);padding:10px 15px;font-weight:750}
 .journey-tabs button.active{background:var(--forest);border-color:var(--forest);color:#fff}
 .journey-pane{display:none}.journey-pane.active{display:block}.journey-intro{font-size:13px;color:var(--muted);margin:4px 0 14px}
@@ -75,7 +78,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
       <div class="tag">Место для тех, кому по пути</div>
       <h2>Следующее путешествие может начаться со знакомства.</h2>
       <p>Находи попутчиков, открывай необычные места, присоединяйся к поездкам или собирай собственную компанию.</p>
-      <div class="actions"><button class="btn light" onclick="showView('discover')">Исследовать поездки</button><button class="btn" onclick="openModal('trip')">＋ Создать путешествие</button></div>
+      <div class="actions"><button class="btn light" onclick="showView('discover')">Исследовать поездки</button><button class="btn" onclick="openModal('trip')">＋ Создать поездку</button></div>
     </div>
     <div class="section-head"><h3>Куда можно отправиться</h3><span>Опубликованные поездки и идеи направлений</span></div>
     <div class="grid" id="home-trips"></div>
@@ -111,14 +114,14 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
   </section>
 
   <section class="view" id="trips">
-    <div class="section-head"><h3>Путешествия</h3><button class="btn" onclick="openModal('trip')">＋ Создать путешествие</button></div>
+    <div class="section-head"><h3>Путешествия</h3></div>
     <div class="journey-tabs" role="tablist" aria-label="Разделы путешествий">
       <button type="button" class="active" data-journey-tab="points" role="tab" aria-selected="true">📍 Точки</button>
       <button type="button" data-journey-tab="routes" role="tab" aria-selected="false">🧭 Маршруты</button>
       <button type="button" data-journey-tab="meetings" role="tab" aria-selected="false">🤝 Встречи</button>
       <button type="button" data-journey-tab="trips" role="tab" aria-selected="false">🎒 Поездки</button>
     </div>
-    <div class="actions" style="margin:14px 0 18px">
+    <div class="journey-create-actions">
       <button class="btn outline" type="button" onclick="openJourneyCreate('route')">＋ Создать маршрут</button>
       <button class="btn outline" type="button" onclick="openJourneyCreate('meeting')">＋ Создать встречу</button>
       <button class="btn" type="button" onclick="openJourneyCreate('trip')">＋ Создать поездку</button>
