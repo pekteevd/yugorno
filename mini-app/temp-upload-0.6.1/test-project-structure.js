@@ -295,11 +295,11 @@ test('people tab shows the saved own profile and retains demo profile cards', as
 test('journey creation uses one clear set of responsive actions and consistent trip wording', () => {
   const tripsSection = html.slice(html.indexOf('<section class="view" id="trips">'), html.indexOf('<section class="view" id="map">'));
   assert.ok(tripsSection.length > 0, 'trips section should exist');
-  assert.match(tripsSection, /<div class="section-head"><h3>Путешествия<\\/h3><\\/div>/);
-  assert.doesNotMatch(tripsSection, /Создать путешествие/);
-  assert.match(tripsSection, /class="journey-create-actions"/);
-  for (const label of ['Создать маршрут', 'Создать встречу', 'Создать поездку']) assert.match(tripsSection, new RegExp(label));
-  assert.match(html, /\.journey-create-actions\\{display:grid;grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)/);
-  assert.match(html, /@media\\(max-width:560px\\)\\{\.journey-create-actions\\{grid-template-columns:1fr\\}\\}/);
-  assert.match(html, /onclick="openModal\\('trip'\\)">＋ Создать поездку<\\/button>/);
+  assert.ok(tripsSection.includes('<div class="section-head"><h3>Путешествия</h3></div>'));
+  assert.ok(!tripsSection.includes('Создать путешествие'));
+  assert.ok(tripsSection.includes('class="journey-create-actions"'));
+  for (const label of ['Создать маршрут', 'Создать встречу', 'Создать поездку']) assert.ok(tripsSection.includes(label));
+  assert.ok(html.includes('.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}'));
+  assert.ok(html.includes('@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr}}'));
+  assert.ok(html.includes('onclick="openModal(\'trip\')">＋ Создать поездку</button>'));
 });
