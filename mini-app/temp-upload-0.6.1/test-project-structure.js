@@ -239,3 +239,25 @@ test('moderation cards show full place descriptions and group pending photos wit
   assert.match(map, /data-private-image=/);
   assert.match(map, /Фото недоступно для просмотра/);
 });
+
+
+test('journeys expose points, routes, meetings and trips using the existing published APIs', () => {
+  for (const tab of ['points', 'routes', 'meetings', 'trips']) assert.match(html, new RegExp(`data-journey-tab="${tab}"`));
+  for (const host of ['journey-point-list', 'journey-route-list', 'journey-meeting-list', 'journey-trip-list']) assert.ok(html.includes(`id="${host}"`));
+  assert.match(html, /telegramApi\('\/api\/places'\)/);
+  assert.match(html, /telegramApi\('\/api\/routes'\)/);
+  assert.match(html, /telegramApi\('\/api\/trips'\)/);
+  assert.match(html, /function renderJourneyPoints\(/);
+  assert.match(html, /function renderJourneyRoutes\(/);
+  assert.match(html, /function renderJourneyMeetings\(/);
+  assert.match(html, /function renderJourneyTrips\(/);
+  assert.match(html, /imageUrl:t\.imageUrl\|\|t\.imageUrls\?\.\[0\]/);
+});
+
+test('journey and map list cards render uploaded photos with a visual fallback', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(html, /journey-card-image/);
+  assert.match(html, /journeyImage\(p\.photoUrls\?\.\[0\]/);
+  assert.match(map, /map-place-photo/);
+  assert.match(map, /p\.photoUrls\?\.\[0\]/);
+});
