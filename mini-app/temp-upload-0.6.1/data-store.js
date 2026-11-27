@@ -217,26 +217,10 @@ export async function saveProfile(userId, input) {
   const profile = {
     name: cleanText(input.name, 100), city: cleanText(input.city, 120),
     interest: cleanText(input.interest, 120), imageUrl: cleanText(input.imageUrl, 500),
-    discoverable: input.discoverable === true, updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString()
   };
   return update(store => { store.profiles[String(userId)] = profile; return profile; });
 }
-
-export async function listPublicProfiles(excludeUserId = '') {
-  const store = await readStore();
-  return Object.entries(store.profiles)
-    .filter(([userId]) => userId !== String(excludeUserId))
-    .map(([, profile]) => profile)
-    .filter(profile => profile && profile.discoverable === true && cleanText(profile.name, 100))
-    .map(profile => ({
-      name: cleanText(profile.name, 100),
-      city: cleanText(profile.city, 120),
-      interest: cleanText(profile.interest, 120),
-      imageUrl: cleanText(profile.imageUrl, 500)
-    }))
-    .slice(0, 200);
-}
-
 
 export async function expressTripInterest(userId, tripId) {
   return update(store => {
