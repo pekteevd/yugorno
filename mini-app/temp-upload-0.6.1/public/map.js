@@ -46,7 +46,7 @@ root.innerHTML=`
 `;
 const categories=["Природа","Красивые места","Деревни и города","История и культура","Люди и ремёсла","Еда","Ночлег","Активный отдых","Другое"];
 let map=null,layerControl=null,markers=null,routeLine=null,places=[],routes=[],activeMode="map",activeLayer="standard",currentPlace=null,leafletReady=false;
-let placePickerMap=null,placePickerMarker=null,selectedPlaceLocation=null,geocoderLastRequest=0;
+let placePickerMap=null,placePickerMarker=null,placePickerClickHandler=null,selectedPlaceLocation=null,geocoderLastRequest=0;
 const geocoderCache=new Map();
 const tileLayers={
  standard:{url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",attr:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'},
@@ -106,7 +106,7 @@ async function showRouteForm(){
  }catch(e){showToast(e.message)}
 }
 function setMode(mode){activeMode=mode;document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));document.getElementById("map-main").hidden=mode!=="map";if(mode==="map"){document.querySelector(".map-layout").style.gridTemplateColumns="minmax(0,1fr) 300px";setTimeout(()=>map?.invalidateSize(),80);loadPlaces()}else{document.querySelector(".map-layout").style.gridTemplateColumns="1fr";if(mode==="list")loadPlaces();else loadRoutes()}document.getElementById("map-side-title").textContent=mode==="routes"?"Опубликованные маршруты":mode==="list"?"Список мест":"Места на карте"}
-function destroyPlacePicker(){if(placePickerMap){placePickerMap.remove();placePickerMap=null}placePickerMarker=null;selectedPlaceLocation=null}
+function destroyPlacePicker(){if(placePickerMap){const container=placePickerMap.getContainer();if(placePickerClickHandler)container.removeEventListener("click",placePickerClickHandler);placePickerMap.remove();placePickerMap=null}placePickerClickHandler=null;placePickerMarker=null;selectedPlaceLocation=null}
 function selectPlaceLocation(lat,lng,label){
  lat=Number(lat);lng=Number(lng);
  if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat< -90||lat>90||lng< -180||lng>180)throw new Error("Не удалось определить корректную точку");
@@ -131,12 +131,39 @@ function initPlacePickerMap(){
  placePickerMap.attributionControl.setPrefix(false);
  const conf=tileLayers[activeLayer]||tileLayers.standard;
  L.tileLayer(conf.url,{attribution:conf.attr,maxZoom:activeLayer==="terrain"?17:19,crossOrigin:true}).addTo(placePickerMap);
- placePickerMap.on("click",event=>selectPlaceLocation(event.latlng.lat,event.latlng.lng,"Точка на карте"));
+ const clickContainer=placePickerMap.getContainer();
+ placePickerClickHandler=event=>{
+  if(event.target?.closest?.(".leaflet-control,.leaflet-marker-icon,.leaflet-interactive"))return;
+  const point=placePickerMap?.mouseEventToLatLng(event);
+  if(point)selectPlaceLocation(point.lat,point.lng,"Точка на карте");
+ };
+ clickContainer.addEventListener("click",placePickerClickHandler);
  if(selectedPlaceLocation)selectPlaceLocation(selectedPlaceLocation.lat,selectedPlaceLocation.lng,selectedPlaceLocation.label);
  setTimeout(()=>placePickerMap?.invalidateSize(),100);
 }
 function photonLabel(properties){
  return [properties.name,properties.street,properties.housenumber,properties.city||properties.locality,properties.district,properties.state,properties.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(", ");
+}
+function nominatimLabel(item){
+ const a=item.address||{};
+ return [item.name,a.amenity,a.tourism,a.village,a.town,a.city,a.municipality,a.county,a.state,a.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(", ")||item.display_name||"Найденное место";
+}
+async function fetchPlaceGeocoding(query){
+ const photonUrl="https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&limit=6&lang=ru";
+ let photonError=null;
+ try{
+  const response=await fetch(photonUrl,{headers:{Accept:"application/geo+json"}});
+  if(!response.ok)throw new Error("Photon HTTP "+response.status);
+  const data=await response.json();
+  if(Array.isArray(data.features)&&data.features.length)return data.features.map(feature=>({coords:feature?.geometry?.coordinates,label:photonLabel(feature?.properties||{})})).filter(item=>Array.isArray(item.coords)&&item.coords.length>=2&&item.label);
+ }catch(error){photonError=error}
+ const nominatimUrl="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q="+encodeURIComponent(query);
+ try{
+  const response=await fetch(nominatimUrl,{headers:{Accept:"application/json","Accept-Language":"ru"}});
+  if(!response.ok)throw new Error("Nominatim HTTP "+response.status);
+  const data=await response.json();
+  return Array.isArray(data)?data.map(item=>({coords:[Number(item.lon),Number(item.lat)],label:nominatimLabel(item)})).filter(item=>item.coords.every(Number.isFinite)&&item.label):[];
+ }catch(error){throw new Error("Не удалось подключиться к сервисам поиска. Можно выбрать точку вручную на карте или через GPS. "+(photonError?"Оба сервиса недоступны.":""))}
 }
 async function searchPlaceLocation(){
  const input=document.getElementById("place-location-query"),host=document.getElementById("place-location-results"),button=document.getElementById("place-location-search");
@@ -146,27 +173,22 @@ async function searchPlaceLocation(){
  const loading=document.createElement("div");loading.className="map-muted";loading.textContent="Ищем место…";host.append(loading);
  try{
   const cacheKey=query.toLocaleLowerCase("ru");
-  let features=geocoderCache.get(cacheKey);
-  if(!features){
+  let results=geocoderCache.get(cacheKey);
+  if(!results){
    const wait=Math.max(0,1100-(Date.now()-geocoderLastRequest));
    if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
    geocoderLastRequest=Date.now();
-   const url="https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&limit=6&lang=ru";
-   const response=await fetch(url,{headers:{Accept:"application/geo+json"}});
-   if(!response.ok)throw new Error(response.status===429?"Сервис поиска временно ограничил запросы. Попробуй позже.":"Сервис поиска сейчас недоступен");
-   const data=await response.json();features=Array.isArray(data.features)?data.features:[];
-   geocoderCache.set(cacheKey,features);
+   results=await fetchPlaceGeocoding(query);
+   geocoderCache.set(cacheKey,results);
   }
   host.replaceChildren();
-  if(!features.length){const empty=document.createElement("div");empty.className="map-muted";empty.textContent="Ничего не найдено. Попробуй другое название или укажи точку на карте.";host.append(empty);return}
-  features.forEach(feature=>{
-   const coords=feature?.geometry?.coordinates,props=feature?.properties||{},label=photonLabel(props);
-   if(!Array.isArray(coords)||coords.length<2||!label)return;
+  if(!results.length){const empty=document.createElement("div");empty.className="map-muted";empty.textContent="Ничего не найдено. Попробуй другое название или укажи точку на карте.";host.append(empty);return}
+  results.forEach(result=>{
+   const [lng,lat]=result.coords,label=result.label;
    const item=document.createElement("button");item.type="button";item.className="map-place map-location-result";item.textContent=label;
-   item.addEventListener("click",()=>{selectPlaceLocation(coords[1],coords[0],label);host.replaceChildren();if(input)input.value=label});
+   item.addEventListener("click",()=>{selectPlaceLocation(lat,lng,label);host.replaceChildren();if(input)input.value=label});
    host.append(item);
   });
-  if(!host.childElementCount){const empty=document.createElement("div");empty.className="map-muted";empty.textContent="Не удалось выбрать точку из результатов. Укажи её на карте.";host.append(empty)}
  }catch(error){host.replaceChildren();const message=document.createElement("div");message.className="map-muted";message.textContent=error.message||"Ошибка поиска";host.append(message)}
  finally{button.disabled=false}
 }
@@ -179,7 +201,7 @@ function useDeviceLocation(){
   finally{button.disabled=false}
  },error=>{button.disabled=false;showToast(error.code===1?"Разреши доступ к местоположению в браузере":error.code===2?"Не удалось определить местоположение":"Истекло время ожидания GPS")},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
-function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотография места (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
+function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon с резервным OpenStreetMap Nominatim. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотография места (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
 function bindAdd(){
  document.getElementById("map-add-btn").addEventListener("click",()=>{
   if(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}
