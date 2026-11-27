@@ -167,6 +167,12 @@ test('place creation selects coordinates by search, map click, or device GPS wit
   assert.match(map, /name="lat"><input type="hidden" name="lng"/);
   assert.doesNotMatch(map, /name="lat" type="number"[^>]*required/);
   assert.doesNotMatch(map, /name="lng" type="number"[^>]*required/);
+  assert.match(map, /name="photo" type="file"[^>]*multiple/);
+  assert.match(map, /f\.getAll\("photo"\)/);
+  assert.match(map, /payload\.photoUrls=\[\]/);
+  assert.match(map, /В выбранных фотографиях не найдены GPS-координаты/);
+  const addFlow = map.slice(map.indexOf("function bindAdd(){"), map.indexOf("async function loadMyPlaces()"));
+  assert.doesNotMatch(addFlow, /\/impressions/);
 });
 
 test('place picker uses a native container click handler and cleans it up', async () => {
@@ -184,6 +190,14 @@ test('place geocoder falls back from Photon to OpenStreetMap Nominatim', async (
   assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
 });
 
+test('maps support mouse-wheel zoom and resolve the U Ilem village search alias', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /L\.map\("yugorno-map",\{zoomControl:true,scrollWheelZoom:true/);
+  assert.match(map, /L\.map\(container,\{zoomControl:true,scrollWheelZoom:true\}/);
+  assert.match(map, /\["у илем","уилем"\]\.includes\(normalizedQuery\)/);
+  assert.match(map, /Уилем, Моркинский район, Республика Марий Эл/);
+});
+
 test('place geocoding is explicit, cached, throttled, and uses safe text rendering', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /photon\.komoot\.io\/api/);
@@ -191,5 +205,75 @@ test('place geocoding is explicit, cached, throttled, and uses safe text renderi
   assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
   assert.match(map, /1100-\(Date\.now\(\)-geocoderLastRequest\)/);
   assert.match(map, /item\.textContent=label/);
-  assert.match(map, /place-location-search.*onclick=searchPlaceLocation/s);
+  assert.match(map, /locationSearch\.onclick=event=>\{event\.preventDefault\(\);searchPlaceLocation\(\)\}/);
+  assert.match(map, /locationQuery\.onkeydown=event=>\{if\(event\.key==="Enter"\)\{event\.preventDefault\(\);searchPlaceLocation\(\)\}\}/);
+});
+
+
+
+test('initial place photos use the place moderation lifecycle and pending attached impressions are bundled', async () => {
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(store, /photoUrls = cleanImageUrls\(input\.photoUrls \|\| \[\]\)/);
+  assert.match(store, /pendingImpressions: store\.impressions\.filter/);
+  assert.match(store, /pendingPlaceIds = new Set/);
+  assert.match(store, /impression\.status = status/);
+  assert.match(store, /const place = store\.places\.find\(item => \(item\.photoUrls \|\| \[\]\)\.includes\(url\)\)/);
+});
+
+test('moderation cards show full place descriptions and group pending photos with their parent place', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /map-moderation-description/);
+  assert.match(map, /map-moderation-gallery/);
+  assert.match(map, /map-moderation-map/);
+  assert.match(map, /export\/embed\.html\?bbox=/);
+  assert.match(map, /marker=/);
+  assert.match(map, /Координаты места не указаны/);
+  assert.match(map, /place\.pendingImpressions\|\|\[\]/);
+  assert.match(map, /place\.photoUrls\|\|\[\]/);
+  assert.match(map, /Дополнение к заявке на место/);
+  assert.match(map, /actionMarkup\("places",place\.id\)/);
+  const placeModeration = map.slice(map.indexOf("const placeCards="), map.indexOf("const looseImpressions="));
+  assert.doesNotMatch(placeModeration, /actionMarkup\("impressions"/);
+  assert.match(map, /Фотографии места/);
+  assert.match(map, /В выбранных фотографиях не найдены GPS-координаты/);
+  assert.match(map, /data-private-image=/);
+  assert.match(map, /Фото недоступно для просмотра/);
+});
+
+
+test('journeys expose points, routes, meetings and trips using the existing published APIs', () => {
+  for (const tab of ['points', 'routes', 'meetings', 'trips']) assert.match(html, new RegExp(`data-journey-tab="${tab}"`));
+  for (const host of ['journey-point-list', 'journey-route-list', 'journey-meeting-list', 'journey-trip-list']) assert.ok(html.includes(`id="${host}"`));
+  assert.match(html, /telegramApi\('\/api\/places'\)/);
+  assert.match(html, /telegramApi\('\/api\/routes'\)/);
+  assert.match(html, /telegramApi\('\/api\/trips'\)/);
+  assert.match(html, /function renderJourneyPoints\(/);
+  assert.match(html, /function renderJourneyRoutes\(/);
+  assert.match(html, /function renderJourneyMeetings\(/);
+  assert.match(html, /function renderJourneyTrips\(/);
+  assert.match(html, /imageUrl:t\.imageUrl\|\|t\.imageUrls\?\.\[0\]/);
+});
+
+test('journey and map list cards render uploaded photos with a visual fallback', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(html, /journey-card-image/);
+  assert.match(html, /journeyImage\(p\.photoUrls\?\.\[0\]/);
+  assert.match(map, /map-place-photo/);
+  assert.match(map, /p\.photoUrls\?\.\[0\]/);
+  assert.match(map, /r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)/);
+  assert.match(map, /cover\?'<img class="map-place-photo"/);
+});
+
+test('people tab shows the saved own profile and retains demo profile cards', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="people-own-profile-card"/);
+  assert.match(html, /id="people-own-name"/);
+  assert.match(html, /id="people-own-meta"/);
+  assert.match(html, /id="people-own-interest"/);
+  assert.match(html, /id="people-own-avatar"/);
+  assert.match(html, /function renderOwnPeopleProfile\(/);
+  assert.match(html, /renderOwnPeopleProfile\(\{name,city:p\.city\|\|'',interest:p\.interest\|\|'',imageUrl:p\.imageUrl\|\|''\}\)/);
+  assert.match(html, /localStorage\.getItem\('yugorno-profile'\)/);
+  for (const name of ['Алексей', 'Марина', 'Илья']) assert.match(html, new RegExp(name));
+  assert.doesNotMatch(html, /profile-discoverable|loadPeopleDirectory|\/api\/people/);
 });

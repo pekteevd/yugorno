@@ -216,11 +216,11 @@ export async function getProfile(userId) {
 export async function saveProfile(userId, input) {
   const profile = {
     name: cleanText(input.name, 100), city: cleanText(input.city, 120),
-    interest: cleanText(input.interest, 120), imageUrl: cleanText(input.imageUrl, 500), updatedAt: new Date().toISOString()
+    interest: cleanText(input.interest, 120), imageUrl: cleanText(input.imageUrl, 500),
+    updatedAt: new Date().toISOString()
   };
   return update(store => { store.profiles[String(userId)] = profile; return profile; });
 }
-
 
 export async function expressTripInterest(userId, tripId) {
   return update(store => {
@@ -301,7 +301,8 @@ function cleanPlaceInput(input = {}) {
   if (!title || !category || lat === null || lng === null) {
     throw new TypeError("Укажите название, категорию и корректные координаты места");
   }
-  return { title, category, description, region, lat, lng, coordinateAccuracy: accuracy };
+  const photoUrls = cleanImageUrls(input.photoUrls || []);
+  return { title, category, description, region, lat, lng, coordinateAccuracy: accuracy, photoUrls };
 }
 export async function listPlaces(options = {}) {
   const store = await readStore();
@@ -363,6 +364,9 @@ export async function moderatePlace(placeId, status) {
     const place = store.places.find(item => item.id === placeId);
     if (!place) return null;
     place.status = status; place.updatedAt = new Date().toISOString();
+    for (const impression of store.impressions) {
+      if (impression.placeId === placeId && impression.status === "pending") impression.status = status;
+    }
     return { ...publicPlace(place), status: place.status };
   });
 }
@@ -441,12 +445,19 @@ export async function listSavedPlaces(userId) {
 
 export async function listMapModerationQueue(kind = 'places') {
   const store = await readStore();
-  if (kind === 'impressions') return store.impressions.filter(item => item.status === 'pending').slice(0, 200).map(publicImpression);
+  if (kind === 'impressions') {
+    const pendingPlaceIds = new Set(store.places.filter(place => place.status === 'pending').map(place => place.id));
+    return store.impressions.filter(item => item.status === 'pending' && !pendingPlaceIds.has(item.placeId)).slice(0, 200).map(publicImpression);
+  }
   if (kind === 'routes') return store.routes.filter(item => item.status === 'pending').slice(0, 200).map(item => ({
     ...publicRoute(item),
     stops: (item.stopIds || []).map(id => store.places.find(place => place.id === id)).filter(Boolean).map(publicPlace)
   }));
-  return store.places.filter(item => item.status === 'pending').slice(0, 200).map(item => ({ ...publicPlace(item), status: item.status }));
+  return store.places.filter(item => item.status === 'pending').slice(0, 200).map(item => ({
+    ...publicPlace(item),
+    status: item.status,
+    pendingImpressions: store.impressions.filter(impression => impression.placeId === item.id && impression.status === 'pending').map(publicImpression)
+  }));
 }
 
 export async function moderateRoute(routeId, status) {
@@ -462,6 +473,8 @@ export async function moderateRoute(routeId, status) {
 export async function canViewMapUpload(userId, filename, isModerator = false) {
   const store = await readStore();
   const url = `/api/map-uploads/${filename}`;
+  const place = store.places.find(item => (item.photoUrls || []).includes(url));
+  if (place) return place.status === "published" || place.authorId === String(userId || "") || isModerator;
   const impression = store.impressions.find(item => (item.photoUrls || []).includes(url));
   if (!impression) return false;
   return impression.status === "published" || impression.authorId === String(userId || "") || isModerator;
