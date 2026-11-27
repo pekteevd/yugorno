@@ -35,9 +35,9 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 @media(max-width:850px){.app{display:block}aside{padding:13px 15px;gap:10px}.brand{display:flex;align-items:baseline;gap:10px}.brand-name{font-size:22px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;padding:9px 12px;font-size:13px}.side-note{display:none}main{padding:22px 16px 45px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:290px;padding:23px}.hero h2{font-size:29px}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.feature-row{grid-template-columns:1fr}.top h1{font-size:25px}.user span{display:none}.hero{min-height:330px}.row-card{align-items:flex-start}.row-img{width:85px;height:85px}}
 
-.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}
-.journey-create-actions .btn{width:100%;min-height:44px}
-@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr}}
+.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.journey-create-actions .btn{width:100%;min-height:36px;padding:7px 10px;font-size:13px;line-height:1.2;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr;gap:7px}.journey-create-actions .btn{min-height:36px;justify-content:flex-start;padding:7px 12px}}
 .journey-tabs button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--forest);padding:10px 15px;font-weight:750}
 .journey-tabs button.active{background:var(--forest);border-color:var(--forest);color:#fff}
 .journey-pane{display:none}.journey-pane.active{display:block}.journey-intro{font-size:13px;color:var(--muted);margin:4px 0 14px}
@@ -122,9 +122,9 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
       <button type="button" data-journey-tab="trips" role="tab" aria-selected="false">🎒 Поездки</button>
     </div>
     <div class="journey-create-actions">
-      <button class="btn outline" type="button" onclick="openJourneyCreate('route')">＋ Создать маршрут</button>
-      <button class="btn outline" type="button" onclick="openJourneyCreate('meeting')">＋ Создать встречу</button>
-      <button class="btn" type="button" onclick="openJourneyCreate('trip')">＋ Создать поездку</button>
+      <button class="btn outline" type="button" onclick="openJourneyCreate('route')"><span aria-hidden="true">🧭</span> Создать маршрут</button>
+      <button class="btn outline" type="button" onclick="openJourneyCreate('meeting')"><span aria-hidden="true">🤝</span> Создать встречу</button>
+      <button class="btn" type="button" onclick="openJourneyCreate('trip')"><span aria-hidden="true">🎒</span> Создать поездку</button>
     </div>
     <section class="journey-pane active" id="journey-points" role="tabpanel"><div class="journey-intro">Интересные места, природные объекты и открытия сообщества.</div><div class="journey-cards" id="journey-point-list"><div class="empty">Загружаем точки…</div></div></section>
     <section class="journey-pane" id="journey-routes" role="tabpanel" hidden><div class="journey-intro">Постоянные маршруты с последовательностью точек и GPX-треком. Новые маршруты проходят модерацию.</div><div class="journey-cards" id="journey-route-list"></div></section>
