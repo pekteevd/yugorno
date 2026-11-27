@@ -347,7 +347,7 @@ document.getElementById('profile-photo')?.addEventListener('change',()=>previewI
 async function submitModal(){
   const title=document.getElementById('f-title')?.value.trim();
   if(!title){toast('Добавьте название');return}
-  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo)){toast('Откройте Югорно в Telegram или включите локальный режим тестирования');return}
+  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!localStorage.getItem('yugorno-session')&&!window.yugornoLocalDemo)){toast('Откройте Югорно в Telegram или включите локальный режим тестирования');return}
   const description=document.getElementById('f-desc')?.value.trim()||'';
   const selectedPhotos=[...(document.getElementById('f-photo')?.files||[])];
   const payload={title,description};
@@ -439,7 +439,7 @@ async function saveProfile(){
   const n=document.getElementById('profile-name').value.trim(),c=document.getElementById('profile-city').value.trim(),i=document.getElementById('profile-interest').value;
   let imageUrl=window.yugornoProfileImageUrl||'';
   if(!n){toast('Укажи имя для профиля');return}
-  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo)){
+  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!localStorage.getItem('yugorno-session')&&!window.yugornoLocalDemo)){
     localStorage.setItem('yugorno-profile',JSON.stringify({n,c,i,imageUrl}));
     renderProfileSummary(n,c,i,imageUrl);renderOwnPeopleProfile({name:n,city:c,interest:i,imageUrl});setProfileEditMode(false);toast('Профиль сохранён в этом браузере');return;
   }
