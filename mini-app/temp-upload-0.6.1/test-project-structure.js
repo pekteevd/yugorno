@@ -426,3 +426,26 @@ test('server exposes explicit guest, member, moderator and admin session roles',
   assert.match(server, /role !== "admin" && role !== "moderator"/);
   assert.match(env, /YUGORNO_ADMIN_IDS=/);
 });
+
+
+test('local publication cleanup is guarded, backed up and preserves the three featured destinations', async () => {
+  const script = await readFile(new URL('./scripts/clean-local-publications.js', import.meta.url), 'utf8');
+  const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
+  assert.equal(pkg.scripts['reset:local-publications'], 'node scripts/clean-local-publications.js');
+  assert.match(script, /NODE_ENV === "production" \|\| process\.env\.BOT_TOKEN/);
+  assert.match(script, /copyFile\(dataFile, backupFile\)/);
+  assert.match(script, /const publicationCollections = \["trips", "communities", "places", "impressions", "routes"\]/);
+  assert.match(script, /\["karelia", "teriberka", "u-ilem"\]/);
+  assert.match(script, /store\.profiles/);
+  assert.match(script, /Резервная копия/);
+});
+
+test('featured destinations can be edited only by configured admins or moderators', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(server, /YUGORNO_ADMIN_IDS/);
+  assert.match(server, /YUGORNO_MODERATOR_IDS/);
+  assert.match(server, /app\.patch\("\/api\/admin\/destinations\/:slug", requireTelegramUser, requireMapModerator/);
+  assert.match(server, /if \(role !== "admin" && role !== "moderator"\)/);
+  assert.match(store, /const allowed = new Set\(DEFAULT_FEATURED_DESTINATIONS\.map\(item => item\.slug\)\)/);
+});
