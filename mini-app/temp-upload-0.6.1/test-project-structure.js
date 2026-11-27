@@ -146,3 +146,27 @@ test('GPS mismatch warnings use the Telegram confirmation dialog when available'
   assert.match(map, /window\.askConfirm/);
   assert.match(map, /await askUserConfirmation/);
 });
+
+
+test('place creation selects coordinates by search, map click, or device GPS without manual coordinate entry', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /id="place-location-query"/);
+  assert.match(map, /id="place-location-search"/);
+  assert.match(map, /id="place-location-map"/);
+  assert.match(map, /id="place-location-gps"/);
+  assert.match(map, /placePickerMap\.on\("click"/);
+  assert.match(map, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(map, /name="lat"><input type="hidden" name="lng"/);
+  assert.doesNotMatch(map, /name="lat" type="number"[^>]*required/);
+  assert.doesNotMatch(map, /name="lng" type="number"[^>]*required/);
+});
+
+test('place geocoding is explicit, cached, throttled, and uses safe text rendering', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /photon\.komoot\.io\/api/);
+  assert.match(map, /geocoderCache\.get\(cacheKey\)/);
+  assert.match(map, /geocoderCache\.set\(cacheKey,features\)/);
+  assert.match(map, /1100-\(Date\.now\(\)-geocoderLastRequest\)/);
+  assert.match(map, /item\.textContent=label/);
+  assert.match(map, /place-location-search.*onclick=searchPlaceLocation/s);
+});
