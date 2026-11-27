@@ -42,7 +42,7 @@ store.featuredDestinations = Array.isArray(store.featuredDestinations)
   : [];
 
 const tempFile = `${dataFile}.${process.pid}.tmp`;
-await writeFile(tempFile, `${JSON.stringify(store, null, 2)}\\n`, { mode: 0o600 });
+await writeFile(tempFile, `${JSON.stringify(store, null, 2)}\n`, { mode: 0o600 });
 await rename(tempFile, dataFile);
 
 console.log("Локальные публикации очищены.");
