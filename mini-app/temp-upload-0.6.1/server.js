@@ -32,7 +32,7 @@ const waOtpChallenges = new Map();
 const waOtpCooldown = new Map();
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({ limit: "22mb" }));
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -48,7 +48,7 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
     const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) return res.status(400).json({ ok: false, error: "unsupported_image_format" });
     const buffer = Buffer.from(match[2], "base64");
-    if (!buffer.length || buffer.length > 5 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
+    if (!buffer.length || buffer.length > 15 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
     const signatures = {
       "image/jpeg": buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
       "image/png": buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
