@@ -413,7 +413,7 @@ test('map trash controls use the shared confirmation and toast helpers and publi
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /function showToast\(message\)\{if\(typeof window\.toast==="function"\)window\.toast\(message\)/);
   assert.match(map, /async function askUserConfirmation\(message\)\{if\(typeof window\.askConfirm==="function"\)return window\.askConfirm\(message\)/);
-  assert.match(map, /\.map-place-card>\.map-place-photo\{display:block;width:100%;height:clamp\(150px,32vw,220px\)/);
+  assert.match(map, /\.map-place-card \.map-card-media\{height:clamp\(150px,32vw,220px\)/);
   assert.match(map, /trash\.onclick=loadMyTrash/);
   assert.match(map, /async function loadMyTrash\(\)/);
   assert.match(map, /data-trash-restore/);
