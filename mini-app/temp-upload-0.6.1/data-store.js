@@ -121,15 +121,7 @@ export async function updateTrip(userId, tripId, input) {
   });
 }
 
-export async function unpublishTrip(userId, tripId) {
-  return update(store => {
-    const trip = store.trips.find(item => item.id === tripId && item.status === 'published' && item.authorId === String(userId));
-    if (!trip) return null;
-    trip.status = 'unpublished';
-    trip.unpublishedAt = new Date().toISOString();
-    return { id: trip.id, status: trip.status };
-  });
-}
+export async function unpublishTrip(userId, tripId) { return trashPublication(userId, "trip", tripId); }
 
 export async function createTrip(userId, input) {
   const trip = {
@@ -165,15 +157,7 @@ export async function updateCommunity(userId, communityId, input) {
   });
 }
 
-export async function unpublishCommunity(userId, communityId) {
-  return update(store => {
-    const community = store.communities.find(item => item.id === communityId && item.status === 'published' && item.authorId === String(userId));
-    if (!community) return null;
-    community.status = 'unpublished';
-    community.unpublishedAt = new Date().toISOString();
-    return { id: community.id, status: community.status };
-  });
-}
+export async function unpublishCommunity(userId, communityId) { return trashPublication(userId, "community", communityId); }
 
 export async function listMyCommunities(userId) {
   const store = await readStore();
@@ -335,7 +319,7 @@ export async function getPlace(placeId) {
 }
 export async function listMyPlaces(userId) {
   const store = await readStore();
-  return store.places.filter(item => item.authorId === String(userId))
+  return store.places.filter(item => item.authorId === String(userId) && item.status !== "deleted")
     .map(item => ({ ...publicPlace(item), lat: item.exactLat ?? item.lat, lng: item.exactLng ?? item.lng, status: item.status }));
 }
 export async function createPlace(userId, input = {}, authorName = "") {
@@ -403,7 +387,7 @@ export async function listImpressions(placeId) {
 }
 export async function listMyImpressions(userId) {
   const store = await readStore();
-  return store.impressions.filter(item => item.authorId === String(userId)).map(item => {
+  return store.impressions.filter(item => item.authorId === String(userId) && item.status !== "deleted").map(item => {
     const place = store.places.find(entry => entry.id === item.placeId);
     const publicParent = place ? publicPlace(place) : null;
     return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено", placeLat: publicParent?.lat ?? null, placeLng: publicParent?.lng ?? null };
@@ -475,7 +459,7 @@ export async function createRoute(userId, input = {}, authorName = "") {
 }
 export async function listMyRoutes(userId) {
   const store = await readStore();
-  return store.routes.filter(route => route.authorId === String(userId)).map(route => ({
+  return store.routes.filter(route => route.authorId === String(userId) && route.status !== "deleted").map(route => ({
     ...publicRoute(route),
     status: route.status,
     stops: (route.stopIds || []).map(id => store.places.find(place => place.id === id)).filter(Boolean).map(publicPlace)
@@ -518,6 +502,54 @@ export async function listSavedPlaces(userId) {
   const store = await readStore();
   const ids = new Set(store.savedPlaces.filter(item => item.userId === String(userId)).map(item => item.placeId));
   return store.places.filter(item => ids.has(item.id) && item.status === "published").map(publicPlace);
+}
+
+const PUBLICATION_COLLECTIONS = { place: "places", route: "routes", impression: "impressions", trip: "trips", community: "communities" };
+
+export async function trashPublication(userId, kind, publicationId) {
+  const collection = PUBLICATION_COLLECTIONS[kind];
+  if (!collection) throw new TypeError("Неизвестный тип публикации");
+  return update(store => {
+    const item = store[collection].find(entry => entry.id === publicationId && entry.authorId === String(userId) && entry.status !== "deleted");
+    if (!item) return null;
+    if (kind === "place") {
+      const linkedRoutes = store.routes.filter(route => route.status !== "deleted" && (route.stopIds || []).includes(publicationId));
+      const linkedImpressions = store.impressions.filter(impression => impression.status !== "deleted" && impression.placeId === publicationId);
+      if (linkedRoutes.length || linkedImpressions.length) throw new TypeError("Это место связано с " + linkedRoutes.length + " маршрутами и " + linkedImpressions.length + " впечатлениями. Сначала переместите связанные публикации в корзину.");
+    }
+    item.deletedFromStatus = item.status || "pending";
+    item.status = "deleted";
+    item.deletedAt = new Date().toISOString();
+    return { id: item.id, kind, status: item.status, deletedAt: item.deletedAt };
+  });
+}
+
+export async function restorePublication(userId, kind, publicationId) {
+  const collection = PUBLICATION_COLLECTIONS[kind];
+  if (!collection) throw new TypeError("Неизвестный тип публикации");
+  return update(store => {
+    const item = store[collection].find(entry => entry.id === publicationId && entry.authorId === String(userId) && entry.status === "deleted");
+    if (!item) return null;
+    item.status = item.deletedFromStatus || "pending";
+    delete item.deletedFromStatus;
+    delete item.deletedAt;
+    item.updatedAt = new Date().toISOString();
+    return { id: item.id, kind, status: item.status };
+  });
+}
+
+export async function listMyTrash(userId) {
+  const store = await readStore();
+  const items = [];
+  for (const [kind, collection] of Object.entries(PUBLICATION_COLLECTIONS)) {
+    for (const item of store[collection]) {
+      if (item.authorId !== String(userId) || item.status !== "deleted") continue;
+      items.push({ id: item.id, kind, title: item.title || (kind === "impression" ? "Впечатление" : "Без названия"),
+        deletedAt: item.deletedAt || null, previousStatus: item.deletedFromStatus || "pending",
+        placeTitle: kind === "impression" ? (store.places.find(place => place.id === item.placeId)?.title || "Место не найдено") : undefined });
+    }
+  }
+  return items.sort((a, b) => String(b.deletedAt || "").localeCompare(String(a.deletedAt || "")));
 }
 
 export async function listMapModerationQueue(kind = 'places') {
