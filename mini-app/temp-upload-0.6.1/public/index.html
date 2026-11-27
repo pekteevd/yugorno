@@ -8,6 +8,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Югорно — Магия троп</title>
 <style>
+.photo-remove-option{display:grid;gap:4px;font-size:11px;color:var(--muted)}.photo-remove-option input{width:auto;justify-self:start}.photo-remove-option img{width:100%;height:92px;object-fit:cover;border-radius:10px}
 .photo-gallery-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-top:10px}.photo-gallery-preview img{width:100%;height:92px;object-fit:cover;border-radius:10px}.detail-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0 14px}.detail-gallery img{width:100%;max-height:220px;object-fit:cover;border-radius:12px}
 :root{--forest:#203d35;--forest2:#315548;--moss:#71866a;--cream:#f4f1e8;--paper:#fffdf8;--ink:#202b26;--muted:#748078;--line:#e5e4da;--orange:#d87945;--shadow:0 12px 35px #1e352510;--image-hero:url("https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=85");--image-trip-karelia:url("https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=800&q=80");--image-trip-u-ilem:url("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80");--image-trip-teriberka:url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80");--image-community-u-ilem:url("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=700&q=80");--image-community-road:url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=700&q=80");--image-community-trails:url("https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=700&q=80")}
 *{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -287,7 +288,7 @@ function openModal(type, item=null){
     fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="Название сообщества"></div><div class="field"><label>О чём оно</label><textarea id="f-desc" maxlength="1200" placeholder="Кого хотите объединить?">${value('description')}</textarea></div>`;
   }
   const existingPhotos=Array.isArray(item?.imageUrls)&&item.imageUrls.length?item.imageUrls:(item?.imageUrl?[item.imageUrl]:[]);
-  if(!route)fields.insertAdjacentHTML('beforeend',`<div class="field"><label>Фотографии</label><input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple><small style="color:var(--muted)">До 8 фотографий JPG, PNG или WebP, до 5 МБ каждая.</small><div id="f-photo-preview" class="photo-gallery-preview">${existingPhotos.map(url=>`<img alt="Фотография публикации" src="${escapeHTML(url)}">`).join('')}</div></div>`);
+  if(!route)fields.insertAdjacentHTML('beforeend',`<div class="field"><label>Фотографии</label><div id="f-existing-photo-gallery" class="photo-gallery-preview">${existingPhotos.map((url,index)=>`<label class="photo-remove-option"><input type="checkbox" name="f-remove-photo" value="${escapeHTML(url)}"> Удалить фото ${index+1}<img alt="Фотография публикации" src="${escapeHTML(url)}"></label>`).join('')}</div><input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple><small style="color:var(--muted)">До 8 фотографий JPG, PNG или WebP, до 5 МБ каждая. Старые фото сохраняются, если не отметить их удаление.</small><div id="f-photo-preview" class="photo-gallery-preview"></div></div>`);
   const startInput=document.getElementById('f-start-date'),endInput=document.getElementById('f-end-date'),durationLabel=document.getElementById('f-duration');
   const updateDuration=()=>{if(!startInput||!endInput||!durationLabel)return;const start=startInput.value,end=endInput.value;if(!start||!end){durationLabel.textContent='Укажите даты начала и окончания';return}const a=new Date(start+'T00:00:00Z'),b=new Date(end+'T00:00:00Z'),days=Math.round((b-a)/86400000)+1;durationLabel.textContent=days>0?'Продолжительность: '+days+' дн.':'Дата окончания не может быть раньше даты начала'};
   startInput?.addEventListener('change',updateDuration);endInput?.addEventListener('change',updateDuration);updateDuration();
@@ -338,11 +339,13 @@ async function submitModal(){
       if(!Number.isInteger(capacity)||capacity<0||capacity>500){toast('Количество мест должно быть от 0 до 500');return}
       Object.assign(payload,{place,date:startDate&&endDate?startDate+' – '+endDate:'',kind:document.getElementById('f-kind').value,startDate,endDate,price:document.getElementById('f-price')?.value.trim()||'',capacity});
     }
-    if(selectedPhotos.length){
-      if(selectedPhotos.length>8)throw new Error('Можно добавить не более 8 фотографий');
-      const imageUrls=[];for(const photo of selectedPhotos)imageUrls.push(await uploadImageFile(photo));
-      payload.imageUrls=imageUrls;payload.imageUrl=imageUrls[0]||'';
-    }
+    const keptExistingPhotos=[...document.querySelectorAll('#f-existing-photo-gallery input[name="f-remove-photo"]:not(:checked)')].map(input=>input.value);
+    const removedExistingPhotos=document.querySelectorAll('#f-existing-photo-gallery input[name="f-remove-photo"]:checked').length>0;
+    if(selectedPhotos.length>8)throw new Error('Можно добавить не более 8 фотографий');
+    const imageUrls=[...keptExistingPhotos];
+    for(const photo of selectedPhotos)imageUrls.push(await uploadImageFile(photo));
+    if(keptExistingPhotos.length+selectedPhotos.length>8)throw new Error('Всего можно сохранить не более 8 фотографий');
+    if(selectedPhotos.length||removedExistingPhotos){payload.imageUrls=imageUrls;payload.imageUrl=imageUrls[0]||''}
   }catch(error){toast(error.message);return}
   try{
     let result;
