@@ -310,7 +310,7 @@ test('journey creation uses one clear set of responsive actions and consistent t
   assert.match(html, /f-meeting-date/);
   assert.match(html, /f-meeting-time/);
   assert.match(html, /Продолжительность:/);
-  assert.match(html, /inputmode="numeric" pattern="\\[0-9\\]\\*"/);
+  assert.ok(html.includes('inputmode="numeric" pattern="[0-9]*"'));
   assert.match(html, /payload\.date=startDate&&endDate\?startDate\+' – '\+endDate/);
   assert.match(html, /Дата окончания не может быть раньше даты начала/);
 });
