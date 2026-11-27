@@ -314,3 +314,43 @@ test('journey creation uses one clear set of responsive actions and consistent t
   assert.match(html, /date:startDate&&endDate\?startDate\+' – '\+endDate/);
   assert.match(html, /Дата окончания не может быть раньше даты начала/);
 });
+
+test('owner editing APIs enforce ownership for routes and impressions and re-submit edits for moderation', async () => {
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  for (const marker of ['export async function listMyRoutes(userId)', 'export async function updateRoute(userId, routeId, input = {})', 'export async function listMyImpressions(userId)', 'export async function updateImpression(userId, impressionId, input = {})']) {
+    assert.ok(store.includes(marker), `missing owner operation: ${marker}`);
+  }
+  assert.match(store, /item\.authorId === String\(userId\)/);
+  assert.match(store, /route\.authorId === String\(userId\)/);
+  assert.match(store, /status: "pending"/);
+  for (const route of [
+    'app.get("/api/my/routes", requireTelegramUser',
+    'app.patch("/api/my/routes/:id", requireTelegramUser',
+    'app.get("/api/my/impressions", requireTelegramUser',
+    'app.patch("/api/my/impressions/:id", requireTelegramUser'
+  ]) assert.ok(server.includes(route), `missing authenticated owner route: ${route}`);
+});
+
+test('map owner tools expose edit actions for places, routes and impressions', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  for (const marker of ['loadMyPublications', 'editOwnPlace', 'editOwnRoute', 'editOwnImpression', '/api/my/places/', '/api/my/routes/', '/api/my/impressions/']) {
+    assert.ok(map.includes(marker), `missing map owner editor: ${marker}`);
+  }
+  assert.match(map, /data-owner-edit/);
+  assert.match(map, /removePhotos/);
+});
+
+test('journey and map cards use photo covers or genuine coordinate-based previews', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(html, /function journeyPointMap\(/);
+  assert.match(html, /function journeyRouteMap\(/);
+  assert.match(html, /journeyRouteMap\(r\)/);
+  assert.match(html, /journeyPointMap\(p\)/);
+  assert.match(map, /function miniMapPreview\(/);
+  assert.match(map, /function routeSchematic\(/);
+  assert.match(map, /miniMapPreview\(p\.lat,p\.lng,p\.title\)/);
+  assert.match(map, /routeSchematic\(r\)/);
+  assert.match(html, /f-existing-photo-gallery/);
+  assert.match(html, /f-remove-photo/);
+});
