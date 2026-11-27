@@ -514,3 +514,55 @@ test('local browser opens as a guest and local administrator mode requires an ex
   assert.match(html, /async function logoutAccount\(\)/);
   assert.match(html, /window\.yugornoLocalDemo=true/);
 });
+
+test('trip detail pages use their own data and never reference an out-of-scope trip variable', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const detail = html.slice(html.indexOf('function openDetailPage('), html.indexOf('function getImageUrl('));
+  assert.match(detail, /action\.textContent=data\.kind==='Встреча'/);
+  assert.doesNotMatch(detail, /trip\.kind/);
+  assert.match(html, /kind:trip\.kind,published:true/);
+});
+
+test('trip creation form contains one start and end date pair and calculates duration from them', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  assert.equal((html.match(/id="f-start-date"/g) || []).length, 1);
+  assert.equal((html.match(/id="f-end-date"/g) || []).length, 1);
+  assert.match(html, /const updateDuration=\(\)=>/);
+  assert.match(html, /Продолжительность: '\+days\+' дн\.'/);
+});
+
+test('modal save and cancel actions are restored whenever a form is opened', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const openModal = html.slice(html.indexOf('function openModal(type, item=null)'), html.indexOf('async function searchMeetingLocation'));
+  assert.match(openModal, /actions\.replaceChildren\(\)/);
+  assert.match(openModal, /saveButton\.addEventListener\('click',submitModal\)/);
+  assert.match(openModal, /cancelButton\.addEventListener\('click',closeModal\)/);
+  assert.match(html, /if\(isOwner\).*Изменить/s);
+  assert.match(html, /unpublishTripFromList\(id\)/);
+});
+
+test('meeting place search falls back from Photon to OpenStreetMap Nominatim', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const search = html.slice(html.indexOf('async function searchMeetingLocation'), html.indexOf('\nfunction ', html.indexOf('async function searchMeetingLocation')));
+  assert.match(search, /photon\.komoot\.io/);
+  assert.match(search, /nominatim\.openstreetmap\.org\/search/);
+  assert.match(search, /if\(!results\.length\)/);
+});
+
+test('all photo upload paths accept 15 MB and server JSON parsing supports base64 payloads', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  assert.match(html, /file\.size>15\*1024\*1024/);
+  assert.match(map, /file\.size>15\*1024\*1024/);
+  assert.match(server, /express\.json\(\{ limit: "22mb" \}\)/);
+  assert.match(server, /buffer\.length > 15 \* 1024 \* 1024/);
+  assert.match(server, /buffer\.length > 5 \* 1024 \* 1024/ === false ? /x/ : /y/);
+});
+
+test('map list photos use the nested card media container dimensions instead of an unmatched direct-child selector', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /\.map-place-card \.map-card-media\{height:clamp\(150px,32vw,220px\)/);
+  assert.match(map, /\.map-place-card \.map-card-media \.map-place-photo/);
+  assert.doesNotMatch(map, /\.map-place-card>\.map-place-photo/);
+});
