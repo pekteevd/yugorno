@@ -443,7 +443,7 @@ async function loadMyTrash(){
   host.querySelectorAll('[data-trash-restore]').forEach(button=>button.onclick=async()=>{try{await api('/api/my/trash/'+encodeURIComponent(button.dataset.trashRestore)+'/'+encodeURIComponent(button.dataset.trashId)+'/restore',{method:'POST'});await loadMyTrash();await loadMyPublications();await loadPlaces();routes=(await api('/api/routes')).items||[];showToast('Публикация восстановлена')}catch(error){showToast(error.message)}});
  }catch(error){showToast('Не удалось открыть корзину: '+error.message)}
 }
-function loadMyPublications(){
+async function loadMyPublications(){
  try{
   const [p,r,i]=await Promise.all([api("/api/my/places"),api("/api/my/routes"),api("/api/my/impressions")]);
   const items=[
