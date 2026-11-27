@@ -32,6 +32,10 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run tests
         run: npm test
+      - name: Install Chromium browser test dependencies
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1 leaflet@1.9.4 leaflet.markercluster@1.5.3
+          npx playwright install --with-deps chromium
       - name: Check JavaScript syntax
         run: |
           for file in *.js; do
@@ -59,3 +63,4 @@ jobs:
           done
           cat /tmp/yugorno-health.json
           node -e "const h=require('/tmp/yugorno-health.json'); if(!h.ok || h.version!=='0.6.1') process.exit(1)"
+          node tests/map-browser.spec.js
