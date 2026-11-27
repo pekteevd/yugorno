@@ -167,8 +167,13 @@ async function fetchPlaceGeocoding(query){
 }
 async function searchPlaceLocation(){
  const input=document.getElementById("place-location-query"),host=document.getElementById("place-location-results"),button=document.getElementById("place-location-search");
- const query=input?.value.trim();
- if(!query){showToast("Введи название места или адрес");return}
+ if(!input||!host||!button){
+  console.error("[Югорно] Геопоиск вызван без открытой формы добавления места");
+  showToast("Форма поиска не открыта. Закрой и снова нажми «Добавить место».");
+  return;
+ }
+ const query=input.value.trim();
+ if(!query){showToast("Введи название места или адрес");input.focus();return}
  button.disabled=true;host.replaceChildren();
  const loading=document.createElement("div");loading.className="map-muted";loading.textContent="Ищем место…";host.append(loading);
  try{
@@ -203,14 +208,25 @@ function useDeviceLocation(){
 }
 function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon с резервным OpenStreetMap Nominatim. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотография места (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
 function bindAdd(){
+ // Делегирование сохраняет обработчики при повторном создании динамической формы.
+ root.addEventListener("click",event=>{
+  const button=event.target?.closest?.("#place-location-search");
+  if(!button||!root.contains(button))return;
+  event.preventDefault();
+  searchPlaceLocation();
+ });
+ root.addEventListener("keydown",event=>{
+  if(event.target?.id==="place-location-query"&&event.key==="Enter"){
+   event.preventDefault();
+   searchPlaceLocation();
+  }
+ });
  document.getElementById("map-add-btn").addEventListener("click",()=>{
   if(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}
   const host=document.getElementById("map-form-host");destroyPlacePicker();host.innerHTML=formMarkup();
   const form=document.getElementById("new-place-form"),photoInput=form.querySelector('input[name="photo"]'),gpsStatus=document.getElementById("new-place-photo-gps"),useGps=document.getElementById("new-place-use-gps");
   let photoGps=null;
   document.getElementById("map-form-cancel").onclick=()=>{destroyPlacePicker();host.replaceChildren()};
-  document.getElementById("place-location-search").onclick=searchPlaceLocation;
-  document.getElementById("place-location-query").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}});
   document.getElementById("place-location-gps").onclick=useDeviceLocation;
   initPlacePickerMap();
   photoInput.onchange=async()=>{
