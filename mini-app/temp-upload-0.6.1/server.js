@@ -386,7 +386,7 @@ app.patch("/api/moderation/impressions/:id", requireTelegramUser, requireMapMode
 });
 
 app.get("/api/people", requireTelegramUser, async (_req, res, next) => {
-  try { res.json({ ok: true, items: await listPublicProfiles() }); } catch (error) { next(error); }
+  try { res.json({ ok: true, items: await listPublicProfiles(_req.telegramUser.id) }); } catch (error) { next(error); }
 });
 
 app.get("/api/profile", requireTelegramUser, async (req, res, next) => {
