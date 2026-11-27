@@ -184,6 +184,14 @@ test('place geocoder falls back from Photon to OpenStreetMap Nominatim', async (
   assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
 });
 
+test('maps support mouse-wheel zoom and resolve the U Ilem village search alias', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /L\.map\("yugorno-map",\{zoomControl:true,scrollWheelZoom:true/);
+  assert.match(map, /L\.map\(container,\{zoomControl:true,scrollWheelZoom:true\}/);
+  assert.match(map, /\["у илем","уилем"\]\.includes\(normalizedQuery\)/);
+  assert.match(map, /Уилем, Моркинский район, Республика Марий Эл/);
+});
+
 test('place geocoding is explicit, cached, throttled, and uses safe text rendering', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /photon\.komoot\.io\/api/);
