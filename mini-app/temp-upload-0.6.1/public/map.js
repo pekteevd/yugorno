@@ -13,7 +13,7 @@ const css=`
 .map-side h4{margin:0 0 10px}.map-place{padding:10px 0;border-top:1px solid var(--line)}.map-place:first-of-type{border-top:0}
 .map-place button{border:0;background:none;color:var(--forest);font-weight:750;text-align:left;padding:0}.map-card-media{position:relative;width:100%;height:112px;overflow:hidden;border-radius:10px;background:#e8ece4}.map-card-open{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;cursor:pointer}.map-card-media .map-place-photo,.map-card-media .map-card-preview,.map-card-media .map-route-preview{height:112px;border-radius:0}
 .map-card-preview{display:block;width:100%;height:112px;border:0;border-radius:10px;background:#e8ece4}.map-route-preview{display:block;width:100%;height:112px;border-radius:10px;background:#e9eee5}
-.map-place-photo{display:block;width:100%;height:112px;object-fit:cover;border-radius:10px;margin:0 0 9px;background:#e8ece4}.map-place-card{display:grid;gap:4px}
+.map-place-photo{display:block;width:100%;height:112px;object-fit:cover;border-radius:10px;margin:0 0 9px;background:#e8ece4}.map-place-card{display:grid;gap:4px}.map-place-card>.map-place-photo{height:auto;aspect-ratio:4/3;max-height:220px;object-fit:cover}
 .map-muted{color:var(--muted);font-size:12px}.map-chip{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 9px;background:#edf0e8;font-size:12px}
 .map-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--paper)}
 .map-form label{display:grid;gap:5px;font-size:12px;color:var(--muted)}.map-form input,.map-form select,.map-form textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;color:var(--ink)}.map-form textarea{min-height:68px}.map-form .wide{grid-column:1/-1}
@@ -78,6 +78,8 @@ const tileLayers={
 };
 function api(path,options={}){const initData=window.Telegram?.WebApp?.initData;const headers={...(options.headers||{})};if(initData)headers["X-Telegram-Init-Data"]=initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
 function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function showToast(message){if(typeof window.toast==="function")window.toast(message);else console.info(message)}
+async function askUserConfirmation(message){if(typeof window.askConfirm==="function")return window.askConfirm(message);return window.confirm(message)}
 
 function miniMapPreview(latValue,lngValue,label){
  if(latValue===null||latValue===undefined||latValue===""||lngValue===null||lngValue===undefined||lngValue==="")return '<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">📍</div>';
