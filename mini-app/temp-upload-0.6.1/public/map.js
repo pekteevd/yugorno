@@ -21,6 +21,7 @@ const css=`
 .map-moderation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .map-moderation img,.map-impression-photo{max-width:100%;max-height:220px;border-radius:10px;object-fit:cover}
 .map-track-note{font-size:12px;color:var(--muted);grid-column:1/-1}
+.map-location-result{display:block;width:100%;text-align:left;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);margin:5px 0;cursor:pointer}.map-location-result:hover{border-color:var(--forest)}#place-location-query{flex:1;min-width:180px}#place-location-map{background:#e4e9df}
 @media(max-width:850px){.map-layout{grid-template-columns:1fr}#yugorno-map{height:54vh;min-height:360px}.map-side{max-height:360px}}
 @media(max-width:560px){.map-form{grid-template-columns:1fr}.map-form .wide{grid-column:auto}#map .section-head span{display:none}}
 `;
@@ -45,6 +46,8 @@ root.innerHTML=`
 `;
 const categories=["Природа","Красивые места","Деревни и города","История и культура","Люди и ремёсла","Еда","Ночлег","Активный отдых","Другое"];
 let map=null,layerControl=null,markers=null,routeLine=null,places=[],routes=[],activeMode="map",activeLayer="standard",currentPlace=null,leafletReady=false;
+let placePickerMap=null,placePickerMarker=null,selectedPlaceLocation=null,geocoderLastRequest=0;
+const geocoderCache=new Map();
 const tileLayers={
  standard:{url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",attr:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'},
  satellite:{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",attr:'Tiles © <a href="https://www.esri.com/">Esri</a>'},
@@ -103,8 +106,116 @@ async function showRouteForm(){
  }catch(e){showToast(e.message)}
 }
 function setMode(mode){activeMode=mode;document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));document.getElementById("map-main").hidden=mode!=="map";if(mode==="map"){document.querySelector(".map-layout").style.gridTemplateColumns="minmax(0,1fr) 300px";setTimeout(()=>map?.invalidateSize(),80);loadPlaces()}else{document.querySelector(".map-layout").style.gridTemplateColumns="1fr";if(mode==="list")loadPlaces();else loadRoutes()}document.getElementById("map-side-title").textContent=mode==="routes"?"Опубликованные маршруты":mode==="list"?"Список мест":"Места на карте"}
-function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><label>Широта<input name="lat" type="number" step="any" min="-90" max="90" required placeholder="56.1234"></label><label>Долгота<input name="lng" type="number" step="any" min="-180" max="180" required placeholder="47.1234"></label><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотография места (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно, без автоматической публикации.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Подставить координаты из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
-function bindAdd(){document.getElementById("map-add-btn").addEventListener("click",()=>{if(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}const host=document.getElementById("map-form-host");host.innerHTML=formMarkup();document.getElementById("map-form-cancel").onclick=()=>host.replaceChildren();const form=document.getElementById("new-place-form"),photoInput=form.querySelector('input[name="photo"]'),gpsStatus=document.getElementById("new-place-photo-gps"),useGps=document.getElementById("new-place-use-gps");let photoGps=null;photoInput.onchange=async()=>{photoGps=null;useGps.hidden=true;const file=photoInput.files?.[0];if(!file){gpsStatus.textContent="Фотография не выбрана.";return}gpsStatus.textContent="Проверяем GPS-метаданные на устройстве…";photoGps=await window.YugornoExifGps?.readPhotoGps(file)||null;if(photoGps){gpsStatus.textContent="В фотографии найдены координаты: "+photoGps.lat.toFixed(6)+", "+photoGps.lng.toFixed(6)+". Они пока не использованы.";useGps.hidden=false}else gpsStatus.textContent="GPS-координаты в фотографии не найдены. Можно указать точку вручную."};useGps.onclick=()=>{if(!photoGps)return;form.elements.lat.value=photoGps.lat;form.elements.lng.value=photoGps.lng;form.elements.coordinateAccuracy.value="exact";gpsStatus.textContent="Координаты из фотографии подставлены в форму. Проверь точку перед отправкой."};form.onsubmit=async e=>{e.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;const f=new FormData(form),photo=f.get("photo"),payload={title:f.get("title"),category:f.get("category"),lat:Number(f.get("lat")),lng:Number(f.get("lng")),region:f.get("region"),coordinateAccuracy:f.get("coordinateAccuracy"),description:f.get("description")};try{if(photo?.size&&photoGps){const distance=distanceMeters(payload.lat,payload.lng,photoGps.lat,photoGps.lng);if(distance>250&&!(await askUserConfirmation("GPS фотографии отличается от указанной точки примерно на "+Math.round(distance)+" м. Продолжить с координатами, указанными в форме?")))return}const created=await api("/api/places",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});if(photo?.size){try{const imageUrl=await uploadImage(photo);await api("/api/places/"+encodeURIComponent(created.item.id)+"/impressions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({text:"",photoUrls:[imageUrl]})});showToast("Место и фотография отправлены на модерацию")}catch(photoError){showToast("Место отправлено на модерацию, но фото не загрузилось: "+photoError.message)}}else showToast("Место отправлено на модерацию");host.replaceChildren();loadMyPlaces()}catch(err){showToast(err.message)}finally{submit.disabled=false}}})}
+function destroyPlacePicker(){if(placePickerMap){placePickerMap.remove();placePickerMap=null}placePickerMarker=null;selectedPlaceLocation=null}
+function selectPlaceLocation(lat,lng,label){
+ lat=Number(lat);lng=Number(lng);
+ if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat< -90||lat>90||lng< -180||lng>180)throw new Error("Не удалось определить корректную точку");
+ selectedPlaceLocation={lat,lng,label:String(label||"Выбранная точка")};
+ const form=document.getElementById("new-place-form");
+ if(form){form.elements.lat.value=String(lat);form.elements.lng.value=String(lng)}
+ const status=document.getElementById("place-location-status");
+ if(status)status.textContent="✓ "+selectedPlaceLocation.label;
+ if(placePickerMap){
+  const point=[lat,lng];
+  if(placePickerMarker)placePickerMarker.setLatLng(point);
+  else placePickerMarker=L.marker(point,{draggable:true}).addTo(placePickerMap);
+  placePickerMarker.off("dragend").on("dragend",()=>{const p=placePickerMarker.getLatLng();selectPlaceLocation(p.lat,p.lng,"Точка на карте")});
+  placePickerMap.setView(point,Math.max(placePickerMap.getZoom(),14));
+ }
+}
+function initPlacePickerMap(){
+ const container=document.getElementById("place-location-map");
+ if(!container||!window.L)return;
+ if(placePickerMap){setTimeout(()=>placePickerMap?.invalidateSize(),80);return}
+ placePickerMap=L.map(container,{zoomControl:true,scrollWheelZoom:false}).setView(map?.getCenter()||[56.5,47.5],map?.getZoom()||6);
+ placePickerMap.attributionControl.setPrefix(false);
+ const conf=tileLayers[activeLayer]||tileLayers.standard;
+ L.tileLayer(conf.url,{attribution:conf.attr,maxZoom:activeLayer==="terrain"?17:19,crossOrigin:true}).addTo(placePickerMap);
+ placePickerMap.on("click",event=>selectPlaceLocation(event.latlng.lat,event.latlng.lng,"Точка на карте"));
+ if(selectedPlaceLocation)selectPlaceLocation(selectedPlaceLocation.lat,selectedPlaceLocation.lng,selectedPlaceLocation.label);
+ setTimeout(()=>placePickerMap?.invalidateSize(),100);
+}
+function photonLabel(properties){
+ return [properties.name,properties.street,properties.housenumber,properties.city||properties.locality,properties.district,properties.state,properties.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(", ");
+}
+async function searchPlaceLocation(){
+ const input=document.getElementById("place-location-query"),host=document.getElementById("place-location-results"),button=document.getElementById("place-location-search");
+ const query=input?.value.trim();
+ if(!query){showToast("Введи название места или адрес");return}
+ button.disabled=true;host.replaceChildren();
+ const loading=document.createElement("div");loading.className="map-muted";loading.textContent="Ищем место…";host.append(loading);
+ try{
+  const cacheKey=query.toLocaleLowerCase("ru");
+  let features=geocoderCache.get(cacheKey);
+  if(!features){
+   const wait=Math.max(0,1100-(Date.now()-geocoderLastRequest));
+   if(wait)await new Promise(resolve=>setTimeout(resolve,wait));
+   geocoderLastRequest=Date.now();
+   const url="https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&limit=6&lang=ru";
+   const response=await fetch(url,{headers:{Accept:"application/geo+json"}});
+   if(!response.ok)throw new Error(response.status===429?"Сервис поиска временно ограничил запросы. Попробуй позже.":"Сервис поиска сейчас недоступен");
+   const data=await response.json();features=Array.isArray(data.features)?data.features:[];
+   geocoderCache.set(cacheKey,features);
+  }
+  host.replaceChildren();
+  if(!features.length){const empty=document.createElement("div");empty.className="map-muted";empty.textContent="Ничего не найдено. Попробуй другое название или укажи точку на карте.";host.append(empty);return}
+  features.forEach(feature=>{
+   const coords=feature?.geometry?.coordinates,props=feature?.properties||{},label=photonLabel(props);
+   if(!Array.isArray(coords)||coords.length<2||!label)return;
+   const item=document.createElement("button");item.type="button";item.className="map-place map-location-result";item.textContent=label;
+   item.addEventListener("click",()=>{selectPlaceLocation(coords[1],coords[0],label);host.replaceChildren();if(input)input.value=label});
+   host.append(item);
+  });
+  if(!host.childElementCount){const empty=document.createElement("div");empty.className="map-muted";empty.textContent="Не удалось выбрать точку из результатов. Укажи её на карте.";host.append(empty)}
+ }catch(error){host.replaceChildren();const message=document.createElement("div");message.className="map-muted";message.textContent=error.message||"Ошибка поиска";host.append(message)}
+ finally{button.disabled=false}
+}
+function useDeviceLocation(){
+ if(!navigator.geolocation){showToast("Геолокация не поддерживается этим браузером");return}
+ const button=document.getElementById("place-location-gps");button.disabled=true;
+ navigator.geolocation.getCurrentPosition(position=>{
+  try{selectPlaceLocation(position.coords.latitude,position.coords.longitude,"Моё местоположение");if(position.coords.accuracy>100)showToast("Точность GPS около "+Math.round(position.coords.accuracy)+" м. При необходимости уточни точку на карте")}
+  catch(error){showToast(error.message)}
+  finally{button.disabled=false}
+ },error=>{button.disabled=false;showToast(error.code===1?"Разреши доступ к местоположению в браузере":error.code===2?"Не удалось определить местоположение":"Истекло время ожидания GPS")},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+}
+function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотография места (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="new-place-photo-gps">GPS из фотографии проверяется только на этом устройстве. Координаты будут предложены отдельно.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
+function bindAdd(){
+ document.getElementById("map-add-btn").addEventListener("click",()=>{
+  if(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}
+  const host=document.getElementById("map-form-host");destroyPlacePicker();host.innerHTML=formMarkup();
+  const form=document.getElementById("new-place-form"),photoInput=form.querySelector('input[name="photo"]'),gpsStatus=document.getElementById("new-place-photo-gps"),useGps=document.getElementById("new-place-use-gps");
+  let photoGps=null;
+  document.getElementById("map-form-cancel").onclick=()=>{destroyPlacePicker();host.replaceChildren()};
+  document.getElementById("place-location-search").onclick=searchPlaceLocation;
+  document.getElementById("place-location-query").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}});
+  document.getElementById("place-location-gps").onclick=useDeviceLocation;
+  initPlacePickerMap();
+  photoInput.onchange=async()=>{
+   photoGps=null;useGps.hidden=true;const file=photoInput.files?.[0];
+   if(!file){gpsStatus.textContent="Фотография не выбрана.";return}
+   gpsStatus.textContent="Проверяем GPS-метаданные на устройстве…";
+   photoGps=await window.YugornoExifGps?.readPhotoGps(file)||null;
+   if(photoGps){gpsStatus.textContent="В фотографии найдены координаты. Их можно использовать как точку места.";useGps.hidden=false}
+   else gpsStatus.textContent="GPS-координаты в фотографии не найдены. Выбери точку поиском, на карте или через GPS.";
+  };
+  useGps.onclick=()=>{if(!photoGps)return;try{selectPlaceLocation(photoGps.lat,photoGps.lng,"GPS из фотографии");form.elements.coordinateAccuracy.value="exact";gpsStatus.textContent="Точка из фотографии выбрана. Проверь её на карте."}catch(error){showToast(error.message)}};
+  form.onsubmit=async event=>{
+   event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
+   const f=new FormData(form),photo=f.get("photo");
+   try{
+    if(!selectedPlaceLocation)throw new Error("Сначала выбери точку поиска, на карте или через GPS");
+    const payload={title:f.get("title"),category:f.get("category"),lat:Number(f.get("lat")),lng:Number(f.get("lng")),region:f.get("region"),coordinateAccuracy:f.get("coordinateAccuracy"),description:f.get("description")};
+    if(photo?.size&&photoGps){const distance=distanceMeters(payload.lat,payload.lng,photoGps.lat,photoGps.lng);if(distance>250&&!(await askUserConfirmation("GPS фотографии отличается от выбранной точки примерно на "+Math.round(distance)+" м. Продолжить?")))return}
+    const created=await api("/api/places",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+    if(photo?.size){try{const imageUrl=await uploadImage(photo);await api("/api/places/"+encodeURIComponent(created.item.id)+"/impressions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({text:"",photoUrls:[imageUrl]})});showToast("Место и фотография отправлены на модерацию")}catch(photoError){showToast("Место отправлено на модерацию, но фото не загрузилось: "+photoError.message)}}
+    else showToast("Место отправлено на модерацию");
+    destroyPlacePicker();host.replaceChildren();loadMyPlaces();
+   }catch(error){showToast(error.message)}
+   finally{submit.disabled=false}
+  };
+ });
+}
 async function loadMyPlaces(){try{const data=await api("/api/my/places");const pending=data.items.filter(p=>p.status!=="published");if(pending.length){document.getElementById("map-side-title").textContent="Мои места · на проверке";document.getElementById("map-side-content").insertAdjacentHTML("afterbegin",pending.map(p=>'<div class="map-place"><strong>'+safe(p.title)+'</strong><div class="map-muted">Статус: '+safe(p.status)+'</div></div>').join(""))}}catch{}}
 async function openPlace(id){
  try{
