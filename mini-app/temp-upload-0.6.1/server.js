@@ -99,7 +99,7 @@ function userRole(userId) {
   const id = String(userId || "");
   if (id === "local-tester" || MAP_ADMINS.has(id)) return "admin";
   if (MAP_MODERATORS.has(id)) return "moderator";
-  return "member";
+  return "user";
 }
 app.get("/api/session", (req, res) => {
   const user = optionalAuthenticatedUser(req);
