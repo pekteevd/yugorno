@@ -450,9 +450,14 @@ function editOwnPlace(place){
   await api("/api/my/places/"+encodeURIComponent(place.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:form.get("title"),category:form.get("category"),region:form.get("region"),description:form.get("description"),lat:place.lat,lng:place.lng,coordinateAccuracy:place.coordinateAccuracy,photoUrls:urls})});
  });
 }
-function editOwnRoute(route){
- const selected=new Set(route.stopIds||[]);
- const body='<label class="wide">Название маршрута<input name="title" maxlength="120" required value="'+safe(route.title)+'"></label><label>Передвижение<select name="transport"><option value="mixed">Смешанное</option><option value="walking">Пешком</option><option value="cycling">Велосипед</option><option value="driving">Автомобиль</option><option value="water">По воде</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(route.description||"")+'</textarea></label><div class="wide map-muted">Выберите остановки в нужном порядке. Существующий GPS-трек сохранится, если не загружать новый GPX.</div>'+places.map(place=>'<label><span><input type="checkbox" name="stopIds" value="'+safe(place.id)+'" '+(selected.has(place.id)?"checked":"")+'> '+safe(place.title)+'</span></label>').join("")+'<label class="wide">Заменить GPS-трек файлом GPX (необязательно)<input name="gpx" type="file" accept=".gpx,application/gpx+xml"></label>';
+async function editOwnRoute(route){
+ try{
+  const published=(await api("/api/places")).items||[];
+  const byId=new Map(published.map(place=>[place.id,place]));
+  for(const stop of route.stops||[])if(!byId.has(stop.id))byId.set(stop.id,stop);
+  places=[...byId.values()];
+  const selected=new Set(route.stopIds||[]);
+  const body='<label class="wide">Название маршрута<input name="title" maxlength="120" required value="'+safe(route.title)+'"></label><label>Передвижение<select name="transport"><option value="mixed">Смешанное</option><option value="walking">Пешком</option><option value="cycling">Велосипед</option><option value="driving">Автомобиль</option><option value="water">По воде</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(route.description||"")+'</textarea></label><div class="wide map-muted">Выберите остановки в нужном порядке. Существующий GPS-трек сохранится, если не загружать новый GPX.</div>'+places.map(place=>'<label><span><input type="checkbox" name="stopIds" value="'+safe(place.id)+'" '+(selected.has(place.id)?"checked":"")+'> '+safe(place.title)+'</span></label>').join("")+'<label class="wide">Заменить GPS-трек файлом GPX (необязательно)<input name="gpx" type="file" accept=".gpx,application/gpx+xml"></label>';
  ownerEditor("Редактировать маршрут",body,async form=>{
   const stopIds=form.getAll("stopIds");
   if(stopIds.length<2)throw new Error("В маршруте должно быть не менее двух остановок");
@@ -461,7 +466,8 @@ function editOwnRoute(route){
   if(file?.size){payload.trackPoints=await parseGPX(file)}
   await api("/api/my/routes/"+encodeURIComponent(route.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
  });
- const select=document.querySelector('#owner-edit-form select[name="transport"]');if(select)select.value=route.transport||"mixed";
+  const select=document.querySelector('#owner-edit-form select[name="transport"]');if(select)select.value=route.transport||"mixed";
+ }catch(error){showToast("Не удалось открыть редактор маршрута: "+error.message)}
 }
 function editOwnImpression(item){
  const photos=item.photoUrls||[];
