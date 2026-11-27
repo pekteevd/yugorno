@@ -216,9 +216,23 @@ export async function getProfile(userId) {
 export async function saveProfile(userId, input) {
   const profile = {
     name: cleanText(input.name, 100), city: cleanText(input.city, 120),
-    interest: cleanText(input.interest, 120), imageUrl: cleanText(input.imageUrl, 500), updatedAt: new Date().toISOString()
+    interest: cleanText(input.interest, 120), imageUrl: cleanText(input.imageUrl, 500),
+    discoverable: input.discoverable === true, updatedAt: new Date().toISOString()
   };
   return update(store => { store.profiles[String(userId)] = profile; return profile; });
+}
+
+export async function listPublicProfiles() {
+  const store = await readStore();
+  return Object.values(store.profiles)
+    .filter(profile => profile && profile.discoverable === true && cleanText(profile.name, 100))
+    .map(profile => ({
+      name: cleanText(profile.name, 100),
+      city: cleanText(profile.city, 120),
+      interest: cleanText(profile.interest, 120),
+      imageUrl: cleanText(profile.imageUrl, 500)
+    }))
+    .slice(0, 200);
 }
 
 
