@@ -405,7 +405,7 @@ export async function listMyImpressions(userId) {
   const store = await readStore();
   return store.impressions.filter(item => item.authorId === String(userId)).map(item => {
     const place = store.places.find(entry => entry.id === item.placeId);
-    return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено" };
+    return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено", placeLat: place?.lat ?? null, placeLng: place?.lng ?? null };
   });
 }
 export async function updateImpression(userId, impressionId, input = {}) {
