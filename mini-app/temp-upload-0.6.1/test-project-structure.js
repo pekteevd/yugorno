@@ -557,7 +557,6 @@ test('all photo upload paths accept 15 MB and server JSON parsing supports base6
   assert.match(map, /file\.size>15\*1024\*1024/);
   assert.match(server, /express\.json\(\{ limit: "22mb" \}\)/);
   assert.match(server, /buffer\.length > 15 \* 1024 \* 1024/);
-  assert.match(server, /buffer\.length > 5 \* 1024 \* 1024/ === false ? /x/ : /y/);
 });
 
 test('map list photos use the nested card media container dimensions instead of an unmatched direct-child selector', async () => {
