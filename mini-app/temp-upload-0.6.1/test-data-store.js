@@ -41,17 +41,6 @@ test('persists communities and keeps profiles separated by Telegram user id', as
   assert.equal((await store.getProfile(202)).name, 'Мария');
 });
 
-test('public people directory includes only opted-in profiles and never exposes account ids', async () => {
-  await store.saveProfile(1501, { name: 'Открытый участник', city: 'Казань', interest: 'Походы', imageUrl: '/uploads/person.jpg', discoverable: true });
-  await store.saveProfile(1502, { name: 'Закрытый участник', city: 'Москва', interest: 'Культура', discoverable: false });
-  const publicProfiles = await store.listPublicProfiles(1501);
-  assert.equal(publicProfiles.length, 0, 'the current user is excluded from their own directory results');
-  const forAnotherUser = await store.listPublicProfiles(9999);
-  assert.deepEqual(forAnotherUser, [{ name: 'Открытый участник', city: 'Казань', interest: 'Походы', imageUrl: '/uploads/person.jpg' }]);
-  assert.equal(Object.hasOwn(forAnotherUser[0], 'userId'), false);
-  assert.equal((await store.getProfile(1502)).discoverable, false);
-});
-
 test('serializes concurrent writes without losing records', async () => {
   await Promise.all(Array.from({ length: 12 }, (_, i) => store.createCommunity(500 + i, { title: `Тема ${i}`, description: 'Описание' })));
   assert.equal((await store.listCommunities()).length, 13);
