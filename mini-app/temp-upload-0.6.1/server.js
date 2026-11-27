@@ -12,6 +12,7 @@ const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.
 const UPLOADS_DIR = path.resolve(process.env.YUGORNO_UPLOAD_DIR || path.join(DATA_DIR, "uploads"));
 const PRIVATE_UPLOADS_DIR = path.resolve(process.env.YUGORNO_PRIVATE_UPLOAD_DIR || path.join(DATA_DIR, "private-uploads"));
 const MAP_MODERATORS = new Set((process.env.YUGORNO_MODERATOR_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
+const MAP_ADMINS = new Set((process.env.YUGORNO_ADMIN_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
 const BOT_TOKEN = process.env.BOT_TOKEN?.trim();
 const BOT_USERNAME = process.env.BOT_USERNAME?.replace(/^@/, "").trim() || "YugornoTravelBot";
 const WEBAPP_URL = process.env.WEBAPP_URL?.trim();
@@ -85,6 +86,27 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "yugorno", version: "0.6.1" });
 });
 
+
+function optionalAuthenticatedUser(req) {
+  if (isLocalDemoAdminRequest(req)) return { id: "local-tester", first_name: "Локальный тестировщик", authMethod: "local-demo" };
+  const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
+  if (phoneSession) return { id: phoneSession.id, first_name: phoneSession.phone, phone: phoneSession.phone, authMethod: "whatsapp" };
+  const initData = req.get("X-Telegram-Init-Data");
+  const auth = validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS);
+  return auth.ok && auth.user?.id ? { ...auth.user, authMethod: "telegram" } : null;
+}
+function userRole(userId) {
+  const id = String(userId || "");
+  if (id === "local-tester" || MAP_ADMINS.has(id)) return "admin";
+  if (MAP_MODERATORS.has(id)) return "moderator";
+  return "member";
+}
+app.get("/api/session", (req, res) => {
+  const user = optionalAuthenticatedUser(req);
+  if (!user) return res.json({ ok: true, authenticated: false, role: "guest", user: null });
+  const { id, first_name, last_name, username, phone, authMethod } = user;
+  res.json({ ok: true, authenticated: true, role: userRole(id), user: { id, first_name, last_name, username, phone, authMethod } });
+});
 app.get("/api/status", (_req, res) => {
   res.json({
     app: "Югорно",
@@ -320,8 +342,8 @@ function isLocalDemoAdminRequest(req) {
   return localDemoEnabled && loopbackHost && loopbackRemote && req.get('X-Local-Demo-User') === 'local-tester';
 }
 function requireMapModerator(req, res, next) {
-  const userId = String(req.telegramUser?.id || "");
-  if (!isLocalDemoAdminRequest(req) && !MAP_MODERATORS.has(userId)) return res.status(403).json({ ok: false, error: "moderator_required" });
+  const role = userRole(req.telegramUser?.id);
+  if (role !== "admin" && role !== "moderator") return res.status(403).json({ ok: false, error: "moderator_required" });
   next();
 }
 function authorLabel(user) {
