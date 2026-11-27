@@ -155,8 +155,8 @@ function selectPlaceLocation(lat,lng,label){
  lat=Number(lat);lng=Number(lng);
  if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat< -90||lat>90||lng< -180||lng>180)throw new Error("Не удалось определить корректную точку");
  selectedPlaceLocation={lat,lng,label:String(label||"Выбранная точка")};
- const form=document.getElementById("new-place-form");
- if(form){form.elements.lat.value=String(lat);form.elements.lng.value=String(lng)}
+ const form=document.getElementById("new-place-form")||document.getElementById("owner-edit-form");
+ if(form?.elements.lat&&form?.elements.lng){form.elements.lat.value=String(lat);form.elements.lng.value=String(lng)}
  const status=document.getElementById("place-location-status");
  if(status)status.textContent="✓ "+selectedPlaceLocation.label;
  if(placePickerMap){
@@ -476,18 +476,26 @@ function ownerEditor(title,body,onSubmit){
  host.innerHTML='<form class="map-form" id="owner-edit-form"><h4 class="wide">'+safe(title)+'</h4>'+body+'<button class="btn" type="submit">Сохранить изменения</button><button class="btn outline" type="button" id="owner-edit-cancel">Отмена</button></form>';
  hydrateOwnerImages(host);
  const form=document.getElementById("owner-edit-form");
- document.getElementById("owner-edit-cancel").onclick=()=>{releaseOwnerImages(host);host.replaceChildren()};
- form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));releaseOwnerImages(host);host.replaceChildren();await loadMyPublications();await loadPlaces();showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
+ document.getElementById("owner-edit-cancel").onclick=()=>{destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren()};
+ form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren();await loadMyPublications();await loadPlaces();showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
 }
 function editOwnPlace(place){
  const photos=place.photoUrls||[];
- const body='<label>Название<input name="title" maxlength="120" required value="'+safe(place.title)+'"></label><label>Категория<select name="category">'+categories.map(category=>'<option'+(category===place.category?' selected':'')+'>'+safe(category)+'</option>').join("")+'</select></label><label class="wide">Регион<input name="region" maxlength="120" value="'+safe(place.region||"")+'"></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(place.description||"")+'</textarea></label><div class="wide map-muted">Координаты: '+Number(place.lat).toFixed(5)+', '+Number(place.lng).toFixed(5)+' · Чтобы изменить расположение, используйте выбор точки при создании новой версии места.</div><div class="wide map-moderation-gallery">'+photos.map((url,index)=>'<label><input type="checkbox" name="removePhotos" value="'+safe(url)+'"> Удалить фото '+(index+1)+'<img data-owner-private-image="'+safe(url)+'" alt="Текущее фото"></label>').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
+ destroyPlacePicker();
+ const body='<label>Название<input name="title" maxlength="120" required value="'+safe(place.title)+'"></label><label>Категория<select name="category">'+categories.map(category=>'<option'+(category===place.category?' selected':'')+'>'+safe(category)+'</option>').join("")+'</select></label><label class="wide">Регион<input name="region" maxlength="120" value="'+safe(place.region||"")+'"></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(place.description||"")+'</textarea></label><div class="wide"><strong>Расположение места</strong><div class="map-toolbar"><input id="place-location-query" type="search" placeholder="Название места или адрес"><button type="button" id="place-location-search">Найти</button><button type="button" id="place-location-gps">Моё местоположение</button></div><div id="place-location-results"></div><div id="place-location-map" style="height:230px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div id="place-location-status" class="map-muted">Текущая точка отмечена на карте. Нажмите на карту, чтобы изменить её.</div><input type="hidden" name="lat" value="'+safe(place.lat)+'"><input type="hidden" name="lng" value="'+safe(place.lng)+'"></div><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><div class="wide map-moderation-gallery">'+photos.map((url,index)=>'<label><input type="checkbox" name="removePhotos" value="'+safe(url)+'"> Удалить фото '+(index+1)+'<img data-owner-private-image="'+safe(url)+'" alt="Текущее фото"></label>').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
  ownerEditor("Редактировать точку",body,async form=>{
   const removed=new Set(form.getAll("removePhotos"));const urls=photos.filter(url=>!removed.has(url));const files=[...(form.getAll("photos")||[])].filter(file=>file&&file.size);
   if(urls.length+files.length>8)throw new Error("Всего можно сохранить не более 8 фотографий");
   for(const file of files)urls.push(await uploadImage(file));
-  await api("/api/my/places/"+encodeURIComponent(place.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:form.get("title"),category:form.get("category"),region:form.get("region"),description:form.get("description"),photoUrls:urls})});
+  const lat=Number(form.get("lat")),lng=Number(form.get("lng"));if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error("Выберите корректное расположение места на карте");
+  await api("/api/my/places/"+encodeURIComponent(place.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:form.get("title"),category:form.get("category"),region:form.get("region"),description:form.get("description"),lat,lng,coordinateAccuracy:form.get("coordinateAccuracy"),photoUrls:urls})});
  });
+ const accuracy=document.querySelector('#owner-edit-form select[name="coordinateAccuracy"]');if(accuracy)accuracy.value=place.coordinateAccuracy||"exact";
+ selectedPlaceLocation={lat:Number(place.lat),lng:Number(place.lng),label:"Текущее расположение"};
+ document.getElementById("place-location-search").onclick=searchPlaceLocation;
+ document.getElementById("place-location-gps").onclick=useDeviceLocation;
+ document.getElementById("place-location-query").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}};
+ initPlacePickerMap();
 }
 async function editOwnRoute(route){
  try{
