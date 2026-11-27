@@ -160,7 +160,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
       <p id="account-state" style="color:var(--muted);margin:0 0 12px">Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.</p>
       <div id="account-login-controls">
         <div class="field"><label for="account-phone">Номер телефона для входа</label><input id="account-phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00"></div>
-        <button class="btn outline" type="button" onclick="requestWhatsappCode()">Получить код</button>
+        <button class="btn outline" id="account-request-code" type="button" onclick="requestWhatsappCode()">Получить код</button>
         <div class="field" id="account-code-field" hidden><label for="account-code">Код из WhatsApp</label><input id="account-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 цифр"></div>
         <button class="btn" id="account-verify-button" type="button" onclick="verifyWhatsappCode()" hidden>Войти</button>
         <p id="account-login-note" style="font-size:12px;color:var(--muted);margin:10px 0 0">Вход по номеру станет доступен после настройки WhatsApp на сервере. В Telegram вход выполняется автоматически.</p>
@@ -557,6 +557,7 @@ function renderAccountState(role='guest',user=null,authMethod=''){
   if(logout)logout.hidden=isGuest||authMethod==='telegram';
   if(topButton)topButton.textContent=isGuest?'Войти':authMethod==='telegram'?'Telegram':labels[role]||'Аккаунт';
   if(localLogin)localLogin.hidden=!isGuest||!window.yugornoLocalDemoAvailable;
+  const requestButton=document.getElementById('account-request-code');if(requestButton)requestButton.disabled=!window.yugornoWhatsappAuthAvailable;
   const note=document.getElementById('account-login-note');
   if(note)note.textContent=window.yugornoWhatsappAuthAvailable?'На номер будет отправлен одноразовый код WhatsApp.':'Вход по номеру пока не настроен. В Telegram Mini App вход выполняется автоматически.';
   const profileNote=document.getElementById('profile-account-note');
