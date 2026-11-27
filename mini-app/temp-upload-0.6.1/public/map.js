@@ -238,16 +238,16 @@ function bindAdd(){
   const locationSearch=document.getElementById("place-location-search"),locationQuery=document.getElementById("place-location-query");
   locationSearch.onclick=event=>{event.preventDefault();searchPlaceLocation()};
   locationQuery.onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}};
-  let photoGps=null;
+  let photoGps=null,photoGpsPoints=[];
   document.getElementById("map-form-cancel").onclick=()=>{destroyPlacePicker();host.replaceChildren()};
   document.getElementById("place-location-gps").onclick=useDeviceLocation;
   initPlacePickerMap();
   photoInput.onchange=async()=>{
-   photoGps=null;useGps.hidden=true;const files=[...(photoInput.files||[])];
+   photoGps=null;photoGpsPoints=[];useGps.hidden=true;const files=[...(photoInput.files||[])];
    if(!files.length){gpsStatus.textContent="Фотографии не выбраны.";return}
    if(files.length>8){photoInput.value="";gpsStatus.textContent="Можно приложить не более 8 фотографий.";showToast("Можно приложить не более 8 фотографий");return}
    gpsStatus.textContent="Проверяем GPS-метаданные фотографий на устройстве…";
-   for(const file of files){photoGps=await window.YugornoExifGps?.readPhotoGps(file)||null;if(photoGps)break}
+   for(const file of files){const gps=await window.YugornoExifGps?.readPhotoGps(file)||null;if(gps){photoGpsPoints.push(gps);if(!photoGps)photoGps=gps}}
    if(photoGps){gpsStatus.textContent="В одной из фотографий найдены GPS-координаты. Их можно использовать как точку места.";useGps.hidden=false}
    else if(selectedPlaceLocation){gpsStatus.textContent="В фотографиях нет GPS. Будет использована уже выбранная точка места."}
    else{
@@ -266,7 +266,8 @@ function bindAdd(){
     if(photoFiles.length>8)throw new Error("Можно приложить не более 8 фотографий");
     if(!selectedPlaceLocation)throw new Error("Сначала укажи, где находится место: выбери результат поиска, точку на карте или GPS устройства");
     const payload={title:f.get("title"),category:f.get("category"),lat:Number(f.get("lat")),lng:Number(f.get("lng")),region:f.get("region"),coordinateAccuracy:f.get("coordinateAccuracy"),description:f.get("description")};
-    if(photoFiles.length&&photoGps){const distance=distanceMeters(payload.lat,payload.lng,photoGps.lat,photoGps.lng);if(distance>250&&!(await askUserConfirmation("GPS одной из фотографий отличается от выбранной точки примерно на "+Math.round(distance)+" м. Продолжить?")))return}
+    const farthestPhotoGpsDistance=Math.max(0,...photoGpsPoints.map(gps=>distanceMeters(payload.lat,payload.lng,gps.lat,gps.lng)));
+    if(farthestPhotoGpsDistance>250&&!(await askUserConfirmation("GPS одной или нескольких фотографий отличается от выбранной точки максимум примерно на "+Math.round(farthestPhotoGpsDistance)+" м. Продолжить?")))return
     payload.photoUrls=[];
     for(const file of photoFiles)payload.photoUrls.push(await uploadImage(file));
     await api("/api/places",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
@@ -399,7 +400,7 @@ async function loadModeration(){
   }
   host.querySelectorAll("[data-mod-status]").forEach(button=>button.onclick=async()=>{
    button.disabled=true;
-   try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});showToast(button.dataset.modStatus==="published"?"Материал опубликован":"Материал отклонён");loadModeration()}
+   try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});const published=button.dataset.modStatus==="published";showToast(button.dataset.modKind==="places"?(published?"Место и все его фотографии опубликованы":"Заявка на место и связанные материалы отклонены"):(published?"Материал опубликован":"Материал отклонён"));loadModeration()}
    catch(error){button.disabled=false;showToast(error.message)}
   });
  }catch(error){showToast("Не удалось открыть очередь модерации: "+error.message)}
