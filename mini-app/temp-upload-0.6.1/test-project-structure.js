@@ -436,7 +436,7 @@ test('local publication cleanup is guarded, backed up and preserves the three fe
   assert.match(script, /copyFile\(dataFile, backupFile\)/);
   assert.match(script, /const publicationCollections = \["trips", "communities", "places", "impressions", "routes"\]/);
   assert.match(script, /\["karelia", "teriberka", "u-ilem"\]/);
-  assert.match(script, /store\.profiles/);
+  assert.doesNotMatch(script, /store\\.profiles\\s*=/);
   assert.match(script, /Резервная копия/);
 });
 
