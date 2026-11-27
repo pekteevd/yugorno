@@ -252,7 +252,7 @@ export async function joinCommunity(userId, communityId) {
 export async function listMyTrips(userId) {
   const store = await readStore();
   return store.trips.filter(item => item.status === 'published' && item.authorId === String(userId)).map(item => ({
-    id: item.id, title: item.title, place: item.place, date: item.date, kind: item.kind, description: item.description, imageUrl: item.imageUrl || '', imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
+    id: item.id, title: item.title, place: item.place, date: item.date, kind: item.kind, description: item.description, startDate: item.startDate || '', endDate: item.endDate || '', price: item.price || '', capacity: item.capacity || 0, imageUrl: item.imageUrl || '', imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
     createdAt: item.createdAt,
     interestCount: store.tripInterests.filter(entry => entry.tripId === item.id).length
   }));
