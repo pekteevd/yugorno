@@ -388,3 +388,22 @@ test('place editor supports map-based location changes without manual coordinate
   assert.match(map, /coordinateAccuracy:form\.get\("coordinateAccuracy"\)/);
   assert.match(map, /miniMapPreview\(item\.placeLat,item\.placeLng,item\.placeTitle\)/);
 });
+
+test('owner publications support a recoverable trash across all publication types', async () => {
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  for (const kind of ['place', 'route', 'impression', 'trip', 'community']) assert.match(store, new RegExp(kind + ':'));
+  for (const marker of ['export async function trashPublication', 'export async function restorePublication', 'export async function listMyTrash', 'item.status = "deleted"', 'item.deletedFromStatus']) assert.ok(store.includes(marker), 'missing trash lifecycle: ' + marker);
+  assert.match(store, /status !== "deleted"/);
+  assert.match(server, /app\.get\("\/api\/my\/trash", requireTelegramUser/);
+  assert.match(server, /app\.delete\("\/api\/my\/publications\/:kind\/:id", requireTelegramUser/);
+  assert.match(server, /app\.post\("\/api\/my\/trash\/:kind\/:id\/restore", requireTelegramUser/);
+  assert.match(map, /async function loadMyPublications\(\)/);
+  assert.match(map, /async function loadMyTrash\(\)/);
+  assert.match(map, /data-owner-trash/);
+  assert.match(map, /data-trash-restore/);
+  assert.match(html, /Переместить путешествие или встречу в корзину/);
+  assert.match(html, /Переместить сообщество в корзину/);
+});
