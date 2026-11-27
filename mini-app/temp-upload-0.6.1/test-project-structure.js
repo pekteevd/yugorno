@@ -407,3 +407,22 @@ test('owner publications support a recoverable trash across all publication type
   assert.match(html, /Переместить путешествие или встречу в корзину/);
   assert.match(html, /Переместить сообщество в корзину/);
 });
+
+
+test('map trash controls use the shared confirmation and toast helpers and publication photos keep a portrait-friendly ratio', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /function showToast\(message\)\{if\(typeof window\.toast==="function"\)window\.toast\(message\)/);
+  assert.match(map, /async function askUserConfirmation\(message\)\{if\(typeof window\.askConfirm==="function"\)return window\.askConfirm\(message\)/);
+  assert.match(map, /\.map-place-card>\.map-place-photo\{height:auto;aspect-ratio:4\/3;max-height:220px/);
+});
+
+test('server exposes explicit guest, member, moderator and admin session roles', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
+  assert.match(server, /YUGORNO_ADMIN_IDS/);
+  assert.match(server, /function userRole\(userId\)/);
+  assert.match(server, /app\.get\("\/api\/session"/);
+  assert.match(server, /role: "guest"/);
+  assert.match(server, /role !== "admin" && role !== "moderator"/);
+  assert.match(env, /YUGORNO_ADMIN_IDS=/);
+});
