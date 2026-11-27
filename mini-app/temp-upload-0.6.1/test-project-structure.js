@@ -212,7 +212,7 @@ test('moderation cards show full place descriptions and group pending photos wit
   assert.match(map, /impressionsByPlace\.get\(place\.id\)/);
   assert.match(map, /Автор не добавил описание\./);
   assert.match(map, /Фотография или впечатление · отдельная проверка/);
-  assert.match(map, /data-mod-kind="impressions"/);
+  assert.match(map, /actionMarkup\("impressions",item\.id\)/);
   assert.match(map, /data-private-image=/);
   assert.match(map, /Фото недоступно для просмотра/);
 });
