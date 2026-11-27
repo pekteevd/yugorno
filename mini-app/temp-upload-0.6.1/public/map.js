@@ -17,9 +17,27 @@ const css=`
 .map-form label{display:grid;gap:5px;font-size:12px;color:var(--muted)}.map-form input,.map-form select,.map-form textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;color:var(--ink)}.map-form textarea{min-height:68px}.map-form .wide{grid-column:1/-1}
 .map-empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px}
 .map-legend{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
-.map-moderation{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--paper)}
-.map-moderation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.map-moderation{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;background:var(--paper);box-shadow:0 5px 18px rgba(30,45,30,.06)}
+.map-moderation-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.map-moderation-kind{display:inline-flex;align-items:center;border-radius:20px;padding:5px 10px;background:#e9eee5;color:var(--forest);font-size:12px;font-weight:700}
+.map-moderation-title{display:block;font-size:19px;line-height:1.25;color:var(--ink);margin:2px 0}
+.map-moderation-description{font-size:14px;line-height:1.6;color:var(--ink);white-space:pre-wrap;margin:0}
+.map-moderation-meta{display:flex;flex-wrap:wrap;gap:7px;color:var(--muted);font-size:12px}
+.map-moderation-meta span{padding:5px 8px;border-radius:8px;background:#f0f2ed}
+.map-moderation-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+.map-moderation-gallery a{display:block;overflow:hidden;border-radius:12px;background:#e9ece6;aspect-ratio:4/3}
+.map-moderation-gallery img{display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover}
+.map-moderation-note{padding:11px 12px;border-radius:12px;background:#f2f4ef;color:var(--ink);font-size:13px;line-height:1.5}
+.map-moderation-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px}
+.map-moderation-actions button{border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer}
+.map-moderation-actions button[data-mod-status="published"]{background:var(--forest);color:#fff}
+.map-moderation-actions button[data-mod-status="rejected"]{background:#f5e9e6;color:#8b352b}
+.map-moderation-actions button:disabled{opacity:.55;cursor:wait}
+.map-moderation-item{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:13px}
+.map-moderation-item h5{margin:0;font-size:14px}
 .map-moderation img,.map-impression-photo{max-width:100%;max-height:220px;border-radius:10px;object-fit:cover}
+@media(min-width:700px){.map-moderation{padding:19px}.map-moderation-gallery{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+
 .map-track-note{font-size:12px;color:var(--muted);grid-column:1/-1}
 .map-location-result{display:block;width:100%;text-align:left;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);margin:5px 0;cursor:pointer}.map-location-result:hover{border-color:var(--forest)}#place-location-query{flex:1;min-width:180px}#place-location-map{background:#e4e9df}
 @media(max-width:850px){.map-layout{grid-template-columns:1fr}#yugorno-map{height:54vh;min-height:360px}.map-side{max-height:360px}}
@@ -336,13 +354,33 @@ async function checkModerator(){
 async function loadModeration(){
  try{
   const [p,i,r]=await Promise.all([api("/api/moderation/places"),api("/api/moderation/impressions"),api("/api/moderation/routes")]);
-  const entries=[...p.items.map(item=>({...item,kind:"places",kindLabel:"Место"})),...i.items.map(item=>({...item,kind:"impressions",kindLabel:"Впечатление"})),...r.items.map(item=>({...item,kind:"routes",kindLabel:"Маршрут"}))];
-  document.getElementById("map-side-title").textContent="Очередь модерации";
+  const pendingPlaces=p.items||[],pendingImpressions=i.items||[],pendingRoutes=r.items||[];
+  const placeById=new Map(pendingPlaces.map(place=>[place.id,place]));
+  const impressionsByPlace=new Map();
+  for(const item of pendingImpressions){const key=item.placeId||"";if(!impressionsByPlace.has(key))impressionsByPlace.set(key,[]);impressionsByPlace.get(key).push(item)}
+  const parentDetails=new Map();
+  await Promise.all([...impressionsByPlace.keys()].filter(id=>id&&!placeById.has(id)).map(async id=>{try{const data=await api("/api/places/"+encodeURIComponent(id));if(data.item)parentDetails.set(id,data.item)}catch{}}));
   const host=document.getElementById("map-side-content");
   host.querySelectorAll('img[data-private-image]').forEach(img=>{if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl)});
-  host.innerHTML=entries.length?entries.map(item=>'<div class="map-moderation"><div class="map-muted">'+item.kindLabel+'</div><strong>'+safe(item.title||item.text||"Без названия")+'</strong><p>'+safe(item.description||item.text||"")+'</p>'+(item.stops?.length?'<p>Остановки: '+safe(item.stops.map(stop=>stop.title).join(" → "))+'</p>':'')+(Number.isFinite(Number(item.lat))&&Number.isFinite(Number(item.lng))?'<p><a href="https://www.openstreetmap.org/?mlat='+encodeURIComponent(item.lat)+'&mlon='+encodeURIComponent(item.lng)+'#map=16/'+encodeURIComponent(item.lat)+'/'+encodeURIComponent(item.lng)+'" target="_blank" rel="noopener">Проверить точку на карте</a></p>':'')+(item.photoUrls||[]).map(url=>'<img data-private-image="'+safe(url)+'" alt="Фото на проверке" loading="lazy">').join("")+'<div class="map-muted">'+safe(item.region||"")+'</div><div class="map-moderation-actions"><button type="button" data-mod-kind="'+item.kind+'" data-mod-id="'+safe(item.id)+'" data-mod-status="published">Опубликовать</button><button type="button" data-mod-kind="'+item.kind+'" data-mod-id="'+safe(item.id)+'" data-mod-status="rejected">Отклонить</button></div></div>').join(""):'<div class="map-empty">Очередь пуста. Новых материалов на проверке нет.</div>';
+  const imageMarkup=(urls)=>{const unique=[...new Set((urls||[]).filter(Boolean))];return unique.length?'<div class="map-moderation-gallery">'+unique.map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img data-private-image="'+safe(url)+'" alt="Фотография на модерации" loading="lazy"></a>').join("")+'</div>':'<div class="map-moderation-note">Фотографии не приложены.</div>'};
+  const actionMarkup=(kind,id)=>'<div class="map-moderation-actions"><button type="button" data-mod-kind="'+kind+'" data-mod-id="'+safe(id)+'" data-mod-status="published">Опубликовать</button><button type="button" data-mod-kind="'+kind+'" data-mod-id="'+safe(id)+'" data-mod-status="rejected">Отклонить</button></div>';
+  const placeCards=pendingPlaces.map(place=>{
+   const attached=impressionsByPlace.get(place.id)||[];
+   const photos=attached.flatMap(item=>item.photoUrls||[]);
+   const extras=attached.map(item=>'<div class="map-moderation-item"><h5>Фотография или впечатление · отдельная проверка</h5>'+(item.text?'<p class="map-moderation-description">'+safe(item.text)+'</p>':'<div class="map-moderation-note">К фотографии не добавлен текст.</div>')+imageMarkup(item.photoUrls)+actionMarkup("impressions",item.id)+'</div>').join("");
+   const coords=Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lng))?'<a href="https://www.openstreetmap.org/?mlat='+encodeURIComponent(place.lat)+'&mlon='+encodeURIComponent(place.lng)+'#map=16/'+encodeURIComponent(place.lat)+'/'+encodeURIComponent(place.lng)+'" target="_blank" rel="noopener">Открыть точку на карте</a>':"";
+   return '<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Место · ожидает решения</span><span class="map-muted">'+safe(place.author||"Автор не указан")+'</span></div><strong class="map-moderation-title">'+safe(place.title||"Без названия")+'</strong><div class="map-moderation-meta">'+(place.category?'<span>'+safe(place.category)+'</span>':'')+(place.region?'<span>'+safe(place.region)+'</span>':'')+'</div><p class="map-moderation-description">'+safe(place.description||"Автор не добавил описание.")+'</p>'+imageMarkup(photos)+'<div class="map-moderation-meta">'+(coords?'<span>'+coords+'</span>':'')+'<span>Вложений на проверке: '+attached.length+'</span></div>'+actionMarkup("places",place.id)+(extras?'<h4>Связанные материалы</h4>'+extras:'')+'</article>';
+  });
+  const looseImpressions=pendingImpressions.filter(item=>!placeById.has(item.placeId)).map(item=>{
+   const parent=parentDetails.get(item.placeId),parentTitle=parent?.title||"Место из каталога";
+   return '<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Впечатление · ожидает решения</span><span class="map-muted">'+safe(item.author||"Автор не указан")+'</span></div><strong class="map-moderation-title">'+safe(parentTitle)+'</strong><p class="map-moderation-description">'+safe(item.text||"Автор добавил фотографию без текста.")+'</p>'+imageMarkup(item.photoUrls)+'<div class="map-moderation-meta">'+(parent?.region?'<span>'+safe(parent.region)+'</span>':'')+'</div>'+actionMarkup("impressions",item.id)+'</article>';
+  });
+  const routeCards=pendingRoutes.map(item=>'<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Маршрут · ожидает решения</span></div><strong class="map-moderation-title">'+safe(item.title||"Без названия")+'</strong><p class="map-moderation-description">'+safe(item.description||"Автор не добавил описание.")+'</p>'+(item.stops?.length?'<div class="map-moderation-note">Остановки: '+safe(item.stops.map(stop=>stop.title).join(" → "))+'</div>':'')+actionMarkup("routes",item.id)+'</article>');
+  const cards=[...placeCards,...looseImpressions,...routeCards];
+  document.getElementById("map-side-title").textContent="Очередь модерации · "+cards.length;
+  host.innerHTML=cards.length?cards.join(""):'<div class="map-empty">Очередь пуста. Новых материалов на проверке нет.</div>';
   for(const img of host.querySelectorAll("img[data-private-image]")){
-   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}}catch{}
+   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}else{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Фото недоступно для просмотра</span>');img.closest("a")?.remove()}}catch{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Не удалось загрузить фото</span>');img.closest("a")?.remove()}
   }
   host.querySelectorAll("[data-mod-status]").forEach(button=>button.onclick=async()=>{
    button.disabled=true;
