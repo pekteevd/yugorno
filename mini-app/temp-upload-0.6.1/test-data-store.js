@@ -173,7 +173,7 @@ test('stores validated GPX track points with a route and rejects malformed track
 
 test('initial place photos are private and follow the place moderation decision', async () => {
   const filename = '223e4567-e89b-12d3-a456-426614174000.jpg';
-  const url = \`/api/map-uploads/\${filename}\`;
+  const url = '/api/map-uploads/' + filename;
   const place = await store.createPlace(1551, { title: 'Лесная поляна', category: 'Природа', lat: 55.2, lng: 46.3, photoUrls: [url] });
   assert.deepEqual(place.photoUrls, [url]);
   assert.equal(await store.canViewMapUpload(1551, filename, false), true);
