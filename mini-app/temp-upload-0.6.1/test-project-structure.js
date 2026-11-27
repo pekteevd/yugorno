@@ -160,11 +160,26 @@ test('place creation selects coordinates by search, map click, or device GPS wit
   assert.match(map, /id="place-location-search"/);
   assert.match(map, /id="place-location-map"/);
   assert.match(map, /id="place-location-gps"/);
-  assert.match(map, /placePickerMap\.on\("click"/);
+  assert.match(map, /placePickerClickHandler=event=>/);\n  assert.match(map, /mouseEventToLatLng\(event\)/);\n  assert.match(map, /removeEventListener\("click",placePickerClickHandler\)/);
   assert.match(map, /navigator\.geolocation\.getCurrentPosition/);
   assert.match(map, /name="lat"><input type="hidden" name="lng"/);
   assert.doesNotMatch(map, /name="lat" type="number"[^>]*required/);
   assert.doesNotMatch(map, /name="lng" type="number"[^>]*required/);
+});
+
+test('place picker uses a native container click handler and cleans it up', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /clickContainer\.addEventListener\("click",placePickerClickHandler\)/);
+  assert.match(map, /mouseEventToLatLng\(event\)/);
+  assert.match(map, /removeEventListener\("click",placePickerClickHandler\)/);
+});
+
+test('place geocoder falls back from Photon to OpenStreetMap Nominatim', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /photon\.komoot\.io\/api/);
+  assert.match(map, /nominatim\.openstreetmap\.org\/search/);
+  assert.match(map, /await fetchPlaceGeocoding\(query\)/);
+  assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
 });
 
 test('place geocoding is explicit, cached, throttled, and uses safe text rendering', async () => {
