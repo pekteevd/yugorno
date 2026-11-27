@@ -167,6 +167,12 @@ test('place creation selects coordinates by search, map click, or device GPS wit
   assert.match(map, /name="lat"><input type="hidden" name="lng"/);
   assert.doesNotMatch(map, /name="lat" type="number"[^>]*required/);
   assert.doesNotMatch(map, /name="lng" type="number"[^>]*required/);
+  assert.match(map, /name="photo" type="file"[^>]*multiple/);
+  assert.match(map, /f\.getAll\("photo"\)/);
+  assert.match(map, /payload\.photoUrls=\[\]/);
+  assert.match(map, /В выбранных фотографиях не найдены GPS-координаты/);
+  const addFlow = map.slice(map.indexOf("function bindAdd(){"), map.indexOf("async function loadMyPlaces()"));
+  assert.doesNotMatch(addFlow, /\/impressions/);
 });
 
 test('place picker uses a native container click handler and cleans it up', async () => {
@@ -204,6 +210,16 @@ test('place geocoding is explicit, cached, throttled, and uses safe text renderi
 });
 
 
+
+test('initial place photos use the place moderation lifecycle and pending attached impressions are bundled', async () => {
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(store, /photoUrls = cleanImageUrls\(input\.photoUrls \|\| \[\]\)/);
+  assert.match(store, /pendingImpressions: store\.impressions\.filter/);
+  assert.match(store, /pendingPlaceIds = new Set/);
+  assert.match(store, /impression\.status = status/);
+  assert.match(store, /const place = store\.places\.find\(item => \(item\.photoUrls \|\| \[\]\)\.includes\(url\)\)/);
+});
+
 test('moderation cards show full place descriptions and group pending photos with their parent place', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /map-moderation-description/);
@@ -212,12 +228,12 @@ test('moderation cards show full place descriptions and group pending photos wit
   assert.match(map, /export\/embed\.html\?bbox=/);
   assert.match(map, /marker=/);
   assert.match(map, /Координаты места не указаны/);
-  assert.match(map, /const impressionsByPlace=new Map\(\)/);
-  assert.match(map, /impressionsByPlace\.get\(place\.id\)/);
-  assert.match(map, /Автор не добавил описание\./);
-  assert.match(map, /Материал к этому месту · отдельная проверка/);
-  assert.match(map, /Фотография добавлена без текста\. Она показана в галерее выше\./);
-  assert.match(map, /actionMarkup\("impressions",item\.id\)/);
+  assert.match(map, /place\.pendingImpressions\|\|\[\]/);
+  assert.match(map, /place\.photoUrls\|\|\[\]/);
+  assert.match(map, /Дополнение к заявке на место/);
+  assert.match(map, /actionMarkup\("places",place\.id\)/);
+  assert.match(map, /Фотографии места/);
+  assert.match(map, /В выбранных фотографиях не найдены GPS-координаты/);
   assert.match(map, /data-private-image=/);
   assert.match(map, /Фото недоступно для просмотра/);
 });
