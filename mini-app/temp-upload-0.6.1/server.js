@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, listMyRoutes, updateRoute, listMyImpressions, updateImpression, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, listMyRoutes, updateRoute, listMyImpressions, updateImpression, trashPublication, restorePublication, listMyTrash, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -262,6 +262,24 @@ app.post("/api/communities/:id/join", requireTelegramUser, async (req, res, next
     const { notifyUserId, communityTitle, ...publicResult } = result;
     res.json({ ok: true, result: publicResult });
   } catch (error) { next(error); }
+});
+
+app.get("/api/my/trash", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyTrash(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.delete("/api/my/publications/:kind/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await trashPublication(req.telegramUser.id, req.params.kind, req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "publication_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(409).json({ ok: false, error: error.message }); next(error); }
+});
+app.post("/api/my/trash/:kind/:id/restore", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await restorePublication(req.telegramUser.id, req.params.kind, req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "trash_item_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
 
 app.get("/api/my/trips", requireTelegramUser, async (req, res, next) => {
