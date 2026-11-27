@@ -473,7 +473,7 @@ test('admin and moderator identities can be assigned to Telegram or WhatsApp acc
   const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
   assert.match(server, /MAP_ADMINS\.has\(id\)/);
   assert.match(server, /MAP_MODERATORS\.has\(id\)/);
-  assert.match(server, /id: `wa:\$\{phone\}`/);
+  assert.match(server, /sub: `wa:\$\{phone\}`/);
   assert.match(env, /YUGORNO_ADMIN_IDS=/);
   assert.match(env, /YUGORNO_MODERATOR_IDS=/);
 });
