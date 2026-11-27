@@ -87,11 +87,20 @@ test('owners can edit and unpublish only their own trips and communities', async
   assert.equal(changedCommunity.title, 'Новое сообщество');
   assert.equal(await store.unpublishTrip(701, trip.id), null);
   assert.equal(await store.unpublishCommunity(701, community.id), null);
-  assert.equal((await store.unpublishTrip(700, trip.id)).status, 'unpublished');
-  assert.equal((await store.unpublishCommunity(700, community.id)).status, 'unpublished');
+  assert.equal((await store.unpublishTrip(700, trip.id)).status, 'deleted');
+  assert.equal((await store.unpublishCommunity(700, community.id)).status, 'deleted');
   assert.equal(await store.getTrip(trip.id), null);
   assert.equal((await store.listTrips()).some(item => item.id === trip.id), false);
   assert.equal((await store.listCommunities()).some(item => item.id === community.id), false);
+  const trash = await store.listMyTrash(700);
+  assert.equal(trash.some(item => item.id === trip.id && item.kind === 'trip'), true);
+  assert.equal(trash.some(item => item.id === community.id && item.kind === 'community'), true);
+  assert.equal(await store.restorePublication(701, 'trip', trip.id), null);
+  assert.equal(await store.restorePublication(701, 'community', community.id), null);
+  assert.equal((await store.restorePublication(700, 'trip', trip.id)).status, 'published');
+  assert.equal((await store.restorePublication(700, 'community', community.id)).status, 'published');
+  assert.equal((await store.listTrips()).some(item => item.id === trip.id), true);
+  assert.equal((await store.listCommunities()).some(item => item.id === community.id), true);
 });
 
 test('community owners can see member profiles but public data never exposes Telegram ids', async () => {
