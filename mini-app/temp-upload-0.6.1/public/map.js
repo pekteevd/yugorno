@@ -477,7 +477,7 @@ function ownerEditor(title,body,onSubmit){
  hydrateOwnerImages(host);
  const form=document.getElementById("owner-edit-form");
  document.getElementById("owner-edit-cancel").onclick=()=>{destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren()};
- form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren();await loadMyPublications();await loadPlaces();showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
+ form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren();await loadMyPublications();await loadPlaces();if(activeMode==="routes"){routes=(await api("/api/routes")).items;renderSide()}window.loadJourneyTab?.("points",true);window.loadJourneyTab?.("routes",true);showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
 }
 function editOwnPlace(place){
  const photos=place.photoUrls||[];
