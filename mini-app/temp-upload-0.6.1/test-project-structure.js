@@ -464,6 +464,8 @@ test('public website supports guest browsing and authenticated account controls'
   assert.match(html, /X-Yugorno-Session/);
   assert.match(html, /\['GET','HEAD'\]\.includes\(method\)/);
   assert.match(map, /X-Yugorno-Session/);
+  assert.match(map, /localStorage\.getItem\(\"yugorno-session\"\)/);
+  assert.match(html, /localStorage\.getItem\('yugorno-session'\)/);
   assert.match(server, /app\.get\("\/api\/session"/);
   assert.match(server, /whatsappAuthAvailable:/);
 });
