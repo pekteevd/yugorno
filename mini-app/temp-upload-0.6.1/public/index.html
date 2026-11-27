@@ -177,7 +177,6 @@ function setJourneyTab(tab){document.querySelectorAll('[data-journey-tab]').forE
 function openJourneyItem(kind,id){if(kind==='place'){if(window.YugornoMap?.openPlace)window.YugornoMap.openPlace(id);else{showView('map');toast('Откройте точку на карте после загрузки карты')}}else if(kind==='route'){if(window.YugornoMap?.showRoute)window.YugornoMap.showRoute(id);else{showView('map');toast('Карта ещё загружается')}}else if(kind==='trip')openTripDetails(id)}
 document.querySelectorAll('[data-journey-tab]').forEach(button=>button.addEventListener('click',()=>setJourneyTab(button.dataset.journeyTab)));
 document.getElementById('trips').addEventListener('click',event=>{const button=event.target.closest('[data-journey-open]');if(button)openJourneyItem(button.dataset.journeyKind,button.dataset.journeyOpen)});
-loadJourneyTab('points');
 
 let detailReturnView='home';
 let detailHistoryActive=false;
@@ -368,7 +367,7 @@ async function showTripInterests(id,title){try{const result=await telegramApi(`/
 async function loadServerProfile(){try{const result=await telegramApi('/api/profile');const p=result.profile||{};const user=window.yugornoTelegramUser||{};const fallbackName=[user.first_name,user.last_name].filter(Boolean).join(' ')||(user.username?'@'+user.username:'Путешественник');const name=p.name||fallbackName;document.getElementById('profile-name').value=name;document.getElementById('profile-city').value=p.city||'';const select=document.getElementById('profile-interest');if(p.interest&&[...select.options].some(o=>o.value===p.interest||o.text===p.interest))select.value=p.interest;renderProfileSummary(name,p.city||'',p.interest||'',p.imageUrl||'');if(p.imageUrl){const preview=document.getElementById('profile-photo-preview');preview.src=p.imageUrl;preview.style.display='block'}setProfileEditMode(false)}catch(error){console.warn('Профиль не загружен:',error.message)}}
 
 async function initLocalDemoMode(){
-  if(window.Telegram?.WebApp?.initData)return;
+  if(window.Telegram?.WebApp?.initData){await loadJourneyTab('points');return}
   try{
     const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)return;
     const status=await response.json();if(!status.localDemoEnabled)return;
@@ -376,7 +375,7 @@ async function initLocalDemoMode(){
     const label=document.querySelector('.user span');if(label)label.textContent='КУНДЫШ';
     const profileHeading=document.querySelector('#profile .panel h3');if(profileHeading)profileHeading.textContent='КУНДЫШ';const profileAvatar=document.querySelector('#profile .panel .avatar');if(profileAvatar)profileAvatar.textContent='К';
     const note=document.querySelector('#profile .panel small');if(note)note.textContent='Локальный режим проверки. Данные хранятся только на этом компьютере.';
-    await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();
+    await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();await loadJourneyTab('points');
   }catch(error){console.warn('Локальный режим недоступен:',error.message)}
 }
 initLocalDemoMode();
