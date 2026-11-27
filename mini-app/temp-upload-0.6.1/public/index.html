@@ -118,9 +118,14 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
       <button type="button" data-journey-tab="meetings" role="tab" aria-selected="false">🤝 Встречи</button>
       <button type="button" data-journey-tab="trips" role="tab" aria-selected="false">🎒 Поездки</button>
     </div>
+    <div class="actions" style="margin:14px 0 18px">
+      <button class="btn outline" type="button" onclick="openJourneyCreate('route')">＋ Создать маршрут</button>
+      <button class="btn outline" type="button" onclick="openJourneyCreate('meeting')">＋ Создать встречу</button>
+      <button class="btn" type="button" onclick="openJourneyCreate('trip')">＋ Создать поездку</button>
+    </div>
     <section class="journey-pane active" id="journey-points" role="tabpanel"><div class="journey-intro">Интересные места, природные объекты и открытия сообщества.</div><div class="journey-cards" id="journey-point-list"><div class="empty">Загружаем точки…</div></div></section>
-    <section class="journey-pane" id="journey-routes" role="tabpanel" hidden><div class="journey-intro">Маршруты, собранные из опубликованных точек.</div><div class="journey-cards" id="journey-route-list"></div></section>
-    <section class="journey-pane" id="journey-meetings" role="tabpanel" hidden><div class="journey-intro">Встречи и совместные выезды. Пока они публикуются через общий формат путешествий «Встреча».</div><div class="journey-cards" id="journey-meeting-list"></div></section>
+    <section class="journey-pane" id="journey-routes" role="tabpanel" hidden><div class="journey-intro">Постоянные маршруты с последовательностью точек и GPX-треком. Новые маршруты проходят модерацию.</div><div class="journey-cards" id="journey-route-list"></div></section>
+    <section class="journey-pane" id="journey-meetings" role="tabpanel" hidden><div class="journey-intro">События в конкретном месте и в конкретное время. Участники могут открыть встречу и присоединиться.</div><div class="journey-cards" id="journey-meeting-list"></div></section>
     <section class="journey-pane" id="journey-trips" role="tabpanel" hidden><div class="journey-intro">Авторские поездки, поиск попутчиков и путешествия участников.</div><div class="journey-cards" id="journey-trip-list"></div></section>
     <div class="list" id="trip-list" hidden></div>
     <section class="panel" id="my-trips-panel" hidden style="margin-top:20px"><h3>Мои публикации</h3><div class="list" id="my-trip-list"></div></section>
@@ -160,7 +165,7 @@ const titles={home:'Открывай. Знакомься. Путешествуй
 function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function tripCard(t){
   const imageKey=['trip-karelia','trip-u-ilem','trip-teriberka'].includes(t.image)?t.image:'trip-karelia';
-  const action=t.published?`<button class="btn outline" onclick="openTripDetails('${escapeHTML(t.id)}')">Подробнее</button>`:`<button class="btn outline" onclick="openTripPreview('${escapeHTML(t.slug)}')">Подробнее</button>`;
+  const action=t.published?`<button class="btn outline" onclick="openTripDetails('${escapeHTML(t.id)}')">Подробнее</button>`:`<button class="btn outline" onclick="openTripPreview('${escapeHTML(t.slug)}')">Подробнее</button>${t.slug&&window.yugornoIsModerator?` <button class="btn outline" onclick="openDestinationEditor('${escapeHTML(t.slug)}')">Изменить</button>`:''}`;
   return `<article class="card"><div class="card-img" style="background-image:${t.imageUrl?`url('${escapeHTML(t.imageUrl)}')`:`var(--image-${imageKey}, none)`}"><span class="pill">${escapeHTML(t.kind)}</span></div><div class="card-body"><h4>${escapeHTML(t.title)}</h4><div class="meta"><span>⌖ ${escapeHTML(t.place)}</span><span>◷ ${escapeHTML(t.date)}</span></div><p>${escapeHTML(t.desc)}</p><div class="card-foot"><span class="price">${escapeHTML(t.price||'Условия уточняются')}</span>${action}</div></div></article>`
 }
 function renderTrips(){
@@ -171,6 +176,27 @@ function renderTrips(){
   document.getElementById('trip-list').innerHTML=published.length?published.map(t=>`<article class="row-card"><div class="row-img" style="background-image:${(t.imageUrl||t.imageUrls?.[0])?`url('${escapeHTML(t.imageUrl||t.imageUrls[0])}')`:`var(--image-${['trip-karelia','trip-u-ilem','trip-teriberka'].includes(t.image)?t.image:'trip-karelia'}, none)`}"></div><div style="flex:1"><h4 style="margin:0">${escapeHTML(t.title)}</h4><p>${escapeHTML(t.place)} · ${escapeHTML(t.date)} · ${escapeHTML(t.kind)}</p><div class="meta">${escapeHTML(t.price||'Условия уточняются')}</div></div><button class="btn outline" onclick="openTripDetails('${escapeHTML(t.id)}')">Открыть</button></article>`).join(''):`<div class="panel"><h3>Пока нет опубликованных путешествий</h3><p>Здесь появятся реальные поездки участников. Можно создать собственную публикацию.</p><button class="btn" onclick="openModal('trip')">＋ Создать путешествие</button></div>`;
 }
 
+let activeDestinationSlug='';
+async function openJourneyCreate(kind){
+  if(kind==='route'){
+    try{journeyPlaces=(await telegramApi('/api/places')).items||[]}catch(error){toast(error.message||'Не удалось загрузить точки');return}
+    if(journeyPlaces.length<2){toast('Для маршрута сначала нужны минимум две опубликованные точки');return}
+  }
+  openModal(kind);
+}
+async function openDestinationEditor(slug){
+  const item=trips.find(trip=>trip.slug===slug);if(!item)return;
+  activeDestinationSlug=slug;openModal('destination',item);
+}
+async function loadFeaturedDestinations(){
+  try{
+    const result=await telegramApi('/api/destinations');
+    const published=trips.filter(item=>item.published);
+    trips.splice(0,trips.length,...result.items.map(item=>({ ...item,desc:item.description||'',imageUrl:item.imageUrl||'',published:false })),...published);
+    renderTrips();
+    try{await telegramApi('/api/admin/destinations');window.yugornoIsModerator=true;renderTrips()}catch{window.yugornoIsModerator=false}
+  }catch(error){console.warn('Направления не загружены:',error.message)}
+}
 let activeJourneyTab='points';
 let journeyPlaces=[],journeyRoutes=[],journeyTrips=[];
 function journeyImage(url,alt){return url?`<img class="journey-card-image" src="${escapeHTML(url)}" alt="${escapeHTML(alt||'Фотография')}" loading="lazy">`:`<div class="journey-card-placeholder" aria-hidden="true">🌿</div>`}
@@ -219,7 +245,7 @@ function openDetailPage(data,{pushHistory=true}={}){
   const description=document.createElement('div');description.className='detail-description';description.textContent=data.description||'Описание пока не добавлено';
   body.append(eyebrow,title,meta,description);
   if(data.notice){const note=document.createElement('p');note.style.cssText='color:var(--muted);margin-top:22px';note.textContent=data.notice;body.append(note)}
-  if(data.type==='trip'&&data.published&&data.id){const action=document.createElement('button');action.className='btn';action.textContent='Откликнуться';action.addEventListener('click',()=>expressInterest(data.id));const actions=document.createElement('div');actions.className='detail-actions';actions.append(action);body.append(actions)}
+  if(data.type==='trip'&&data.published&&data.id){const action=document.createElement('button');action.className='btn';action.textContent=trip.kind==='Встреча'?'Присоединиться':'Откликнуться';action.addEventListener('click',()=>expressInterest(data.id));const actions=document.createElement('div');actions.className='detail-actions';actions.append(action);body.append(actions)}
   if(data.type==='community'&&data.published&&data.id){const action=document.createElement('button');action.className='btn';action.textContent='Присоединиться';action.addEventListener('click',()=>joinPublishedCommunity(data.id));const actions=document.createElement('div');actions.className='detail-actions';actions.append(action);body.append(actions)}
   content.append(body);page.append(content);page.classList.add('active');
   document.getElementById('page-title').textContent=data.title||'Югорно';window.scrollTo({top:0,behavior:'smooth'});
@@ -237,17 +263,24 @@ function openModal(type, item=null){
   modalType=type;
   const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');
   const editing=type==='edit-trip'||type==='edit-community';
-  const trip=type==='trip'||type==='edit-trip';
-  document.getElementById('modal-title').textContent=editing?(trip?'Редактировать путешествие':'Редактировать сообщество'):(trip?'Новое путешествие':'Предложить сообщество');
-  document.getElementById('modal-desc').textContent=trip?'Расскажите, куда собираетесь и кого хотите взять с собой.':'Опишите тему сообщества и людей, которых хотите объединить.';
-  const value=(key)=>escapeHTML(item?.[key]||'');
-  if(trip){
-    fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="Например, выходные у озера"></div><div class="field"><label>Место или маршрут</label><input id="f-place" maxlength="160" value="${value('place')}" placeholder="Регион, город, маршрут"></div><div class="field"><label>Дата</label><input id="f-date" maxlength="100" value="${value('date')}" placeholder="Даты или период"></div><div class="field"><label>Формат</label><select id="f-kind"><option ${item?.kind==='Авторское путешествие'?'selected':''}>Авторское путешествие</option><option ${item?.kind==='Ищу попутчиков'?'selected':''}>Ищу попутчиков</option><option ${item?.kind==='Встреча'?'selected':''}>Встреча</option><option ${item?.kind==='Поход'?'selected':''}>Поход</option><option ${item?.kind==='Автопутешествие'?'selected':''}>Автопутешествие</option><option ${item?.kind==='Природа'?'selected':''}>Природа</option></select></div><div class="field"><label>Короткое описание</label><textarea id="f-desc" maxlength="1200" placeholder="Что планируете?">${value('description')||value('desc')}</textarea></div>`;
+  const route=type==='route',meeting=type==='meeting',destination=type==='destination';
+  const trip=type==='trip'||type==='edit-trip'||meeting;
+  const value=(key)=>escapeHTML(item?.[key]??'');
+  const title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc');
+  title.textContent=destination?'Редактировать направление':route?'Создать маршрут':meeting?'Создать встречу':editing?(trip?'Редактировать поездку':'Редактировать сообщество'):trip?'Создать поездку':'Предложить сообщество';
+  desc.textContent=destination?'Изменения будут сохранены в каталоге направлений.':route?'Выберите не менее двух опубликованных точек. Маршрут отправится на модерацию.':meeting?'Укажите место, дату и время встречи.':trip?'Опишите поездку, даты, условия и количество мест.':'Опишите тему сообщества и людей, которых хотите объединить.';
+  if(destination){
+    fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}"></div><div class="field"><label>Регион / место</label><input id="f-place" maxlength="160" value="${value('place')}"></div><div class="field"><label>Период</label><input id="f-date" maxlength="100" value="${value('date')}"></div><div class="field"><label>Формат</label><input id="f-kind" maxlength="60" value="${value('kind')}"></div><div class="field"><label>Стоимость / условия</label><input id="f-price" maxlength="120" value="${value('price')}"></div><div class="field"><label>Краткое описание</label><textarea id="f-desc" maxlength="1200">${value('description')}</textarea></div><div class="field"><label>Подробное описание</label><textarea id="f-details" maxlength="3000">${value('details')}</textarea></div>`;
+  }else if(route){
+    const choices=journeyPlaces.map((place,index)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-weight:500"><input type="checkbox" class="f-route-stop" value="${escapeHTML(place.id)}" style="width:auto;margin-top:3px"><span>${escapeHTML(place.title)} <small style="display:block;color:var(--muted)">${escapeHTML([place.region,place.category].filter(Boolean).join(' · '))}</small></span></label>`).join('');
+    fields.innerHTML=`<div class="field"><label>Название маршрута</label><input id="f-title" maxlength="120" placeholder="Например, Тропа к водопаду"></div><div class="field"><label>Описание и особенности</label><textarea id="f-desc" maxlength="3000" placeholder="Протяжённость, сложность, сезонность, что взять с собой"></textarea></div><div class="field"><label>Способ передвижения</label><select id="f-transport"><option value="walking">Пешком</option><option value="car">На автомобиле</option><option value="water">По воде</option><option value="mixed">Смешанный</option></select></div><div class="field"><label>Точки маршрута (выберите минимум две)</label><div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px">${choices||'<p>Пока нет опубликованных точек. Сначала добавьте точки на карте.</p>'}</div></div>`;
+  }else if(trip){
+    fields.innerHTML=`<div class="field"><label>${meeting?'Название встречи':'Название поездки'}</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="${meeting?'Например, прогулка у озера':'Например, выходные на Белом море'}"></div><div class="field"><label>Место / направление</label><input id="f-place" maxlength="160" value="${value('place')}" placeholder="Регион, населённый пункт или место"></div><div class="field"><label>${meeting?'Дата и время':'Период'}</label><input id="f-date" maxlength="100" value="${value('date')}" placeholder="${meeting?'2026-12-05, 14:00':'Даты или период поездки'}"></div>${meeting?'':`<div class="field"><label>Дата начала</label><input id="f-start-date" type="date" value="${value('startDate')}"></div><div class="field"><label>Дата окончания</label><input id="f-end-date" type="date" value="${value('endDate')}"></div><div class="field"><label>Стоимость / условия участия</label><input id="f-price" maxlength="120" value="${value('price')}" placeholder="Например, 12 000 ₽ или расходы поровну"></div><div class="field"><label>Количество мест (0 = не ограничено)</label><input id="f-capacity" type="number" min="0" max="500" value="${value('capacity')||'0'}"></div><div class="field"><label>Формат</label><select id="f-kind"><option>Авторское путешествие</option><option>Ищу попутчиков</option><option>Поход</option><option>Автопутешествие</option><option>Водное путешествие</option></select></div>`}`<div class="field"><label>Описание / программа</label><textarea id="f-desc" maxlength="1200" placeholder="${meeting?'Что будем делать и сколько продлится встреча?':'Программа, условия, требования к участникам'}">${value('description')||value('desc')}</textarea></div>`;
   }else{
     fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="Название сообщества"></div><div class="field"><label>О чём оно</label><textarea id="f-desc" maxlength="1200" placeholder="Кого хотите объединить?">${value('description')}</textarea></div>`;
   }
-  const existingPhotos = Array.isArray(item?.imageUrls) && item.imageUrls.length ? item.imageUrls : (item?.imageUrl ? [item.imageUrl] : []);
-  fields.insertAdjacentHTML('beforeend', `<div class="field"><label>Фотографии</label><input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple><small style="color:var(--muted)">Можно выбрать до 8 фотографий JPG, PNG или WebP. До 5 МБ каждая. При редактировании новые фотографии заменят текущую галерею.</small><div id="f-photo-preview" class="photo-gallery-preview">${existingPhotos.map(url=>`<img alt="Фотография публикации" src="${escapeHTML(url)}">`).join('')}</div></div>`);
+  const existingPhotos=Array.isArray(item?.imageUrls)&&item.imageUrls.length?item.imageUrls:(item?.imageUrl?[item.imageUrl]:[]);
+  if(!route)fields.insertAdjacentHTML('beforeend',`<div class="field"><label>Фотографии</label><input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple><small style="color:var(--muted)">До 8 фотографий JPG, PNG или WebP, до 5 МБ каждая.</small><div id="f-photo-preview" class="photo-gallery-preview">${existingPhotos.map(url=>`<img alt="Фотография публикации" src="${escapeHTML(url)}">`).join('')}</div></div>`);
   const photoInput=document.getElementById('f-photo');photoInput?.addEventListener('change',()=>previewImageFiles(photoInput,'f-photo-preview'));
   document.querySelector('#modal-back .modal-actions').style.display='flex';
   back.classList.add('show');
@@ -260,20 +293,48 @@ document.getElementById('profile-photo')?.addEventListener('change',()=>previewI
 async function submitModal(){
   const title=document.getElementById('f-title')?.value.trim();
   if(!title){toast('Добавьте название');return}
-  if(!window.yugornoTelegramUser || (!window.Telegram?.WebApp?.initData && !window.yugornoLocalDemo)){toast('Откройте Югорно в Telegram или включите локальный режим тестирования');return}
-  const isTrip=modalType==='trip'||modalType==='edit-trip';
-  const editing=modalType==='edit-trip'||modalType==='edit-community';
-  const description=document.getElementById('f-desc').value.trim();
-  if(!isTrip&&!description){toast('Добавьте описание сообщества');return}
-  const payload=isTrip?{title,place:document.getElementById('f-place').value.trim()||'Место уточняется',date:document.getElementById('f-date').value.trim(),kind:document.getElementById('f-kind').value,description}:{title,description};
+  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo)){toast('Откройте Югорно в Telegram или включите локальный режим тестирования');return}
+  const description=document.getElementById('f-desc')?.value.trim()||'';
   const selectedPhotos=[...(document.getElementById('f-photo')?.files||[])];
-  try{if(selectedPhotos.length){if(selectedPhotos.length>8)throw new Error('Можно добавить не более 8 фотографий');const imageUrls=[];for(const photo of selectedPhotos)imageUrls.push(await uploadImageFile(photo));payload.imageUrls=imageUrls;payload.imageUrl=imageUrls[0]||''}}catch(error){toast(error.message);return}
-  const endpoint=editing?(isTrip?`/api/my/trips/${encodeURIComponent(activeEditId)}`:`/api/my/communities/${encodeURIComponent(activeEditId)}`):(isTrip?'/api/trips':'/api/communities');
+  const payload={title,description};
   try{
-    const result=await telegramApi(endpoint,{method:editing?'PATCH':'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    if(modalType==='destination'){
+      Object.assign(payload,{place:document.getElementById('f-place').value.trim(),date:document.getElementById('f-date').value.trim(),kind:document.getElementById('f-kind').value.trim(),price:document.getElementById('f-price').value.trim(),details:document.getElementById('f-details').value.trim()});
+    }else if(modalType==='route'){
+      payload.transport=document.getElementById('f-transport').value;
+      payload.stopIds=[...document.querySelectorAll('.f-route-stop:checked')].map(input=>input.value);
+      if(payload.stopIds.length<2){toast('Для маршрута выберите минимум две точки');return}
+    }else if(modalType==='meeting'){
+      payload.place=document.getElementById('f-place').value.trim();
+      payload.date=document.getElementById('f-date').value.trim();
+      payload.kind='Встреча';
+      if(!payload.place||!payload.date){toast('Укажите место, дату и время встречи');return}
+    }else if(modalType==='trip'||modalType==='edit-trip'){
+      Object.assign(payload,{place:document.getElementById('f-place').value.trim(),date:document.getElementById('f-date').value.trim(),kind:document.getElementById('f-kind').value,startDate:document.getElementById('f-start-date')?.value||'',endDate:document.getElementById('f-end-date')?.value||'',price:document.getElementById('f-price')?.value.trim()||'',capacity:Number(document.getElementById('f-capacity')?.value||0)});
+      if(!payload.place){toast('Укажите направление поездки');return}
+    }
+    if(selectedPhotos.length){
+      if(selectedPhotos.length>8)throw new Error('Можно добавить не более 8 фотографий');
+      const imageUrls=[];for(const photo of selectedPhotos)imageUrls.push(await uploadImageFile(photo));
+      payload.imageUrls=imageUrls;payload.imageUrl=imageUrls[0]||'';
+    }
+  }catch(error){toast(error.message);return}
+  try{
+    let result;
+    if(modalType==='destination'){
+      result=await telegramApi(`/api/admin/destinations/${encodeURIComponent(activeDestinationSlug)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      await loadFeaturedDestinations();
+    }else{
+      const isRoute=modalType==='route',isMeeting=modalType==='meeting',isTrip=modalType==='trip'||modalType==='edit-trip';
+      const editing=modalType==='edit-trip';
+      const endpoint=isRoute?'/api/routes':editing?`/api/my/trips/${encodeURIComponent(activeEditId)}`:'/api/trips';
+      result=await telegramApi(endpoint,{method:editing?'PATCH':'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      if(isRoute){journeyRoutes=[];await loadJourneyTab('routes',true)}
+      else{await loadPublishedTrips();await loadMyTrips();journeyTrips=[];await loadJourneyTab(isMeeting?'meetings':'trips',true)}
+    }
     closeModal();
-    if(isTrip){await loadPublishedTrips();await loadMyTrips();showView('trips')}else{await loadPublishedCommunities();await loadMyCommunities();showView('communities')}
-    toast(editing?'Изменения сохранены':(isTrip?'Путешествие опубликовано':'Сообщество опубликовано'));
+    if(modalType==='destination'){showView('home');toast('Карточка направления обновлена')}
+    else{showView('trips');toast(modalType==='route'?'Маршрут отправлен на модерацию':modalType==='meeting'?'Встреча опубликована':'Поездка опубликована')}
   }catch(error){toast(error.message||'Ошибка сохранения')}
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
