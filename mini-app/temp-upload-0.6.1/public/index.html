@@ -377,22 +377,28 @@ function renderPersonCard(profile,own=false){
 }
 async function loadPeopleDirectory(){
   const ownHost=document.getElementById('people-own-profile'),directory=document.getElementById('people-directory');if(!ownHost||!directory)return;
-  try{
-    let ownProfile={},items=[];
-    if(window.yugornoTelegramUser&&(window.Telegram?.WebApp?.initData||window.yugornoLocalDemo)){
-      const [profileResult,peopleResult]=await Promise.all([telegramApi('/api/profile'),telegramApi('/api/people')]);
-      ownProfile=profileResult.profile||{};items=peopleResult.items||[];
-    }else{
-      const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');
-      ownProfile={name:saved.n||'',city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||'',discoverable:saved.discoverable===true};
-    }
-    const fallback=window.yugornoTelegramUser||{};
-    ownProfile.name=ownProfile.name||[fallback.first_name,fallback.last_name].filter(Boolean).join(' ')||'Ваш профиль';
-    ownHost.replaceChildren(renderPersonCard(ownProfile,true));
-    directory.replaceChildren();
-    if(!items.length){const empty=document.createElement('div');empty.className='people-empty';empty.textContent='Пока нет других участников с открытыми профилями. Участники появятся здесь, когда разрешат показывать свои анкеты.';directory.append(empty)}
-    else items.forEach(profile=>directory.append(renderPersonCard(profile,false)));
-  }catch(error){ownHost.textContent='Не удалось загрузить профиль.';directory.textContent='Не удалось загрузить список участников.';console.warn('Люди не загружены:',error.message)}
+  const demoProfiles=[
+    {name:'Алексей',city:'Москва',interest:'Походы и горы'},
+    {name:'Марина',city:'Санкт-Петербург',interest:'Природа и фотография'},
+    {name:'Илья',city:'Петрозаводск',interest:'Автопутешествия'}
+  ];
+  let ownProfile={},items=[...demoProfiles];
+  const authenticated=Boolean(window.yugornoTelegramUser&&(window.Telegram?.WebApp?.initData||window.yugornoLocalDemo));
+  if(authenticated){
+    try{const result=await telegramApi('/api/profile');ownProfile=result.profile||{}}
+    catch(error){console.warn('Серверный профиль недоступен:',error.message)}
+    try{const result=await telegramApi('/api/people');items.push(...(result.items||[]))}
+    catch(error){console.warn('Каталог участников недоступен:',error.message)}
+  }
+  if(!ownProfile.name){
+    try{const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');ownProfile={name:saved.n||'',city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||'',discoverable:saved.discoverable===true}}
+    catch(error){console.warn('Локальный профиль недоступен:',error.message)}
+  }
+  const fallback=window.yugornoTelegramUser||{};
+  ownProfile.name=ownProfile.name||[fallback.first_name,fallback.last_name].filter(Boolean).join(' ')||'Ваш профиль';
+  ownHost.replaceChildren(renderPersonCard(ownProfile,true));
+  directory.replaceChildren();
+  items.forEach(profile=>directory.append(renderPersonCard(profile,false)));
 }
 async function loadServerProfile(){try{const result=await telegramApi('/api/profile');const p=result.profile||{};const user=window.yugornoTelegramUser||{};const fallbackName=[user.first_name,user.last_name].filter(Boolean).join(' ')||(user.username?'@'+user.username:'Путешественник');const name=p.name||fallbackName;document.getElementById('profile-name').value=name;document.getElementById('profile-city').value=p.city||'';const select=document.getElementById('profile-interest');if(p.interest&&[...select.options].some(o=>o.value===p.interest||o.text===p.interest))select.value=p.interest;document.getElementById('profile-discoverable').checked=p.discoverable===true;renderProfileSummary(name,p.city||'',p.interest||'',p.imageUrl||'');if(p.imageUrl){const preview=document.getElementById('profile-photo-preview');preview.src=p.imageUrl;preview.style.display='block'}setProfileEditMode(false)}catch(error){console.warn('Профиль не загружен:',error.message)}}
 
