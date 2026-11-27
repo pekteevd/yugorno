@@ -395,6 +395,25 @@ export async function listImpressions(placeId) {
   const store = await readStore();
   return store.impressions.filter(item => item.placeId === placeId && item.status === "published").slice(0, 100).map(publicImpression);
 }
+export async function listMyImpressions(userId) {
+  const store = await readStore();
+  return store.impressions.filter(item => item.authorId === String(userId)).map(item => {
+    const place = store.places.find(entry => entry.id === item.placeId);
+    return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено" };
+  });
+}
+export async function updateImpression(userId, impressionId, input = {}) {
+  return update(store => {
+    const item = store.impressions.find(entry => entry.id === impressionId && entry.authorId === String(userId));
+    if (!item || item.status === "hidden" || item.status === "archived") return null;
+    if (Object.hasOwn(input, "text")) item.text = cleanText(input.text, 3000);
+    if (Object.hasOwn(input, "photoUrls")) item.photoUrls = cleanImageUrls(input.photoUrls);
+    if (!item.text && !(item.photoUrls || []).length) throw new TypeError("Добавьте текст или фотографию впечатления");
+    item.status = "pending";
+    item.updatedAt = new Date().toISOString();
+    return { ...publicImpression(item), status: item.status };
+  });
+}
 export async function moderateImpression(impressionId, status) {
   if (!["published", "rejected", "hidden", "archived"].includes(status)) throw new TypeError("Недопустимый статус публикации");
   return update(store => {
@@ -444,6 +463,32 @@ export async function createRoute(userId, input = {}, authorName = "") {
       status: "pending", createdAt: new Date().toISOString()
     };
     store.routes.push(route);
+    return { ...publicRoute(route), status: route.status, stops: stops.map(publicPlace) };
+  });
+}
+export async function listMyRoutes(userId) {
+  const store = await readStore();
+  return store.routes.filter(route => route.authorId === String(userId)).map(route => ({
+    ...publicRoute(route),
+    status: route.status,
+    stops: (route.stopIds || []).map(id => store.places.find(place => place.id === id)).filter(Boolean).map(publicPlace)
+  }));
+}
+export async function updateRoute(userId, routeId, input = {}) {
+  return update(store => {
+    const route = store.routes.find(item => item.id === routeId && item.authorId === String(userId));
+    if (!route || ["hidden", "archived"].includes(route.status)) return null;
+    const title = Object.hasOwn(input, "title") ? cleanText(input.title, 120) : route.title;
+    const description = Object.hasOwn(input, "description") ? cleanText(input.description, 3000) : route.description;
+    const transport = Object.hasOwn(input, "transport") ? cleanText(input.transport, 40) || "mixed" : route.transport;
+    const stopIds = Object.hasOwn(input, "stopIds")
+      ? [...new Set((Array.isArray(input.stopIds) ? input.stopIds : []).map(id => cleanText(id, 80)).filter(Boolean))].slice(0, 50)
+      : route.stopIds;
+    const trackPoints = Object.hasOwn(input, "trackPoints") ? cleanTrackPoints(input.trackPoints) : route.trackPoints || [];
+    if (!title || stopIds.length < 2) throw new TypeError("Маршрут должен иметь название и не менее двух мест");
+    const stops = stopIds.map(id => store.places.find(place => place.id === id && (place.status === "published" || place.authorId === String(userId))));
+    if (stops.some(item => !item)) throw new TypeError("Маршрут содержит недоступное место");
+    Object.assign(route, { title, description, transport, stopIds, trackPoints, status: "pending", updatedAt: new Date().toISOString() });
     return { ...publicRoute(route), status: route.status, stops: stops.map(publicPlace) };
   });
 }
