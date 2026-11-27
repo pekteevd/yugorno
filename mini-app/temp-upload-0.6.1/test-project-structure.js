@@ -232,6 +232,8 @@ test('moderation cards show full place descriptions and group pending photos wit
   assert.match(map, /place\.photoUrls\|\|\[\]/);
   assert.match(map, /Дополнение к заявке на место/);
   assert.match(map, /actionMarkup\("places",place\.id\)/);
+  const placeModeration = map.slice(map.indexOf("const placeCards="), map.indexOf("const looseImpressions="));
+  assert.doesNotMatch(placeModeration, /actionMarkup\("impressions"/);
   assert.match(map, /Фотографии места/);
   assert.match(map, /В выбранных фотографиях не найдены GPS-координаты/);
   assert.match(map, /data-private-image=/);
