@@ -307,7 +307,7 @@ async function openPlace(id){
   const data=await api("/api/places/"+encodeURIComponent(id)),p=data.item;currentPlace=p;
   const impressions=data.impressions||[];
   const placePhotoHtml=(p.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография места" loading="lazy"></a>').join("");
-  const impressionHtml=impressions.map(i=>'<div class="map-place">'+(i.text?'<p>'+safe(i.text)+'</p>':'')+(i.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография впечатления" loading="lazy"></a>').join("")+'</div>').join("");
+  const impressionHtml=impressions.map(i=>'<div class="map-place">'+(i.text?'<p>'+safe(i.text)+'</p>':'')+((i.photoUrls||[]).length?(i.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография впечатления" loading="lazy"></a>').join(""):miniMapPreview(p.lat,p.lng,p.title))+'</div>').join("");
   const actions='<button type="button" class="btn outline" id="save-place">Сохранить</button><button type="button" class="btn outline" id="copy-coords">Координаты</button><button type="button" class="btn outline" id="open-nav">Навигатор</button>';
   document.getElementById("map-side-title").textContent=p.title;
   document.getElementById("map-side-content").innerHTML='<div class="map-chip">'+iconFor(p.category)+' '+safe(p.category)+'</div><p>'+safe(p.description||"Описание пока не добавлено")+'</p><div class="map-muted">'+safe(p.region||"")+' · '+safe(p.author||"Автор")+'</div><div class="map-toolbar">'+actions+'</div><h4>Фотографии места</h4>'+(placePhotoHtml?'<div class="map-moderation-gallery">'+placePhotoHtml+'</div>':'<div class="map-muted">Фотографии места не добавлены</div>')+'<h4>Впечатления</h4>'+(impressionHtml||'<div class="map-muted">Пока нет опубликованных впечатлений</div>');
@@ -444,7 +444,8 @@ async function loadMyPublications(){
   host.innerHTML=items.length?items.map(item=>{
    const cover=item.ownerKind==="place"?item.photoUrls?.[0]:item.ownerKind==="impression"?item.photoUrls?.[0]:item.stops?.find(stop=>stop.photoUrls?.[0])?.photoUrls?.[0];
    const kind={place:"Точка",route:"Маршрут",impression:"Впечатление"}[item.ownerKind];
-   const image=cover?'<img class="map-place-photo" data-owner-private-image="'+safe(cover)+'" alt="'+safe(item.title||item.placeTitle||kind)+'" loading="lazy">':'<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">'+(item.ownerKind==="route"?"🧭":item.ownerKind==="impression"?"📷":"📍")+'</div>';
+   const fallback=item.ownerKind==="impression"?miniMapPreview(item.placeLat,item.placeLng,item.placeTitle):"";
+   const image=cover?'<img class="map-place-photo" data-owner-private-image="'+safe(cover)+'" alt="'+safe(item.title||item.placeTitle||kind)+'" loading="lazy">':(fallback||'<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">'+(item.ownerKind==="route"?"🧭":item.ownerKind==="impression"?"📷":"📍")+'</div>');
    const title=item.title||item.placeTitle||"Впечатление";
    return '<article class="map-place map-place-card">'+image+'<strong>'+safe(title)+'</strong><div class="map-muted">'+kind+' · Статус: '+safe(item.status||"")+'</div><button type="button" class="btn outline" data-owner-edit="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'">Редактировать</button></article>';
   }).join(""):'<div class="map-empty">Пока нет собственных публикаций.</div>';
