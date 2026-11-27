@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, canViewMapUpload } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -309,6 +309,18 @@ function requireMapModerator(req, res, next) {
 function authorLabel(user) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username || "";
 }
+
+app.get("/api/destinations", async (_req, res, next) => {
+  try { res.json({ ok: true, items: await listFeaturedDestinations() }); } catch (error) { next(error); }
+});
+app.patch("/api/admin/destinations/:slug", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await updateFeaturedDestination(req.params.slug, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "destination_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+
 app.get("/api/places", async (req, res, next) => {
   try {
     const items = await listPlaces({ q: req.query.q, category: req.query.category, west: req.query.west, east: req.query.east, south: req.query.south, north: req.query.north });
