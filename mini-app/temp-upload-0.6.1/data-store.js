@@ -106,12 +106,10 @@ export async function updateTrip(userId, tripId, input) {
     const trip = store.trips.find(item => item.id === tripId && item.status === 'published' && item.authorId === String(userId));
     if (!trip) return null;
     const fields = { title: 120, place: 160, date: 100, kind: 60, description: 1200, startDate: 40, endDate: 40, price: 120 };
-    for (const [field, max] of Object.entries(fields)) {
-      if (Object.hasOwn(input, field)) trip[field] = cleanText(input[field], max);
+    for (const [field, max] of Object.entries(fields)) if (Object.hasOwn(input, field)) trip[field] = cleanText(input[field], max);
     if (Object.hasOwn(input, 'capacity')) trip.capacity = Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0));
     if (Object.hasOwn(input, 'imageUrl')) trip.imageUrl = cleanText(input.imageUrl, 500);
     if (Object.hasOwn(input, 'imageUrls')) { trip.imageUrls = cleanImageUrls(input.imageUrls); trip.imageUrl = trip.imageUrls[0] || ''; }
-    }
     if (!trip.title || !trip.place || !trip.kind) throw new TypeError('title, place and kind are required');
     trip.updatedAt = new Date().toISOString();
     return { ...trip };
