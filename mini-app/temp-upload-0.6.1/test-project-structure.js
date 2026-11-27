@@ -260,7 +260,7 @@ test('journeys expose points, routes, meetings and trips using the existing publ
 test('journey and map list cards render uploaded photos with a visual fallback', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(html, /journey-card-image/);
-  assert.match(html, /journeyImage\(p\.photoUrls\?\.\[0\]/);
+  assert.match(html, /p\.photoUrls\?\.\[0\]\?journeyImage\(p\.photoUrls\[0\]/);
   assert.match(map, /map-place-photo/);
   assert.match(map, /p\.photoUrls\?\.\[0\]/);
   assert.match(map, /r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)/);
@@ -353,4 +353,16 @@ test('journey and map cards use photo covers or genuine coordinate-based preview
   assert.match(map, /routeSchematic\(r\)/);
   assert.match(html, /f-existing-photo-gallery/);
   assert.match(html, /f-remove-photo/);
+});
+
+test('meetings require a selected map location and retain coordinates while editing', async () => {
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(html, /f-meeting-location-search/);
+  assert.match(html, /searchMeetingLocation/);
+  assert.match(html, /payload\.lat=meetingLat;payload\.lng=meetingLng/);
+  assert.match(html, /Найдите место встречи на карте перед сохранением/);
+  assert.match(html, /activeEditIsMeeting/);
+  assert.match(html, /journeyPointMap\(t\)/);
+  assert.match(store, /lat: validCoordinate\(input\.lat, -90, 90\), lng: validCoordinate\(input\.lng, -180, 180\)/);
+  assert.match(store, /lat: item\.lat \?\? null, lng: item\.lng \?\? null/);
 });
