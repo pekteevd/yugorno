@@ -288,7 +288,7 @@ function openModal(type, item=null){
   const startInput=document.getElementById('f-start-date'),endInput=document.getElementById('f-end-date'),durationLabel=document.getElementById('f-duration');
   const updateDuration=()=>{if(!startInput||!endInput||!durationLabel)return;const start=startInput.value,end=endInput.value;if(!start||!end){durationLabel.textContent='Укажите даты начала и окончания';return}const a=new Date(start+'T00:00:00Z'),b=new Date(end+'T00:00:00Z'),days=Math.round((b-a)/86400000)+1;durationLabel.textContent=days>0?'Продолжительность: '+days+' дн.':'Дата окончания не может быть раньше даты начала'};
   startInput?.addEventListener('change',updateDuration);endInput?.addEventListener('change',updateDuration);updateDuration();
-  const capacityInput=document.getElementById('f-capacity');capacityInput?.addEventListener('input',()=>{capacityInput.value=capacityInput.value.replace(/\\D/g,'').slice(0,3);if(Number(capacityInput.value)>500)capacityInput.value='500'});
+  const capacityInput=document.getElementById('f-capacity');capacityInput?.addEventListener('input',()=>{capacityInput.value=capacityInput.value.replace(/\D/g,'').slice(0,3);if(Number(capacityInput.value)>500)capacityInput.value='500'});
   const photoInput=document.getElementById('f-photo');photoInput?.addEventListener('change',()=>previewImageFiles(photoInput,'f-photo-preview'));
   document.querySelector('#modal-back .modal-actions').style.display='flex';
   back.classList.add('show');
