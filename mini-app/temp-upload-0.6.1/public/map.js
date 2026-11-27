@@ -159,7 +159,7 @@ async function fetchPlaceGeocoding(query){
   const data=await response.json();
   if(Array.isArray(data.features)&&data.features.length)return data.features.map(feature=>({coords:feature?.geometry?.coordinates,label:photonLabel(feature?.properties||{})})).filter(item=>Array.isArray(item.coords)&&item.coords.length>=2&&item.label);
  }catch(error){photonError=error}
- const nominatimUrl="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q="+encodeURIComponent(query);
+ const nominatimUrl="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q="+encodeURIComponent(searchQuery);
  try{
   const response=await fetch(nominatimUrl,{headers:{Accept:"application/json","Accept-Language":"ru"}});
   if(!response.ok)throw new Error("Nominatim HTTP "+response.status);
