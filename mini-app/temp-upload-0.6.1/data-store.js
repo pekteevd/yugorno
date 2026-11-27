@@ -336,7 +336,7 @@ export async function getPlace(placeId) {
 export async function listMyPlaces(userId) {
   const store = await readStore();
   return store.places.filter(item => item.authorId === String(userId))
-    .map(item => ({ ...publicPlace(item), status: item.status }));
+    .map(item => ({ ...publicPlace(item), lat: item.exactLat ?? item.lat, lng: item.exactLng ?? item.lng, status: item.status }));
 }
 export async function createPlace(userId, input = {}, authorName = "") {
   const data = cleanPlaceInput(input);
@@ -405,7 +405,8 @@ export async function listMyImpressions(userId) {
   const store = await readStore();
   return store.impressions.filter(item => item.authorId === String(userId)).map(item => {
     const place = store.places.find(entry => entry.id === item.placeId);
-    return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено", placeLat: place?.lat ?? null, placeLng: place?.lng ?? null };
+    const publicParent = place ? publicPlace(place) : null;
+    return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено", placeLat: publicParent?.lat ?? null, placeLng: publicParent?.lng ?? null };
   });
 }
 export async function updateImpression(userId, impressionId, input = {}) {
