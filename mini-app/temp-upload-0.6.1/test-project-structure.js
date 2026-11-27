@@ -428,15 +428,26 @@ test('server exposes explicit guest, member, moderator and admin session roles',
 });
 
 
-test('local publication cleanup is guarded, backed up and preserves the three featured destinations', async () => {
+test('local publication cleanup removes only known test records and preserves user content', async () => {
   const script = await readFile(new URL('./scripts/clean-local-publications.js', import.meta.url), 'utf8');
   const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
   assert.equal(pkg.scripts['reset:local-publications'], 'node scripts/clean-local-publications.js');
-  assert.match(script, /NODE_ENV === "production" \|\| process\.env\.BOT_TOKEN/);
-  assert.match(script, /copyFile\(dataFile, backupFile\)/);
-  assert.match(script, /const publicationCollections = \["trips", "communities", "places", "impressions", "routes"\]/);
-  assert.match(script, /\["karelia", "teriberka", "u-ilem"\]/);
-  assert.doesNotMatch(script, /store\.profiles\s*=/);
+  assert.match(script, /NODE_ENV === "production" \\|\\| process\\.env\\.BOT_TOKEN/);
+  assert.match(script, /copyFile\\(dataFile, backupFile\\)/);
+  assert.match(script, /const TEST_PUBLICATION_IDS/);
+  assert.match(script, /04aef7f1-b24f-4fb1-8aaf-8a814e513f5d/);
+  assert.match(script, /e3eac278-c8d4-4808-abaf-2d4e459ae68c/);
+  assert.match(script, /baa11d1b-bbb2-4acb-8cf9-d1e695de1d5f/);
+  assert.match(script, /item\\?\\.authorId === OWNER_ID && ids\\.has\\(item\\.id\\)/);
+  assert.match(script, /store\\.tripInterests = store\\.tripInterests\\.filter/);
+  assert.match(script, /store\\.communityMembers = store\\.communityMembers\\.filter/);
+  assert.match(script, /store\\.savedPlaces = store\\.savedPlaces\\.filter/);
+  assert.doesNotMatch(script, /store\\.places = \\[\\]/);
+  assert.doesNotMatch(script, /store\\.impressions = \\[\\]/);
+  assert.doesNotMatch(script, /store\\.routes = \\[\\]/);
+  assert.doesNotMatch(script, /store\\.profiles\\s*=/);
+  assert.match(script, /featuredDestinations/);
+  assert.match(script, /«У Илем» сохраняется/);
   assert.match(script, /Резервная копия/);
 });
 
