@@ -116,6 +116,80 @@ test('uploaded images are stored outside the application code in the persistent 
   const env = await readFile(new URL('./.env.example', import.meta.url), 'utf8');
   assert.match(server, /const UPLOADS_DIR = path\.resolve\(process\.env\.YUGORNO_UPLOAD_DIR/);
   assert.match(server, /express\.static\(UPLOADS_DIR/);
-  assert.match(server, /writeFile\(path\.join\(UPLOADS_DIR, filename\)/);
+  assert.match(server, /writeFile\(path\.join\(targetDir, filename\)/);
+  assert.match(server, /const targetDir = isPrivate \? PRIVATE_UPLOADS_DIR : UPLOADS_DIR/);
   assert.match(env, /YUGORNO_UPLOAD_DIR=\/data\/uploads/);
+});
+
+
+test('loads the local EXIF GPS reader before the map interface and strips metadata by re-encoding', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  const parser = await readFile(new URL('./public/exif-gps.js', import.meta.url), 'utf8');
+  assert.ok(html.indexOf('/exif-gps.js') < html.indexOf('/map.js'));
+  assert.match(parser, /readPhotoGps/);
+  assert.match(map, /YugornoExifGps\?\.readPhotoGps/);
+  assert.match(map, /canvas\.toDataURL\("image\/jpeg",0\.82\)/);
+});
+
+
+test('route builder preserves the order in which the user selects stops', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /selectedStopIds\.push\(input\.value\)/);
+  assert.match(map, /stopIds:selectedStopIds/);
+  assert.match(map, /route-stop-order/);
+});
+
+
+test('GPS mismatch warnings use the Telegram confirmation dialog when available', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /window\.askConfirm/);
+  assert.match(map, /await askUserConfirmation/);
+});
+
+
+
+test('server permits geolocation only for the same-origin app while keeping camera and microphone disabled', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  assert.match(server, /Permissions-Policy", "camera=\(\), microphone=\(\), geolocation=\(self\)"/);
+});
+
+test('place creation selects coordinates by search, map click, or device GPS without manual coordinate entry', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /id="place-location-query"/);
+  assert.match(map, /id="place-location-search"/);
+  assert.match(map, /id="place-location-map"/);
+  assert.match(map, /id="place-location-gps"/);
+  assert.match(map, /placePickerClickHandler=event=>/);
+  assert.match(map, /mouseEventToLatLng\(event\)/);
+  assert.match(map, /removeEventListener\("click",placePickerClickHandler\)/);
+  assert.match(map, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(map, /name="lat"><input type="hidden" name="lng"/);
+  assert.doesNotMatch(map, /name="lat" type="number"[^>]*required/);
+  assert.doesNotMatch(map, /name="lng" type="number"[^>]*required/);
+});
+
+test('place picker uses a native container click handler and cleans it up', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /clickContainer\.addEventListener\("click",placePickerClickHandler\)/);
+  assert.match(map, /mouseEventToLatLng\(event\)/);
+  assert.match(map, /removeEventListener\("click",placePickerClickHandler\)/);
+});
+
+test('place geocoder falls back from Photon to OpenStreetMap Nominatim', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /photon\.komoot\.io\/api/);
+  assert.match(map, /nominatim\.openstreetmap\.org\/search/);
+  assert.match(map, /await fetchPlaceGeocoding\(query\)/);
+  assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
+});
+
+test('place geocoding is explicit, cached, throttled, and uses safe text rendering', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /photon\.komoot\.io\/api/);
+  assert.match(map, /geocoderCache\.get\(cacheKey\)/);
+  assert.match(map, /geocoderCache\.set\(cacheKey,results\)/);
+  assert.match(map, /1100-\(Date\.now\(\)-geocoderLastRequest\)/);
+  assert.match(map, /item\.textContent=label/);
+  assert.match(map, /place-location-search.*onclick=searchPlaceLocation/s);
 });

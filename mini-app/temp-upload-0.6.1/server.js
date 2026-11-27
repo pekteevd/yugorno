@@ -4,12 +4,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, canViewMapUpload } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), "data"));
 const UPLOADS_DIR = path.resolve(process.env.YUGORNO_UPLOAD_DIR || path.join(DATA_DIR, "uploads"));
+const PRIVATE_UPLOADS_DIR = path.resolve(process.env.YUGORNO_PRIVATE_UPLOAD_DIR || path.join(DATA_DIR, "private-uploads"));
+const MAP_MODERATORS = new Set((process.env.YUGORNO_MODERATOR_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
 const BOT_TOKEN = process.env.BOT_TOKEN?.trim();
 const BOT_USERNAME = process.env.BOT_USERNAME?.replace(/^@/, "").trim() || "YugornoTravelBot";
 const WEBAPP_URL = process.env.WEBAPP_URL?.trim();
@@ -33,7 +35,7 @@ app.use(express.json({ limit: "8mb" }));
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
   next();
 });
 app.use("/uploads", express.static(UPLOADS_DIR, { etag: true, maxAge: "1d", fallthrough: false }));
@@ -46,11 +48,36 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
     if (!match) return res.status(400).json({ ok: false, error: "unsupported_image_format" });
     const buffer = Buffer.from(match[2], "base64");
     if (!buffer.length || buffer.length > 5 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
+    const signatures = {
+      "image/jpeg": buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+      "image/png": buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+      "image/webp": buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP"
+    };
+    if (!signatures[match[1]]) return res.status(400).json({ ok: false, error: "image_content_mismatch" });
     const ext = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" })[match[1]];
-    await mkdir(UPLOADS_DIR, { recursive: true });
+    const isPrivate = req.body?.private === true;
+    const targetDir = isPrivate ? PRIVATE_UPLOADS_DIR : UPLOADS_DIR;
+    await mkdir(targetDir, { recursive: true });
     const filename = `${randomUUID()}${ext}`;
-    await writeFile(path.join(UPLOADS_DIR, filename), buffer, { flag: "wx", mode: 0o644 });
-    res.status(201).json({ ok: true, imageUrl: `/uploads/${filename}` });
+    await writeFile(path.join(targetDir, filename), buffer, { flag: "wx", mode: 0o600 });
+    res.status(201).json({ ok: true, imageUrl: isPrivate ? `/api/map-uploads/${filename}` : `/uploads/${filename}` });
+  } catch (error) { next(error); }
+});
+
+app.get("/api/map-uploads/:filename", async (req, res, next) => {
+  try {
+    const filename = String(req.params.filename || "");
+    if (!/^[a-f0-9-]{36}\.(?:jpg|png|webp)$/i.test(filename)) return res.sendStatus(404);
+    const initData = req.get("X-Telegram-Init-Data");
+    const auth = initData ? validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS) : null;
+    const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
+    const userId = auth?.ok && auth.user?.id ? String(auth.user.id) : phoneSession?.id || null;
+    const isModerator = MAP_MODERATORS.has(String(userId || ""));
+    const allowed = await canViewMapUpload(userId, filename, isModerator);
+    if (!allowed) return res.sendStatus(404);
+    const isPublic = await canViewMapUpload(null, filename, false);
+    res.setHeader("Cache-Control", isPublic ? "public, max-age=86400" : "private, no-store");
+    res.sendFile(path.join(PRIVATE_UPLOADS_DIR, filename), error => { if (error && !res.headersSent) next(error); });
   } catch (error) { next(error); }
 });
 
@@ -264,6 +291,90 @@ app.get("/api/my/trips/:id/interests", requireTelegramUser, async (req, res, nex
     if (!items) return res.status(404).json({ ok: false, error: "trip_not_found" });
     res.json({ ok: true, items });
   } catch (error) { next(error); }
+});
+
+
+function requireMapModerator(req, res, next) {
+  if (!MAP_MODERATORS.has(String(req.telegramUser?.id))) return res.status(403).json({ ok: false, error: "moderator_required" });
+  next();
+}
+function authorLabel(user) {
+  return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username || "";
+}
+app.get("/api/places", async (req, res, next) => {
+  try {
+    const items = await listPlaces({ q: req.query.q, category: req.query.category, west: req.query.west, east: req.query.east, south: req.query.south, north: req.query.north });
+    res.json({ ok: true, items });
+  } catch (error) { next(error); }
+});
+app.get("/api/places/:id", async (req, res, next) => {
+  try {
+    const item = await getPlace(req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, item, impressions: await listImpressions(item.id) });
+  } catch (error) { next(error); }
+});
+app.get("/api/my/places", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.post("/api/places", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await createPlace(req.telegramUser.id, req.body || {}, authorLabel(req.telegramUser));
+    if (item?.duplicate) return res.status(409).json({ ok: false, error: "Похожее место уже опубликовано рядом. Проверьте существующую точку перед повторным добавлением.", matches: item.matches });
+    res.status(201).json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.patch("/api/my/places/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await updatePlace(req.telegramUser.id, req.params.id, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.post("/api/places/:id/impressions", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await createImpression(req.telegramUser.id, req.params.id, req.body || {}, authorLabel(req.telegramUser));
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.status(201).json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.get("/api/routes", async (_req, res, next) => {
+  try { res.json({ ok: true, items: await listRoutes() }); } catch (error) { next(error); }
+});
+app.post("/api/routes", requireTelegramUser, async (req, res, next) => {
+  try { res.status(201).json({ ok: true, item: await createRoute(req.telegramUser.id, req.body || {}, authorLabel(req.telegramUser)) }); }
+  catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.post("/api/my/places/:id/save", requireTelegramUser, async (req, res, next) => {
+  try {
+    const result = await savePlace(req.telegramUser.id, req.params.id);
+    if (!result) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, result });
+  } catch (error) { next(error); }
+});
+app.delete("/api/my/places/:id/save", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, result: await unsavePlace(req.telegramUser.id, req.params.id) }); } catch (error) { next(error); }
+});
+app.get("/api/my/saved-places", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listSavedPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.get("/api/moderation/places", requireTelegramUser, requireMapModerator, async (_req, res, next) => { try { res.json({ ok: true, items: await listMapModerationQueue("places") }); } catch (error) { next(error); } });
+app.get("/api/moderation/impressions", requireTelegramUser, requireMapModerator, async (_req, res, next) => { try { res.json({ ok: true, items: await listMapModerationQueue("impressions") }); } catch (error) { next(error); } });
+app.patch("/api/moderation/places/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await moderatePlace(req.params.id, req.body?.status);
+    if (!item) return res.status(404).json({ ok: false, error: "place_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.get("/api/moderation/routes", requireTelegramUser, requireMapModerator, async (_req, res, next) => { try { res.json({ ok: true, items: await listMapModerationQueue("routes") }); } catch (error) { next(error); } });
+app.patch("/api/moderation/routes/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => { try { const item = await moderateRoute(req.params.id, req.body?.status); if (!item) return res.status(404).json({ ok: false, error: "route_not_found" }); res.json({ ok: true, item }); } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); } });
+app.patch("/api/moderation/impressions/:id", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await moderateImpression(req.params.id, req.body?.status);
+    if (!item) return res.status(404).json({ ok: false, error: "impression_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
 
 app.get("/api/profile", requireTelegramUser, async (req, res, next) => {

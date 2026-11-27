@@ -109,3 +109,83 @@ test('backfills opaque ids for community memberships created by older versions',
   const migrated = JSON.parse(await readFile(file, 'utf8'));
   assert.equal(migrated.communityMembers.find(item => item.communityId === community.id).id, member.memberId);
 });
+
+
+test('map places, impressions, moderation, routes and saves persist without exposing owner ids', async () => {
+  const a = await store.createPlace(1101, { title: 'Озеро', category: 'Природа', lat: 56.1, lng: 47.2, coordinateAccuracy: 'approximate' }, 'Автор');
+  const b = await store.createPlace(1102, { title: 'Смотровая', category: 'Красивые места', lat: 56.2, lng: 47.3 }, 'Другой автор');
+  assert.equal(a.status, 'pending');
+  assert.equal((await store.listPlaces()).length, 0);
+  assert.ok(await store.moderatePlace(a.id, 'published'));
+  assert.ok(await store.moderatePlace(b.id, 'published'));
+  const publicPlace = await store.getPlace(a.id);
+  assert.equal(publicPlace.title, 'Озеро');
+  assert.equal(Object.hasOwn(publicPlace, 'authorId'), false);
+  assert.equal(Object.hasOwn(publicPlace, 'exactLat'), false);
+  const impression = await store.createImpression(1103, a.id, { text: 'Тихий берег' }, 'Гость');
+  assert.equal(impression.status, 'pending');
+  assert.equal((await store.listImpressions(a.id)).length, 0);
+  await store.moderateImpression(impression.id, 'published');
+  assert.equal((await store.listImpressions(a.id))[0].text, 'Тихий берег');
+  const route = await store.createRoute(1101, { title: 'Короткая прогулка', stopIds: [a.id, b.id], transport: 'walking' }, 'Автор');
+  assert.equal(route.status, 'pending');
+  assert.equal(route.stops.length, 2);
+  assert.equal((await store.listRoutes()).length, 0);
+  assert.equal((await store.listMapModerationQueue('routes')).some(item => item.id === route.id), true);
+  await store.moderateRoute(route.id, 'published');
+  assert.equal((await store.listRoutes())[0].stops.length, 2);
+  await store.savePlace(1103, a.id);
+  assert.equal((await store.listSavedPlaces(1103)).length, 1);
+  await assert.rejects(() => store.createPlace(1, { title: 'Плохие координаты', category: 'Природа', lat: 120, lng: 0 }), TypeError);
+});
+
+test('map moderation queue returns pending place and impression records', async () => {
+  const p = await store.createPlace(1201, { title: 'Водопад', category: 'Природа', lat: 55, lng: 46 });
+  const i = await store.createImpression(1201, p.id, { text: 'После дождя' });
+  assert.equal((await store.listMapModerationQueue('places')).some(item => item.id === p.id), true);
+  assert.equal((await store.listMapModerationQueue('impressions')).some(item => item.id === i.id), true);
+});
+
+
+test('prevents a nearby duplicate place with the same normalized title and category', async () => {
+  const first = await store.createPlace(1301, { title: 'Озеро Синее', category: 'Природа', lat: 56.1, lng: 47.2 });
+  await store.moderatePlace(first.id, 'published');
+  const duplicate = await store.createPlace(1302, { title: '  озеро   синее ', category: 'Природа', lat: 56.1001, lng: 47.2001 });
+  assert.equal(duplicate.duplicate, true);
+  assert.equal(duplicate.matches[0].id, first.id);
+});
+
+test('stores validated GPX track points with a route and rejects malformed tracks', async () => {
+  const a = await store.createPlace(1401, { title: 'Точка А', category: 'Природа', lat: 56.1, lng: 47.2 });
+  const b = await store.createPlace(1401, { title: 'Точка Б', category: 'Природа', lat: 56.2, lng: 47.3 });
+  const route = await store.createRoute(1401, { title: 'Трек', stopIds: [a.id, b.id], trackPoints: [{ lat: 56.1, lng: 47.2 }, { lat: 56.15, lng: 47.25 }, { lat: 56.2, lng: 47.3 }] });
+  assert.equal(route.trackPoints.length, 3);
+  assert.equal((await store.listMapModerationQueue('routes')).find(item => item.id === route.id).trackPoints.length, 3);
+  await assert.rejects(() => store.createRoute(1401, { title: 'Плохой трек', stopIds: [a.id, b.id], trackPoints: [{ lat: 120, lng: 47 }, { lat: 56, lng: 47 }] }), TypeError);
+});
+
+
+test('map impression photos remain private until publication', async () => {
+  const place = await store.createPlace(1501, { title: 'Берег', category: 'Природа', lat: 55, lng: 46 });
+  await store.moderatePlace(place.id, 'published');
+  const filename = '123e4567-e89b-12d3-a456-426614174000.jpg';
+  const url = `/api/map-uploads/${filename}`;
+  const impression = await store.createImpression(1502, place.id, { text: 'Фото берега', photoUrls: [url] });
+  assert.equal(await store.canViewMapUpload(1502, filename, false), true);
+  assert.equal(await store.canViewMapUpload(9999, filename, false), false);
+  assert.equal(await store.canViewMapUpload(9999, filename, true), true);
+  await store.moderateImpression(impression.id, 'published');
+  assert.equal(await store.canViewMapUpload(null, filename, false), true);
+});
+
+
+test('approximate map coordinates are rounded before being returned publicly', async () => {
+  const place = await store.createPlace(1601, { title: 'Тихая поляна', category: 'Природа', lat: 56.123456, lng: 47.654321, coordinateAccuracy: 'approximate' });
+  assert.equal(place.lat, 56.12);
+  assert.equal(place.lng, 47.65);
+  const ownPlaces = await store.listMyPlaces(1601);
+  assert.equal(ownPlaces.find(item => item.id === place.id).lat, 56.12);
+  await store.moderatePlace(place.id, 'published');
+  assert.equal((await store.listPlaces()).find(item => item.id === place.id).lng, 47.65);
+  assert.equal((await store.getPlace(place.id)).lat, 56.12);
+});
