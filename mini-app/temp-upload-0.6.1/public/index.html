@@ -35,7 +35,6 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 @media(max-width:850px){.app{display:block}aside{padding:13px 15px;gap:10px}.brand{display:flex;align-items:baseline;gap:10px}.brand-name{font-size:22px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;padding:9px 12px;font-size:13px}.side-note{display:none}main{padding:22px 16px 45px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:290px;padding:23px}.hero h2{font-size:29px}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.feature-row{grid-template-columns:1fr}.top h1{font-size:25px}.user span{display:none}.hero{min-height:330px}.row-card{align-items:flex-start}.row-img{width:85px;height:85px}}
 
-.people-intro{color:var(--muted);font-size:13px;margin:-4px 0 18px}.people-subhead{font-weight:800;color:var(--forest);margin:22px 0 10px}.people-empty{grid-column:1/-1;padding:24px;text-align:center;background:var(--paper);border:1px dashed #cbd1c7;border-radius:15px;color:var(--muted)}.person-card{display:flex;gap:14px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}.person-photo{width:62px;height:62px;flex:none;border-radius:50%;object-fit:cover;background:#e7ebdf}.person-avatar{width:62px;height:62px;flex:none;border-radius:50%;display:grid;place-items:center;background:#e7ebdf;color:var(--forest);font-size:22px;font-weight:800}.person-card h4{margin:2px 0 5px}.person-card p{margin:7px 0 0;color:#5e6a62;font-size:13px}.journey-tabs{display:flex;gap:8px;overflow-x:auto;padding:3px 0 12px;margin:6px 0 4px}
 .journey-tabs button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--forest);padding:10px 15px;font-weight:750}
 .journey-tabs button.active{background:var(--forest);border-color:var(--forest);color:#fff}
 .journey-pane{display:none}.journey-pane.active{display:block}.journey-intro{font-size:13px;color:var(--muted);margin:4px 0 14px}
@@ -96,12 +95,19 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
   </section>
 
   <section class="view" id="people">
-    <div class="section-head"><h3>Люди, которым по пути</h3><button class="btn outline" type="button" onclick="showView('profile')">Мой профиль</button></div>
-    <p class="people-intro">Здесь отображаются ваш профиль и участники, которые разрешили показывать свои анкеты другим путешественникам.</p>
-    <div class="people-subhead">Мой профиль</div>
-    <div class="grid" id="people-own-profile"><div class="people-empty">Загружаем ваш профиль…</div></div>
-    <div class="people-subhead">Участники Югорно</div>
-    <div class="grid" id="people-directory"><div class="people-empty">Загружаем участников…</div></div>
+    <div class="section-head"><h3>Люди, которым по пути</h3><span>Примеры профилей для знакомства с интерфейсом</span></div>
+    <div class="grid">
+      <article class="card" id="people-own-profile-card"><div class="card-body">
+        <div class="avatar" id="people-own-avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">Ю</div>
+        <h4 id="people-own-name">Ваш профиль</h4>
+        <div class="meta" id="people-own-meta">Заполните профиль, чтобы показать информацию о себе</div>
+        <p id="people-own-interest"></p>
+        <button class="btn outline" type="button" onclick="showView('profile')">Редактировать профиль</button>
+      </div></article>
+      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">А</div><h4>Алексей</h4><div class="meta">Москва · Походы и горы</div><p>Любит пешие маршруты и путешествия по природным местам.</p><button class="btn outline" type="button" onclick="openPersonPreview('Алексей','Москва','Походы и горы')">Подробнее</button></div></article>
+      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">М</div><h4>Марина</h4><div class="meta">Санкт-Петербург · Природа и фотография</div><p>Собирает впечатления и фотографирует северные пейзажи.</p><button class="btn outline" type="button" onclick="openPersonPreview('Марина','Санкт-Петербург','Природа и фотография')">Подробнее</button></div></article>
+      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">И</div><h4>Илья</h4><div class="meta">Петрозаводск · Автопутешествия</div><p>Предпочитает дороги, небольшие компании и новые места.</p><button class="btn outline" type="button" onclick="openPersonPreview('Илья','Петрозаводск','Автопутешествия')">Подробнее</button></div></article>
+    </div>
   </section>
 
   <section class="view" id="trips">
@@ -138,7 +144,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 
   <section class="view" id="profile">
     <div class="section-head"><h3>Мой профиль</h3><span>Профиль участника Югорно</span></div>
-    <div class="panel" style="max-width:650px"><div style="display:flex;align-items:center;gap:15px;margin-bottom:20px"><div class="avatar" id="profile-avatar" style="width:65px;height:65px;font-size:22px">К</div><div><h3 id="profile-display-name" style="margin:0">КУНДЫШ</h3><small id="profile-account-note" style="color:var(--muted)">Локальный администратор тестовой версии</small></div></div><div id="profile-summary"><div class="field"><label>Имя</label><div id="profile-summary-name">КУНДЫШ</div></div><div class="field"><label>Город или регион</label><div id="profile-summary-city">Не указан</div></div><div class="field"><label>Интересы</label><div id="profile-summary-interest">Не указаны</div></div><button class="btn" type="button" onclick="setProfileEditMode(true)">Редактировать профиль</button></div><div id="profile-edit-form" hidden><div class="field"><label>Фотография профиля</label><input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp"><small style="color:var(--muted)">JPG, PNG или WebP, до 5 МБ</small><img id="profile-photo-preview" alt="Предпросмотр фото профиля" style="display:none;width:88px;height:88px;object-fit:cover;border-radius:50%;margin-top:10px"></div><div class="field"><label>Как к вам обращаться</label><input id="profile-name" placeholder="Ваше имя"></div><div class="field"><label>Город или регион</label><input id="profile-city" placeholder="Например, Йошкар-Ола"></div><div class="field"><label>Что вам интересно</label><select id="profile-interest"><option>Авторские путешествия</option><option>Поиск попутчиков</option><option>Походы и природа</option><option>Культура и локальные места</option><option>Фестивали и события</option></select></div><div class="field"><label style="display:flex;align-items:flex-start;gap:9px;font-weight:600"><input id="profile-discoverable" type="checkbox" style="width:auto;margin-top:3px"> Показывать мой профиль во вкладке «Люди»</label><small style="color:var(--muted)">Если включить, другим участникам будут видны имя, город, интересы и фотография профиля. Telegram ID и контакты не публикуются.</small></div><button class="btn" type="button" onclick="saveProfile()">Сохранить изменения</button><button class="btn outline" type="button" onclick="setProfileEditMode(false)">Отмена</button></div><p style="font-size:12px;color:var(--muted);margin-top:12px">Локальный профиль хранится на этом компьютере. В Telegram он будет связан с аккаунтом участника.</p></div>
+    <div class="panel" style="max-width:650px"><div style="display:flex;align-items:center;gap:15px;margin-bottom:20px"><div class="avatar" id="profile-avatar" style="width:65px;height:65px;font-size:22px">К</div><div><h3 id="profile-display-name" style="margin:0">КУНДЫШ</h3><small id="profile-account-note" style="color:var(--muted)">Локальный администратор тестовой версии</small></div></div><div id="profile-summary"><div class="field"><label>Имя</label><div id="profile-summary-name">КУНДЫШ</div></div><div class="field"><label>Город или регион</label><div id="profile-summary-city">Не указан</div></div><div class="field"><label>Интересы</label><div id="profile-summary-interest">Не указаны</div></div><button class="btn" type="button" onclick="setProfileEditMode(true)">Редактировать профиль</button></div><div id="profile-edit-form" hidden><div class="field"><label>Фотография профиля</label><input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp"><small style="color:var(--muted)">JPG, PNG или WebP, до 5 МБ</small><img id="profile-photo-preview" alt="Предпросмотр фото профиля" style="display:none;width:88px;height:88px;object-fit:cover;border-radius:50%;margin-top:10px"></div><div class="field"><label>Как к вам обращаться</label><input id="profile-name" placeholder="Ваше имя"></div><div class="field"><label>Город или регион</label><input id="profile-city" placeholder="Например, Йошкар-Ола"></div><div class="field"><label>Что вам интересно</label><select id="profile-interest"><option>Авторские путешествия</option><option>Поиск попутчиков</option><option>Походы и природа</option><option>Культура и локальные места</option><option>Фестивали и события</option></select></div><button class="btn" type="button" onclick="saveProfile()">Сохранить изменения</button><button class="btn outline" type="button" onclick="setProfileEditMode(false)">Отмена</button></div><p style="font-size:12px;color:var(--muted);margin-top:12px">Локальный профиль хранится на этом компьютере. В Telegram он будет связан с аккаунтом участника.</p></div>
   </section>
 </main>
 </div>
@@ -223,7 +229,7 @@ function getImageUrl(key){const value=getComputedStyle(document.documentElement)
 function closeDetailPage(fromPopState=false){const page=document.getElementById('detail-page');page.classList.remove('active');page.replaceChildren();showView(detailReturnView||'home');if(detailHistoryActive&&!fromPopState){detailHistoryActive=false;history.back()}else detailHistoryActive=false}
 window.addEventListener('popstate',()=>{if(document.getElementById('detail-page').classList.contains('active'))closeDetailPage(true);});
 
-function showView(id){if(id==='people')loadPeopleDirectory();const detail=document.getElementById('detail-page');if(detail){detail.classList.remove('active');detail.replaceChildren()}if(detailHistoryActive){history.replaceState(null,'',location.pathname+location.search)}detailHistoryActive=false;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));document.getElementById('page-title').textContent=titles[id]||titles.home;window.scrollTo({top:0,behavior:'smooth'})}
+function showView(id){const detail=document.getElementById('detail-page');if(detail){detail.classList.remove('active');detail.replaceChildren()}if(detailHistoryActive){history.replaceState(null,'',location.pathname+location.search)}detailHistoryActive=false;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));document.getElementById('page-title').textContent=titles[id]||titles.home;window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 let modalType='';
 let activeEditId='';
@@ -292,13 +298,20 @@ function renderProfileSummary(name,city,interest,imageUrl=window.yugornoProfileI
   const label=document.querySelector('.user span');if(label)label.textContent=name||'Путешественник';
 }
 async function saveProfile(){
-  const n=document.getElementById('profile-name').value.trim(),c=document.getElementById('profile-city').value.trim(),i=document.getElementById('profile-interest').value,discoverable=document.getElementById('profile-discoverable').checked;
+  const n=document.getElementById('profile-name').value.trim(),c=document.getElementById('profile-city').value.trim(),i=document.getElementById('profile-interest').value;
   let imageUrl=window.yugornoProfileImageUrl||'';
   if(!n){toast('Укажи имя для профиля');return}
-  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo)){localStorage.setItem('yugorno-profile',JSON.stringify({n,c,i,imageUrl,discoverable}));renderProfileSummary(n,c,i,imageUrl);setProfileEditMode(false);await loadPeopleDirectory();toast('Профиль сохранён в этом браузере');return}
-  try{const photo=document.getElementById('profile-photo')?.files?.[0];if(photo)imageUrl=await uploadImageFile(photo);await telegramApi('/api/profile',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({name:n,city:c,interest:i,discoverable,...(imageUrl?{imageUrl}:{})})});renderProfileSummary(n,c,i,imageUrl);setProfileEditMode(false);await loadPeopleDirectory();toast('Профиль сохранён в Югорно')}catch(error){toast(error.message||'Ошибка сохранения')}
+  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo)){
+    localStorage.setItem('yugorno-profile',JSON.stringify({n,c,i,imageUrl}));
+    renderProfileSummary(n,c,i,imageUrl);renderOwnPeopleProfile({name:n,city:c,interest:i,imageUrl});setProfileEditMode(false);toast('Профиль сохранён в этом браузере');return;
+  }
+  try{
+    const photo=document.getElementById('profile-photo')?.files?.[0];if(photo)imageUrl=await uploadImageFile(photo);
+    await telegramApi('/api/profile',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({name:n,city:c,interest:i,...(imageUrl?{imageUrl}:{})})});
+    renderProfileSummary(n,c,i,imageUrl);renderOwnPeopleProfile({name:n,city:c,interest:i,imageUrl});setProfileEditMode(false);toast('Профиль сохранён в Югорно');
+  }catch(error){toast(error.message||'Ошибка сохранения')}
 }
-const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');if(saved.n){document.getElementById('profile-name').value=saved.n;document.getElementById('profile-city').value=saved.c||'';document.getElementById('profile-discoverable').checked=saved.discoverable===true;document.querySelector('.user span').textContent=saved.n}
+const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');if(saved.n){document.getElementById('profile-name').value=saved.n;document.getElementById('profile-city').value=saved.c||'';document.querySelector('.user span').textContent=saved.n;renderOwnPeopleProfile({name:saved.n,city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||''})}
 // Telegram Mini App: safe initialization; browser preview remains available outside Telegram.
 (function initTelegramWebApp(){
   const tg = window.Telegram?.WebApp;
@@ -365,42 +378,29 @@ async function showCommunityMembers(id,title){try{const result=await telegramApi
 async function removeCommunityMemberFromList(communityId,memberId,title){if(!await askConfirm('Убрать участника из сообщества?'))return;try{await telegramApi(`/api/my/communities/${encodeURIComponent(communityId)}/members/${encodeURIComponent(memberId)}`,{method:'DELETE'});await loadMyCommunities();await showCommunityMembers(communityId,title);toast('Участник удалён из сообщества')}catch(error){toast(error.message||'Не удалось убрать участника')}}
 async function openTripDetails(id){try{const result=await telegramApi(`/api/trips/${encodeURIComponent(id)}`);const trip=result.item;const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');document.getElementById('modal-title').textContent=trip.title;document.getElementById('modal-desc').textContent=[trip.place,trip.date,trip.kind].filter(Boolean).join(' · ');fields.replaceChildren();if(trip.imageUrl){const photo=document.createElement('img');photo.src=trip.imageUrl;photo.alt=trip.title;photo.style.cssText='width:100%;max-height:260px;object-fit:cover;border-radius:14px;margin-bottom:12px';fields.append(photo)}const description=document.createElement('p');description.style.whiteSpace='pre-wrap';description.textContent=trip.description||'Описание пока не добавлено';const count=document.createElement('small');count.style.color='var(--muted)';count.textContent=`Откликов: ${trip.interestCount||0}`;const action=document.createElement('button');action.className='btn';action.textContent='Откликнуться';action.addEventListener('click',()=>expressInterest(id));fields.append(description,count,action);const pageButton=document.createElement('button');pageButton.className='btn outline';pageButton.textContent='Открыть страницу целиком';pageButton.addEventListener('click',()=>{closeModal();openDetailPage({type:'trip',id:trip.id,title:trip.title,subtitle:[trip.place,trip.date,trip.kind].filter(Boolean).join(' · '),description:trip.description,imageUrl:trip.imageUrl,published:true})});const actions=document.querySelector('#modal-back .modal-actions');actions.replaceChildren(pageButton);actions.style.display='flex';back.classList.add('show')}catch(error){toast(error.message||'Не удалось открыть путешествие')}}
 async function showTripInterests(id,title){try{const result=await telegramApi(`/api/my/trips/${encodeURIComponent(id)}/interests`);const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');document.querySelector('#modal-back .modal-actions').style.display='none';document.getElementById('modal-title').textContent=`Отклики: ${title}`;document.getElementById('modal-desc').textContent=`Участников: ${result.items.length}`;fields.replaceChildren();if(!result.items.length){const empty=document.createElement('p');empty.textContent='Пока никто не откликнулся';fields.append(empty)}result.items.forEach(person=>{const row=document.createElement('div');row.className='community';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=person.name;const meta=document.createElement('small');meta.textContent=[person.city,person.interest].filter(Boolean).join(' · ')||'Профиль пока не заполнен';info.append(name,meta);row.append(info);fields.append(row)});back.classList.add('show')}catch(error){toast(error.message||'Не удалось загрузить отклики')}}
-function renderPersonCard(profile,own=false){
-  const card=document.createElement('article');card.className='person-card';
-  if(profile.imageUrl){const img=document.createElement('img');img.className='person-photo';img.src=profile.imageUrl;img.alt='Фото профиля';card.append(img)}
-  else{const avatar=document.createElement('div');avatar.className='person-avatar';avatar.textContent=(profile.name||'Ю').slice(0,1).toUpperCase();card.append(avatar)}
-  const body=document.createElement('div');body.style.minWidth='0';
-  const name=document.createElement('h4');name.textContent=profile.name||'Путешественник';
-  const meta=document.createElement('div');meta.className='meta';meta.textContent=[profile.city,profile.interest].filter(Boolean).join(' · ')||'Интересы пока не указаны';
-  const description=document.createElement('p');description.textContent=own?(profile.discoverable?'Ваш профиль виден другим участникам.':'Ваш профиль пока виден только вам.'):'Участник сообщества Югорно';
-  body.append(name,meta,description);card.append(body);return card;
+function renderOwnPeopleProfile(profile={}){
+  const name=profile.name||'Ваш профиль',city=profile.city||'',interest=profile.interest||'',imageUrl=profile.imageUrl||'';
+  const nameNode=document.getElementById('people-own-name'),metaNode=document.getElementById('people-own-meta'),interestNode=document.getElementById('people-own-interest'),avatar=document.getElementById('people-own-avatar');
+  if(nameNode)nameNode.textContent=name;
+  if(metaNode)metaNode.textContent=city||'Город пока не указан';
+  if(interestNode)interestNode.textContent=interest||'Интересы пока не указаны';
+  if(avatar){avatar.replaceChildren();if(imageUrl){const img=document.createElement('img');img.src=imageUrl;img.alt='Фото профиля';img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%';avatar.append(img)}else avatar.textContent=name==='Ваш профиль'?'Ю':name.slice(0,1).toUpperCase()}
 }
-async function loadPeopleDirectory(){
-  const ownHost=document.getElementById('people-own-profile'),directory=document.getElementById('people-directory');if(!ownHost||!directory)return;
-  const demoProfiles=[
-    {name:'Алексей',city:'Москва',interest:'Походы и горы'},
-    {name:'Марина',city:'Санкт-Петербург',interest:'Природа и фотография'},
-    {name:'Илья',city:'Петрозаводск',interest:'Автопутешествия'}
-  ];
-  let ownProfile={},items=[...demoProfiles];
-  const authenticated=Boolean(window.yugornoTelegramUser&&(window.Telegram?.WebApp?.initData||window.yugornoLocalDemo));
-  if(authenticated){
-    try{const result=await telegramApi('/api/profile');ownProfile=result.profile||{}}
-    catch(error){console.warn('Серверный профиль недоступен:',error.message)}
-    try{const result=await telegramApi('/api/people');items.push(...(result.items||[]))}
-    catch(error){console.warn('Каталог участников недоступен:',error.message)}
+async function loadServerProfile(){
+  try{
+    const result=await telegramApi('/api/profile');const p=result.profile||{};const user=window.yugornoTelegramUser||{};
+    const fallbackName=[user.first_name,user.last_name].filter(Boolean).join(' ')||(user.username?'@'+user.username:'Путешественник');
+    const name=p.name||fallbackName;
+    document.getElementById('profile-name').value=name;document.getElementById('profile-city').value=p.city||'';
+    const select=document.getElementById('profile-interest');if(p.interest&&[...select.options].some(o=>o.value===p.interest||o.text===p.interest))select.value=p.interest;
+    renderProfileSummary(name,p.city||'',p.interest||'',p.imageUrl||'');renderOwnPeopleProfile({name,city:p.city||'',interest:p.interest||'',imageUrl:p.imageUrl||''});
+    if(p.imageUrl){const preview=document.getElementById('profile-photo-preview');preview.src=p.imageUrl;preview.style.display='block'}
+    setProfileEditMode(false);
+  }catch(error){
+    console.warn('Профиль не загружен:',error.message);
+    try{const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');renderOwnPeopleProfile({name:saved.n||'',city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||''})}catch{}
   }
-  if(!ownProfile.name){
-    try{const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');ownProfile={name:saved.n||'',city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||'',discoverable:saved.discoverable===true}}
-    catch(error){console.warn('Локальный профиль недоступен:',error.message)}
-  }
-  const fallback=window.yugornoTelegramUser||{};
-  ownProfile.name=ownProfile.name||[fallback.first_name,fallback.last_name].filter(Boolean).join(' ')||'Ваш профиль';
-  ownHost.replaceChildren(renderPersonCard(ownProfile,true));
-  directory.replaceChildren();
-  items.forEach(profile=>directory.append(renderPersonCard(profile,false)));
 }
-async function loadServerProfile(){try{const result=await telegramApi('/api/profile');const p=result.profile||{};const user=window.yugornoTelegramUser||{};const fallbackName=[user.first_name,user.last_name].filter(Boolean).join(' ')||(user.username?'@'+user.username:'Путешественник');const name=p.name||fallbackName;document.getElementById('profile-name').value=name;document.getElementById('profile-city').value=p.city||'';const select=document.getElementById('profile-interest');if(p.interest&&[...select.options].some(o=>o.value===p.interest||o.text===p.interest))select.value=p.interest;document.getElementById('profile-discoverable').checked=p.discoverable===true;renderProfileSummary(name,p.city||'',p.interest||'',p.imageUrl||'');if(p.imageUrl){const preview=document.getElementById('profile-photo-preview');preview.src=p.imageUrl;preview.style.display='block'}setProfileEditMode(false)}catch(error){console.warn('Профиль не загружен:',error.message)}}
 
 async function initLocalDemoMode(){
   if(window.Telegram?.WebApp?.initData){await loadJourneyTab('points');return}
@@ -411,7 +411,7 @@ async function initLocalDemoMode(){
     const label=document.querySelector('.user span');if(label)label.textContent='КУНДЫШ';
     const profileHeading=document.querySelector('#profile .panel h3');if(profileHeading)profileHeading.textContent='КУНДЫШ';const profileAvatar=document.querySelector('#profile .panel .avatar');if(profileAvatar)profileAvatar.textContent='К';
     const note=document.querySelector('#profile .panel small');if(note)note.textContent='Локальный режим проверки. Данные хранятся только на этом компьютере.';
-    await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadPeopleDirectory();await loadMyTrips();await loadMyCommunities();await loadJourneyTab('points');
+    await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();await loadJourneyTab('points');
   }catch(error){console.warn('Локальный режим недоступен:',error.message)}
 }
 initLocalDemoMode();
