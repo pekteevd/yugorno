@@ -299,7 +299,9 @@ test('journey creation uses one clear set of responsive actions and consistent t
   assert.ok(!tripsSection.includes('Создать путешествие'));
   assert.ok(tripsSection.includes('class="journey-create-actions"'));
   for (const label of ['Создать маршрут', 'Создать встречу', 'Создать поездку']) assert.ok(tripsSection.includes(label));
-  assert.ok(html.includes('.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}'));
-  assert.ok(html.includes('@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr}}'));
+  assert.ok(html.includes('.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 16px}'));
+  assert.ok(html.includes('.journey-create-actions .btn{width:100%;min-height:36px;padding:7px 10px;font-size:13px;line-height:1.2;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}'));
+  assert.ok(html.includes('@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr;gap:7px}.journey-create-actions .btn{min-height:36px;justify-content:flex-start;padding:7px 12px}}'));
+  for (const icon of ['🧭', '🤝', '🎒']) assert.ok(tripsSection.includes(icon), `creation action should include ${icon}`);
   assert.ok(html.includes('onclick="openModal(\'trip\')">＋ Создать поездку</button>'));
 });
