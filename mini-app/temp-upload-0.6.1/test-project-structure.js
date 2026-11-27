@@ -264,6 +264,19 @@ test('journey and map list cards render uploaded photos with a visual fallback',
   assert.match(map, /cover\?'<img class="map-place-photo"/);
 });
 
+test('journeys provide separate creation flows and moderator editing for demo destinations', async () => {
+  for (const action of ["openJourneyCreate('route')", "openJourneyCreate('meeting')", "openJourneyCreate('trip')"]) assert.ok(html.includes(action));
+  assert.match(html, /f-route-stop/);
+  assert.match(html, /payload\.stopIds/);
+  assert.match(html, /payload\.kind='Встреча'/);
+  assert.match(html, /f-start-date/);
+  assert.match(html, /f-end-date/);
+  assert.match(html, /f-price/);
+  assert.match(html, /f-capacity/);
+  assert.match(html, /\/api\/admin\/destinations/);
+  assert.match(html, /openDestinationEditor/);
+});
+
 test('people tab shows the saved own profile and retains demo profile cards', async () => {
   const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
   assert.match(html, /id="people-own-profile-card"/);
