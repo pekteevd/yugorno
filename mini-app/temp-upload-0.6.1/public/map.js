@@ -59,7 +59,7 @@ function showToast(message){if(typeof window.toast==="function")window.toast(mes
 async function askUserConfirmation(message){if(typeof window.askConfirm==="function")return window.askConfirm(message);return window.confirm(message)}
 function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error("Не удалось загрузить библиотеку карты"));document.head.append(s)})}
 async function ensureLeaflet(){if(window.L)return;if(!document.querySelector('link[data-leaflet]')){const l=document.createElement("link");l.rel="stylesheet";l.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";l.dataset.leaflet="1";document.head.append(l)}await loadScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");}
-function initMap(){if(map||!window.L)return;map=L.map("yugorno-map",{zoomControl:true,preferCanvas:true}).setView([56.5,47.5],5);map.attributionControl.setPrefix(false);map.addLayer(L.tileLayer(tileLayers.standard.url,{attribution:tileLayers.standard.attr,maxZoom:19,crossOrigin:true}));markers=L.markerClusterGroup({showCoverageOnHover:false,spiderfyOnMaxZoom:true,maxClusterRadius:48}).addTo(map);map.on("moveend",()=>{if(activeMode==="map")loadPlaces()});}
+function initMap(){if(map||!window.L)return;map=L.map("yugorno-map",{zoomControl:true,scrollWheelZoom:true,preferCanvas:true}).setView([56.5,47.5],5);map.attributionControl.setPrefix(false);map.addLayer(L.tileLayer(tileLayers.standard.url,{attribution:tileLayers.standard.attr,maxZoom:19,crossOrigin:true}));markers=L.markerClusterGroup({showCoverageOnHover:false,spiderfyOnMaxZoom:true,maxClusterRadius:48}).addTo(map);map.on("moveend",()=>{if(activeMode==="map")loadPlaces()});}
 function setLayer(name){if(!map||!tileLayers[name])return;activeLayer=name;map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});const conf=tileLayers[name];L.tileLayer(conf.url,{attribution:conf.attr,maxZoom:name==="terrain"?17:19,crossOrigin:true}).addTo(map);document.querySelectorAll("[data-layer]").forEach(b=>b.classList.toggle("active",b.dataset.layer===name));}
 function iconFor(category){const icons={"Природа":"🌿","Красивые места":"⛰️","Деревни и города":"🏡","История и культура":"🏛️","Люди и ремёсла":"🧶","Еда":"🍲","Ночлег":"🛏️","Активный отдых":"🥾","Другое":"📍"};return icons[category]||"📍"}
 function markerIcon(category){return L.divIcon({className:"",html:'<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#315548;border:2px solid #fff;box-shadow:0 2px 8px #0004;display:grid;place-items:center"><span style="transform:rotate(45deg);font-size:16px">'+iconFor(category)+'</span></div>',iconSize:[34,34],iconAnchor:[17,34]})}
@@ -127,7 +127,7 @@ function initPlacePickerMap(){
  const container=document.getElementById("place-location-map");
  if(!container||!window.L)return;
  if(placePickerMap){setTimeout(()=>placePickerMap?.invalidateSize(),80);return}
- placePickerMap=L.map(container,{zoomControl:true,scrollWheelZoom:false}).setView(map?.getCenter()||[56.5,47.5],map?.getZoom()||6);
+ placePickerMap=L.map(container,{zoomControl:true,scrollWheelZoom:true}).setView(map?.getCenter()||[56.5,47.5],map?.getZoom()||6);
  placePickerMap.attributionControl.setPrefix(false);
  const conf=tileLayers[activeLayer]||tileLayers.standard;
  L.tileLayer(conf.url,{attribution:conf.attr,maxZoom:activeLayer==="terrain"?17:19,crossOrigin:true}).addTo(placePickerMap);
@@ -149,7 +149,9 @@ function nominatimLabel(item){
  return [item.name,a.amenity,a.tourism,a.village,a.town,a.city,a.municipality,a.county,a.state,a.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(", ")||item.display_name||"Найденное место";
 }
 async function fetchPlaceGeocoding(query){
- const photonUrl="https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&limit=6&lang=ru";
+ const normalizedQuery=String(query||"").toLocaleLowerCase("ru").replace(/ё/g,"е").replace(/\s+/g," ").trim();
+ const searchQuery=["у илем","уилем"].includes(normalizedQuery)?"Уилем, Моркинский район, Республика Марий Эл":query;
+ const photonUrl="https://photon.komoot.io/api/?q="+encodeURIComponent(searchQuery)+"&limit=6&lang=ru";
  let photonError=null;
  try{
   const response=await fetch(photonUrl,{headers:{Accept:"application/geo+json"}});
