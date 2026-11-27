@@ -479,3 +479,17 @@ test('admin and moderator identities can be assigned to Telegram or WhatsApp acc
   assert.match(env, /YUGORNO_ADMIN_IDS=/);
   assert.match(env, /YUGORNO_MODERATOR_IDS=/);
 });
+
+
+test('local browser opens as a guest and local administrator mode requires an explicit action', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function initLocalDemoMode(){');
+  const end = html.indexOf('initLocalDemoMode();', start);
+  const init = html.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.match(init, /renderAccountState\('guest'\)/);
+  assert.doesNotMatch(init, /window\.yugornoLocalDemo=true/);
+  assert.match(html, /async function loginLocalDemo\(\)/);
+  assert.match(html, /async function logoutAccount\(\)/);
+  assert.match(html, /window\.yugornoLocalDemo=true/);
+});
