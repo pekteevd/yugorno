@@ -4,7 +4,12 @@ import path from 'node:path';
 
 const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), 'data'));
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
-const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [] };
+const DEFAULT_FEATURED_DESTINATIONS = [
+  { slug: 'karelia', title: 'Выходные у озера в Карелии', place: 'Карелия', date: 'Планируется', kind: 'Природа', price: 'Даты и стоимость уточняются', description: 'Озёра, лесные дороги и небольшая компания.', details: 'Идея направления: провести несколько дней у воды, гулять по лесным берегам, готовить вместе и встречать вечер у костра. Конкретный маршрут и условия участия будут опубликованы отдельным организатором.', image: 'trip-karelia' },
+  { slug: 'u-ilem', title: 'Первые выходные «У Илем»', place: 'Марий Эл', date: 'Планируется', kind: 'Встреча', price: 'Условия уточняются', description: 'Знакомство с местом, деревенская жизнь и совместные дела.', details: 'Идея встречи: познакомиться с пространством У Илем, провести время у озера, приготовить общую еду и обсудить будущие события. Это не открытый набор и не подтверждённая дата.', image: 'trip-u-ilem' },
+  { slug: 'teriberka', title: 'Дорога к северному морю', place: 'Териберка · Кольский полуостров', date: 'Сезон уточняется', kind: 'Автопутешествие', price: 'Бюджет уточняется', description: 'Северные пейзажи, побережье и остановки в интересных местах.', details: 'Идея маршрута: автомобильное путешествие к побережью Териберки с небольшими прогулками и знакомством с северными местами. Даты, состав группы и стоимость пока не объявлены.', image: 'trip-teriberka' }
+];
+const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [], featuredDestinations: [] };
 let writeQueue = Promise.resolve();
 
 function cleanText(value, max = 500) {
@@ -51,7 +56,8 @@ async function readStore() {
       places: Array.isArray(parsed.places) ? parsed.places : [],
       impressions: Array.isArray(parsed.impressions) ? parsed.impressions : [],
       routes: Array.isArray(parsed.routes) ? parsed.routes : [],
-      savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : []
+      savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : [],
+      featuredDestinations: Array.isArray(parsed.featuredDestinations) ? parsed.featuredDestinations : []
     };
   } catch (error) {
     if (error.code === 'ENOENT') return structuredClone(EMPTY);
@@ -99,9 +105,10 @@ export async function updateTrip(userId, tripId, input) {
   return update(store => {
     const trip = store.trips.find(item => item.id === tripId && item.status === 'published' && item.authorId === String(userId));
     if (!trip) return null;
-    const fields = { title: 120, place: 160, date: 100, kind: 60, description: 1200 };
+    const fields = { title: 120, place: 160, date: 100, kind: 60, description: 1200, startDate: 40, endDate: 40, price: 120 };
     for (const [field, max] of Object.entries(fields)) {
       if (Object.hasOwn(input, field)) trip[field] = cleanText(input[field], max);
+    if (Object.hasOwn(input, 'capacity')) trip.capacity = Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0));
     if (Object.hasOwn(input, 'imageUrl')) trip.imageUrl = cleanText(input.imageUrl, 500);
     if (Object.hasOwn(input, 'imageUrls')) { trip.imageUrls = cleanImageUrls(input.imageUrls); trip.imageUrl = trip.imageUrls[0] || ''; }
     }
@@ -125,7 +132,7 @@ export async function createTrip(userId, input) {
   const trip = {
     id: randomUUID(), authorId: String(userId), title: cleanText(input.title, 120),
     place: cleanText(input.place, 160), date: cleanText(input.date, 100),
-    kind: cleanText(input.kind, 60), description: cleanText(input.description, 1200), imageUrl: cleanText(input.imageUrl, 500), imageUrls: cleanImageUrls(input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : [])),
+    kind: cleanText(input.kind, 60), description: cleanText(input.description, 1200), startDate: cleanText(input.startDate, 40), endDate: cleanText(input.endDate, 40), price: cleanText(input.price, 120), capacity: Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0)), imageUrl: cleanText(input.imageUrl, 500), imageUrls: cleanImageUrls(input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : [])),
     createdAt: new Date().toISOString(), status: 'published'
   };
   if (!trip.title || !trip.place || !trip.kind) throw new TypeError('title, place and kind are required');
@@ -399,6 +406,26 @@ export async function moderateImpression(impressionId, status) {
     return { ...publicImpression(item), status };
   });
 }
+export async function listFeaturedDestinations() {
+  const store = await readStore();
+  return store.featuredDestinations.length ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+}
+export async function updateFeaturedDestination(slug, input = {}) {
+  const allowed = new Set(DEFAULT_FEATURED_DESTINATIONS.map(item => item.slug));
+  if (!allowed.has(slug)) return null;
+  return update(store => {
+    const current = store.featuredDestinations.length ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+    const index = current.findIndex(item => item.slug === slug);
+    if (index < 0) return null;
+    const limits = { title: 120, place: 160, date: 100, kind: 60, price: 120, description: 1200, details: 3000, imageUrl: 500 };
+    for (const [field, max] of Object.entries(limits)) if (Object.hasOwn(input, field)) current[index][field] = cleanText(input[field], max);
+    if (Object.hasOwn(input, 'image')) current[index].image = ['trip-karelia','trip-u-ilem','trip-teriberka'].includes(input.image) ? input.image : current[index].image;
+    if (!current[index].title || !current[index].place) throw new TypeError('title and place are required');
+    store.featuredDestinations = current;
+    return { ...current[index] };
+  });
+}
+
 export async function listRoutes() {
   const store = await readStore();
   return store.routes.filter(item => item.status === "published").slice(0, 200).map(item => ({ ...publicRoute(item), stops: item.stopIds.map(id => store.places.find(place => place.id === id && place.status === "published")).filter(Boolean).map(publicPlace) }));
