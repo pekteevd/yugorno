@@ -366,3 +366,22 @@ test('meetings require a selected map location and retain coordinates while edit
   assert.match(store, /lat: validCoordinate\(input\.lat, -90, 90\), lng: validCoordinate\(input\.lng, -180, 180\)/);
   assert.match(store, /lat: item\.lat \?\? null, lng: item\.lng \?\? null/);
 });
+
+test('map cards and journey cards open the full publication from cover and title', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(html, /journey-card-media-open/);
+  assert.match(html, /journey-card-title/);
+  assert.match(map, /function mapCardMedia\(/);
+  assert.match(map, /class="map-card-open"/);
+  assert.match(map, /data-open-meeting/);
+  assert.match(map, /data-meeting=/);
+});
+
+test('place editor supports map-based location changes without manual coordinate typing', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /function editOwnPlace\(/);
+  assert.match(map, /id="place-location-map"/);
+  assert.match(map, /document\.getElementById\("owner-edit-form"\)/);
+  assert.match(map, /coordinateAccuracy:form\.get\("coordinateAccuracy"\)/);
+  assert.match(map, /miniMapPreview\(item\.placeLat,item\.placeLng,item\.placeTitle\)/);
+});
