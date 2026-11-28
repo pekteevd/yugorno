@@ -26,6 +26,13 @@ test('featured demo destinations remain available and can be edited by slug', as
   assert.equal(updated.title, 'Северное побережье');
   assert.equal((await store.listFeaturedDestinations()).find(item => item.slug === 'teriberka').details, 'Обновлённая программа');
   assert.equal(await store.updateFeaturedDestination('unknown', { title: 'x' }), null);
+  const removed = await store.deleteFeaturedDestination('teriberka');
+  assert.equal(removed.slug, 'teriberka');
+  assert.deepEqual((await store.listFeaturedDestinations()).map(item => item.slug).sort(), ['karelia', 'u-ilem']);
+  assert.equal(await store.deleteFeaturedDestination('unknown'), null);
+  await store.deleteFeaturedDestination('karelia');
+  await store.deleteFeaturedDestination('u-ilem');
+  assert.deepEqual(await store.listFeaturedDestinations(), [], 'an intentionally empty destination catalog must stay empty instead of restoring defaults');
 });
 
 test('creates and lists published trips with escaped-as-text values preserved', async () => {
