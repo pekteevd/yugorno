@@ -263,7 +263,7 @@ test('journey and map list cards render uploaded photos with a visual fallback',
   assert.match(html, /function journeyFirstPhoto\(item\)\{return item\?\.imageUrl\|\|item\?\.imageUrls\?\.\[0\]\|\|item\?\.photoUrls\?\.\[0\]/);
   assert.match(map, /map-place-photo/);
   assert.match(map, /p\.photoUrls\?\.\[0\]/);
-  assert.match(map, /const cover=r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)\?\.photoUrls\?\.\[0\];const preview=cover\?/);
+  assert.match(map, /const cover=r\.stops\?\.find\(stop=>stop\.photoUrls\?\.\[0\]\)\?\.photoUrls\?\.\[0\];\s*const preview=cover\?/);
   assert.match(map, /const preview=cover\?'<img class="map-place-photo"/);
 });
 
@@ -593,7 +593,7 @@ test('all discovery, community, journey and owner cards use compact accessible i
   assert.match(html, /class="card-foot-actions"/);
   assert.match(html, /function journeyCard\([\s\S]*?journey-card-actions[\s\S]*?class="card-icon-action"/);
   assert.match(html, /aria-label="Открыть поездку \$\{escapeHTML\(t\.title\)\}"/);
-  for (const name of ['Алексей', 'Марина', 'Илья']) assert.match(html, new RegExp('Открыть профиль ' + name));
+  for (const name of ['Алексея', 'Марины', 'Ильи']) assert.match(html, new RegExp('Открыть профиль ' + name));
   assert.match(html, /\.journey-card-actions\{display:flex;justify-content:flex-end/);
   assert.match(html, /setCardIconButton\(details,'Открыть сообщество '/);
   assert.match(html, /setCardIconButton\(hide,'Переместить поездку в корзину: '/);
