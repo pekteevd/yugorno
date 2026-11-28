@@ -466,7 +466,7 @@ test('featured destinations can be edited only by configured admins or moderator
   const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
   assert.match(server, /YUGORNO_ADMIN_IDS/);
   assert.match(server, /YUGORNO_MODERATOR_IDS/);
-  assert.match(server, /app\.patch\("\/api\/admin\/destinations\/:slug", requireTelegramUser, requireMapModerator/);
+  assert.match(server, /app\.delete\("\/api\/admin\/destinations\/:slug", requireTelegramUser, requireMapModerator/);
   assert.match(server, /if \(role !== "admin" && role !== "moderator"\)/);
   assert.match(store, /const allowed = new Set\(DEFAULT_FEATURED_DESTINATIONS\.map\(item => item\.slug\)\)/);
 });
@@ -570,16 +570,16 @@ test('map list photos use the nested card media container dimensions instead of 
 test('featured destinations can be deleted by administrators and empty catalogs stay empty', async () => {
   const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
   const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
-  assert.match(server, /app\\.delete\\("\\/api\\/admin\\/destinations\\/:slug", requireTelegramUser, requireMapModerator/);
+  assert.match(server, /app\.delete\("\/api\/admin\/destinations\/:slug", requireTelegramUser, requireMapModerator/);
   assert.match(server, /deleteFeaturedDestination/);
-  assert.match(store, /export async function deleteFeaturedDestination\\(slug\\)/);
+  assert.match(store, /export async function deleteFeaturedDestination\(slug\)/);
   assert.match(store, /featuredDestinationsInitialized/);
-  assert.match(html, /deleteFeaturedDestination\\('/);
+  assert.match(html, /deleteFeaturedDestination\('/);
   assert.match(html, /Удалить штатное направление/);
 });
 
 test('journey point lists refresh when the user returns to the tab', () => {
-  assert.match(html, /function setJourneyTab\\(tab\\)[\\s\\S]*?loadJourneyTab\\(tab,true\\)/);
+  assert.match(html, /function setJourneyTab\(tab\)[\s\S]*?loadJourneyTab\(tab,true\)/);
 });
 
 test('owner publication lists show descriptions and visible edit and trash actions', async () => {
