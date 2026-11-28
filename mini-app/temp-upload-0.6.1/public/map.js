@@ -461,7 +461,7 @@ async function loadModeration(){
   host.querySelectorAll("[data-mod-preview-route]").forEach(button=>button.onclick=()=>{const route=pendingRoutes.find(item=>item.id===button.dataset.modPreviewRoute);if(route)renderRouteOnMap(route)});
   host.querySelectorAll("[data-mod-status]").forEach(button=>button.onclick=async()=>{
    button.disabled=true;
-   try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});const published=button.dataset.modStatus==="published";showToast(button.dataset.modKind==="places"?(published?"Место и все его фотографии опубликованы":"Заявка на место и связанные материалы отклонены"):(published?"Материал опубликован":"Материал отклонён"));loadModeration()}
+   try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});const published=button.dataset.modStatus==="published";showToast(button.dataset.modKind==="places"?(published?"Место и все его фотографии опубликованы":"Заявка на место и связанные материалы отклонены"):(published?"Материал опубликован":"Материал отклонён"));await loadModeration();if(published&&button.dataset.modKind==="places"){await loadPlaces();await window.loadJourneyTab?.("points",true)}else if(published&&button.dataset.modKind==="routes"){await loadRoutes();await window.loadJourneyTab?.("routes",true)}}
    catch(error){button.disabled=false;showToast(error.message)}
   });
  }catch(error){showToast("Не удалось открыть очередь модерации: "+error.message)}
