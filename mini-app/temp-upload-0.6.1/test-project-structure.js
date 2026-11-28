@@ -630,3 +630,14 @@ test('local demo authentication takes precedence over stale WhatsApp browser ses
   assert.match(html, /if\(window\.yugornoLocalDemo\)return \{'X-Local-Demo-User':'local-tester'\}/);
   assert.match(map, /trashOwnerPublication\(button\.dataset\.ownerTrash,button\.dataset\.ownerId,button\.dataset\.ownerTitle,button\)/);
 });
+
+
+test('private map uploads respect the administrator WhatsApp login switch', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const start = server.indexOf('app.get("/api/map-uploads/:filename"');
+  const end = server.indexOf('\napp.get("/health"', start);
+  const handler = server.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'map upload handler must exist');
+  assert.ok(handler.includes('const authSettings = await getAuthSettings()'));
+  assert.ok(handler.includes('authSettings.whatsappLoginEnabled ? verifyPhoneSession('));
+});
