@@ -588,16 +588,32 @@ test('profile exposes moderation to admins and moderators and WhatsApp stays dis
   assert.match(server, /settings\.whatsappLoginEnabled && whatsappConfigured/);
 });
 
-test('all discovery and journey cards use compact accessible icon-only open actions', () => {
+test('all discovery, community, journey and owner cards use compact accessible icon-only actions', async () => {
   assert.match(html, /class="card-icon-action"[^>]+aria-label="Подробнее"/);
   assert.match(html, /class="card-foot-actions"/);
-  assert.match(html, /function journeyCard\([\\s\\S]*?journey-card-actions[\\s\\S]*?class="card-icon-action"/);
-  assert.doesNotMatch(html, /data-journey-kind="\\$\\{kind\\}"[^>]*>Подробнее<\\/button>/);
-  assert.match(html, /aria-label="Открыть поездку \\$\\{escapeHTML\\(t\\.title\\)\\}"/);
-  assert.match(html, /Открыть профиль Алексея/);
-  assert.match(html, /Открыть профиль Марины/);
-  assert.match(html, /Открыть профиль Ильи/);
-  assert.match(html, /\\.journey-card-actions\\{display:flex;justify-content:flex-end/);
+  assert.match(html, /function journeyCard\([\s\S]*?journey-card-actions[\s\S]*?class="card-icon-action"/);
+  assert.match(html, /aria-label="Открыть поездку \$\{escapeHTML\(t\.title\)\}"/);
+  for (const name of ['Алексей', 'Марина', 'Илья']) assert.match(html, new RegExp('Открыть профиль ' + name));
+  assert.match(html, /\.journey-card-actions\{display:flex;justify-content:flex-end/);
+  assert.match(html, /setCardIconButton\(details,'Открыть сообщество '/);
+  assert.match(html, /setCardIconButton\(hide,'Переместить поездку в корзину: '/);
+  assert.match(html, /setCardIconButton\(hide,'Переместить сообщество в корзину: '/);
+  assert.match(html, /Открыть сообщество Автопутешествия/);
+  assert.match(html, /Открыть сообщество Пешие тропы/);
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /map-card-title-row/);
+  assert.match(map, /data-owner-trash/);
+  assert.match(map, /data-trash-restore/);
+  assert.match(map, /map-trash-btn/);
+});
+
+test('map management controls initialize even when Leaflet CDN is unavailable', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /async function boot\(\)\{bindControls\(\);bindAdd\(\);checkModerator\(\);[\s\S]*?await ensureLeaflet\(\)/);
+  assert.match(map, /catch\(e\)\{const mapHost=document\.getElementById\("yugorno-map"\)[\s\S]*?await loadPlaces\(\);await loadMeetings\(\)\}/);
+  assert.match(map, /function renderPlaces\(\)\{\s*if\(markers\)\{/);
+  assert.match(map, /async function loadMyTrash\(\)/);
+  assert.match(map, /await loadMyTrash\(\);\s*showToast\('Публикация перемещена в корзину'\)/);
 });
 
 test('local demo authentication takes precedence over stale WhatsApp browser sessions for owner actions', async () => {
