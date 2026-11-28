@@ -39,10 +39,6 @@ try {
   await profileModeration.first().waitFor({ state: "visible", timeout: 10000 });
   await profileModeration.first().click();
 
-  const mapModeration = page.locator("#map-moderation-btn:visible");
-  await mapModeration.waitFor({ state: "visible", timeout: 10000 });
-  await mapModeration.click();
-
   await page.getByText(/Очередь модерации/, { exact: false }).waitFor({ state: "visible", timeout: 10000 });
 
   for (const endpoint of ["/api/moderation/places", "/api/moderation/impressions", "/api/moderation/routes", "/api/admin/destinations", "/api/admin/settings"]) {
