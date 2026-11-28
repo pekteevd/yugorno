@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, listMyRoutes, updateRoute, listMyImpressions, updateImpression, trashPublication, restorePublication, listMyTrash, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination, getAuthSettings, setWhatsAppLoginEnabled } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, listMyRoutes, updateRoute, listMyImpressions, updateImpression, trashPublication, restorePublication, listMyTrash, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination, deleteFeaturedDestination, getAuthSettings, setWhatsAppLoginEnabled } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -397,6 +397,13 @@ app.patch("/api/admin/destinations/:slug", requireTelegramUser, requireMapModera
     if (!item) return res.status(404).json({ ok: false, error: "destination_not_found" });
     res.json({ ok: true, item });
   } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.delete("/api/admin/destinations/:slug", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await deleteFeaturedDestination(req.params.slug);
+    if (!item) return res.status(404).json({ ok: false, error: "destination_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { next(error); }
 });
 
 app.get("/api/places", async (req, res, next) => {
