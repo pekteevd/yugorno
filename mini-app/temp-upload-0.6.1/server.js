@@ -71,7 +71,8 @@ app.get("/api/map-uploads/:filename", async (req, res, next) => {
     if (!/^[a-f0-9-]{36}\.(?:jpg|png|webp)$/i.test(filename)) return res.sendStatus(404);
     const initData = req.get("X-Telegram-Init-Data");
     const auth = initData ? validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS) : null;
-    const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
+    const authSettings = await getAuthSettings();
+    const phoneSession = authSettings.whatsappLoginEnabled ? verifyPhoneSession(req.get("X-Yugorno-Session")) : null;
     const userId = auth?.ok && auth.user?.id ? String(auth.user.id) : phoneSession?.id || (isLocalDemoAdminRequest(req) ? "local-tester" : null);
     const isModerator = isLocalDemoAdminRequest(req) || MAP_ADMINS.has(String(userId || "")) || MAP_MODERATORS.has(String(userId || ""));
     const allowed = await canViewMapUpload(userId, filename, isModerator);
