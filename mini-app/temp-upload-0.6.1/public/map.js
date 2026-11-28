@@ -473,10 +473,10 @@ async function trashOwnerPublication(kind,id,title,button=null){
  if(button){button.disabled=true;button.setAttribute("aria-busy","true")}
  try{
   await api('/api/my/publications/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id),{method:'DELETE'});
-  showToast('Публикация перемещена в корзину');
-  await loadMyTrash();
   const refreshes=await Promise.allSettled([loadPlaces(),api("/api/routes").then(data=>{routes=data.items||[];if(activeMode==="routes")renderSide()}),window.loadJourneyTab?.("points",true),window.loadJourneyTab?.("routes",true)]);
   refreshes.forEach(result=>{if(result.status==="rejected")console.warn("После переноса публикации не обновился один из списков:",result.reason?.message||result.reason)});
+  await loadMyTrash();
+  showToast('Публикация перемещена в корзину');
  }catch(error){
   showToast('Не удалось переместить в корзину: '+error.message);
   if(button){button.disabled=false;button.removeAttribute("aria-busy")}
@@ -494,12 +494,12 @@ async function loadMyTrash(){
    const kind=button.dataset.trashRestore;button.disabled=true;
    try{
     await api('/api/my/trash/'+encodeURIComponent(kind)+'/'+encodeURIComponent(button.dataset.trashId)+'/restore',{method:'POST'});
-    showToast('Публикация восстановлена');
-    await loadMyTrash();
     const refreshes=[loadMyPublications(),loadPlaces(),api('/api/routes').then(result=>{routes=result.items||[];if(activeMode==="routes")renderSide()})];
     if(kind==='trip')refreshes.push(window.loadPublishedTrips?.(),window.loadMyTrips?.());
     else if(kind==='community')refreshes.push(window.loadPublishedCommunities?.(),window.loadMyCommunities?.());
     await Promise.allSettled(refreshes);
+    await loadMyTrash();
+    showToast('Публикация восстановлена');
    }catch(error){button.disabled=false;showToast('Не удалось восстановить публикацию: '+error.message)}
   });
  }catch(error){showToast('Не удалось открыть корзину: '+error.message)}
