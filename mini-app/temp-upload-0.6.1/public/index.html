@@ -375,7 +375,22 @@ async function searchMeetingLocation(){
 }function closeModal(){document.getElementById('modal-back').classList.remove('show');document.querySelector('#modal-back .modal-actions').style.display='flex'}
 function previewImage(input, previewId){const file=input.files?.[0],img=document.getElementById(previewId);if(!file||!img)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024){input.value='';toast('Выберите JPG, PNG или WebP до 15 МБ');return}img.src=URL.createObjectURL(file);img.style.display='block'}
 function previewImageFiles(input, previewId){const host=document.getElementById(previewId);if(!host)return;const files=[...(input.files||[])];if(files.length>8){input.value='';toast('Можно добавить не более 8 фотографий');return}if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024)){input.value='';toast('Каждое фото должно быть JPG, PNG или WebP до 15 МБ');return}host.replaceChildren(...files.map(file=>{const img=document.createElement('img');img.alt='Предпросмотр фотографии';img.src=URL.createObjectURL(file);return img}))}
-async function uploadImageFile(file){if(!file)return '';if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024)throw new Error('Фото должно быть JPG, PNG или WebP и не больше 15 МБ');const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Не удалось прочитать фото'));reader.readAsDataURL(file)});const result=await telegramApi('/api/uploads/image',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({dataUrl})});return result.imageUrl}
+async function uploadImageFile(file){
+  if(!file)return '';
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024)throw new Error('Фото должно быть JPG, PNG или WebP и не больше 15 МБ');
+  if(typeof createImageBitmap!=='function')throw new Error('Браузер не поддерживает безопасную обработку изображения');
+  const bitmap=await createImageBitmap(file);
+  if(bitmap.width*bitmap.height>25000000){bitmap.close?.();throw new Error('Слишком большое разрешение изображения. Уменьшите фото перед загрузкой');}
+  const scale=Math.min(1,1800/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  const context=canvas.getContext('2d');
+  if(!context){bitmap.close?.();throw new Error('Не удалось обработать фотографию');}
+  context.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();
+  const dataUrl=canvas.toDataURL(file.type,file.type==='image/jpeg'||file.type==='image/webp'?0.84:undefined);
+  if(!dataUrl.startsWith('data:image/'))throw new Error('Не удалось подготовить фотографию к загрузке');
+  const result=await telegramApi('/api/uploads/image',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({dataUrl})});
+  return result.imageUrl;
+}
 document.getElementById('profile-photo')?.addEventListener('change',()=>previewImage(document.getElementById('profile-photo'),'profile-photo-preview'));
 async function submitModal(){
   const title=document.getElementById('f-title')?.value.trim();
