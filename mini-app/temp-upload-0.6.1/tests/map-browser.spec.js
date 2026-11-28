@@ -15,6 +15,7 @@ const failures = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.on("pageerror", error => failures.push(error.message));
+  page.on("dialog", dialog => dialog.accept());
 
   await page.addInitScript(() => { window.yugornoLocalDemo = true; });
   await page.route("https://telegram.org/**", route => route.fulfill({ status: 200, contentType: "application/javascript", body: "" }));
@@ -79,6 +80,38 @@ try {
     return form?.elements.lat.value === "56.5001" && form?.elements.lng.value === "48.0002";
   }, { timeout: 5000 });
   assert.match(await page.locator("#place-location-status").innerText(), /^✓ У Илем/);
+
+  // Create a real pending place, move it to the trash, and restore it through the visible UI.
+  await page.locator('#new-place-form input[name="title"]').fill("Тест корзины в браузере");
+  await page.locator('#new-place-form input[name="region"]').fill("Республика Марий Эл");
+  await page.locator('#new-place-form button[type="submit"]').click();
+  await page.waitForFunction(() => document.querySelector("#toast")?.textContent.includes("Место отправлено на модерацию"), { timeout: 10000 });
+  await page.locator("#map-my-publications-btn").click();
+  const ownerTrash = page.locator("[data-owner-trash]").first();
+  await ownerTrash.waitFor({ state: "visible", timeout: 10000 });
+  await ownerTrash.click();
+  const restore = page.locator("[data-trash-restore]").first();
+  await restore.waitFor({ state: "visible", timeout: 10000 });
+  assert.match(await page.locator("#map-side-title").innerText(), /Корзина · 1/);
+  await restore.click();
+  await page.waitForFunction(() => document.querySelector("#map-side-title")?.textContent.includes("Корзина · 0"), { timeout: 10000 });
+  await page.locator("#map-my-publications-btn").click();
+  await page.locator("[data-owner-trash]").first().waitFor({ state: "visible", timeout: 10000 });
+
+  // Even if the Leaflet CDN is blocked, the map management controls and trash must remain usable.
+  const fallbackPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  fallbackPage.on("pageerror", error => failures.push(error.message));
+  await fallbackPage.addInitScript(() => { window.yugornoLocalDemo = true; });
+  await fallbackPage.route("https://telegram.org/**", route => route.fulfill({ status: 200, contentType: "application/javascript", body: "" }));
+  await fallbackPage.route("https://unpkg.com/**", route => route.abort());
+  const fallbackResponse = await fallbackPage.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  assert.equal(fallbackResponse?.status(), 200);
+  await fallbackPage.locator('[data-view="map"]').click();
+  await fallbackPage.locator("#map-trash-btn").waitFor({ state: "visible", timeout: 10000 });
+  await fallbackPage.locator("#map-moderation-btn").waitFor({ state: "visible", timeout: 10000 });
+  await fallbackPage.locator("#map-trash-btn").click();
+  await fallbackPage.waitForFunction(() => document.querySelector("#map-side-title")?.textContent.includes("Корзина · 0"), { timeout: 10000 });
+  await fallbackPage.close();
 
   assert.deepEqual(failures, [], "browser page should not emit uncaught JavaScript errors");
   process.stdout.write("PASS: Chromium loaded the Mini App and Leaflet map\n");
