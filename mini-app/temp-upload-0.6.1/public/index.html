@@ -146,7 +146,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
   <section class="view" id="communities">
     <div class="section-head"><h3>Сообщества Югорно</h3><button class="btn" onclick="openModal('community')">＋ Создать сообщество</button></div>
     <div class="grid">
-      <article class="card"><div class="card-img" data-image="community-u-ilem"></div><div class="card-body"><h4>У Илем</h4><div class="meta">Марий Эл · первые участники</div><p>Деревня, озеро, лес, встречи у костра и совместное создание пространства.</p><button class="btn outline" onclick="openCommunityPreview('У Илем','Марий Эл · первые участники','Деревня, озеро, лес, встречи у костра и совместное создание пространства.')">О сообществе</button></div></article>
+      <article class="card"><div class="card-img" data-image="community-u-ilem"></div><div class="card-body"><h4>У Илем</h4><div class="meta">Марий Эл · первые участники</div><p>Деревня, озеро, лес, встречи у костра и совместное создание пространства.</p><button class="card-icon-action" type="button" aria-label="Открыть сообщество У Илем" title="Открыть сообщество" onclick="openCommunityPreview('У Илем','Марий Эл · первые участники','Деревня, озеро, лес, встречи у костра и совместное создание пространства.')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
       <article class="card"><div class="card-img" data-image="community-road"></div><div class="card-body"><h4>Автопутешествия</h4><div class="meta">Дороги · экипажи · маршруты</div><p>Собираем компании, делимся дорогами и планируем поездки.</p><button class="card-icon-action" type="button" aria-label="Открыть сообщество Автопутешествия" title="Открыть сообщество" onclick="openCommunityPreview('Автопутешествия','Дороги · экипажи · маршруты','Собираем компании, делимся дорогами и планируем поездки.')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
       <article class="card"><div class="card-img" data-image="community-trails"></div><div class="card-body"><h4>Пешие тропы</h4><div class="meta">Походы · прогулки · природа</div><p>Маршруты разной сложности и люди, с которыми интересно идти.</p><button class="card-icon-action" type="button" aria-label="Открыть сообщество Пешие тропы" title="Открыть сообщество" onclick="openCommunityPreview('Пешие тропы','Походы · прогулки · природа','Маршруты разной сложности и люди, с которыми интересно идти.')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
     </div>
@@ -380,7 +380,8 @@ document.getElementById('profile-photo')?.addEventListener('change',()=>previewI
 async function submitModal(){
   const title=document.getElementById('f-title')?.value.trim();
   if(!title){toast('Добавьте название');return}
-  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!localStorage.getItem('yugorno-session')&&!window.yugornoLocalDemo)){toast('Откройте Югорно в Telegram или включите локальный режим тестирования');return}
+  const hasAuthenticatedTransport=Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem('yugorno-session')||window.yugornoLocalDemo);
+  if(!hasAuthenticatedTransport){toast('Откройте Югорно в Telegram или войдите в локальный тестовый режим');return}
   const description=document.getElementById('f-desc')?.value.trim()||'';
   const selectedPhotos=[...(document.getElementById('f-photo')?.files||[])];
   const payload={title,description};
@@ -472,7 +473,8 @@ async function saveProfile(){
   const n=document.getElementById('profile-name').value.trim(),c=document.getElementById('profile-city').value.trim(),i=document.getElementById('profile-interest').value;
   let imageUrl=window.yugornoProfileImageUrl||'';
   if(!n){toast('Укажи имя для профиля');return}
-  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!localStorage.getItem('yugorno-session')&&!window.yugornoLocalDemo)){
+  const hasAuthenticatedTransport=Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem('yugorno-session')||window.yugornoLocalDemo);
+  if(!hasAuthenticatedTransport){
     localStorage.setItem('yugorno-profile',JSON.stringify({n,c,i,imageUrl}));
     renderProfileSummary(n,c,i,imageUrl);renderOwnPeopleProfile({name:n,city:c,interest:i,imageUrl});setProfileEditMode(false);toast('Профиль сохранён в этом браузере');return;
   }
@@ -483,51 +485,6 @@ async function saveProfile(){
   }catch(error){toast(error.message||'Ошибка сохранения')}
 }
 const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');if(saved.n){document.getElementById('profile-name').value=saved.n;document.getElementById('profile-city').value=saved.c||'';document.querySelector('.user span').textContent=saved.n;renderOwnPeopleProfile({name:saved.n,city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||''})}
-// Telegram Mini App: safe initialization; browser preview remains available outside Telegram.
-(function initTelegramWebApp(){
-  const tg = window.Telegram?.WebApp;
-  if (!tg) return;
-  tg.ready();
-  tg.expand();
-  document.documentElement.style.setProperty('--telegram-viewport-height', `${tg.viewportHeight || window.innerHeight}px`);
-  tg.onEvent?.('viewportChanged', () => document.documentElement.style.setProperty('--telegram-viewport-height', `${tg.viewportHeight || window.innerHeight}px`));
-  if (tg.themeParams?.bg_color) document.documentElement.style.setProperty('--tg-bg', tg.themeParams.bg_color);
-  authenticateTelegram(tg);
-})();
-
-async function authenticateTelegram(tg){
-  if (!tg?.initData) return;
-  try {
-    const response = await fetch('/api/auth/telegram', {
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({initData:tg.initData})
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok || !result.user) throw new Error('Telegram auth failed');
-    const user = result.user;
-    const displayName = [user.first_name,user.last_name].filter(Boolean).join(' ') || (user.username ? `@${user.username}` : 'Путешественник');
-    const userLabel = document.querySelector('.user span');
-    if (userLabel) userLabel.textContent = displayName;
-    const avatar = document.querySelector('.user .avatar');
-    if (avatar) avatar.textContent = (user.first_name || user.username || 'Ю').slice(0,1).toUpperCase();
-    const profileHeading = document.querySelector('#profile .panel h3');
-    const profileNote = document.querySelector('#profile .panel small');
-    if (profileHeading) profileHeading.textContent = displayName;
-    if (profileNote) profileNote.textContent = 'Аккаунт подтверждён Telegram';
-    const profileInput = document.getElementById('profile-name');
-    if (profileInput && !profileInput.value) profileInput.value = displayName;
-    window.yugornoTelegramUser = user;
-    await loadPublishedTrips();
-    await loadPublishedCommunities();
-    await loadServerProfile();
-    await loadMyTrips();
-    await loadMyCommunities();
-  } catch (error) {
-    console.warn('Не удалось подтвердить Telegram-пользователя:', error.message);
-  }
-}
-
 function yugornoAuthHeaders(){
   const initData=window.Telegram?.WebApp?.initData;
   if(initData)return {'X-Telegram-Init-Data':initData};
