@@ -641,3 +641,16 @@ test('private map uploads respect the administrator WhatsApp login switch', asyn
   assert.ok(handler.includes('const authSettings = await getAuthSettings()'));
   assert.ok(handler.includes('authSettings.whatsappLoginEnabled ? verifyPhoneSession('));
 });
+
+
+test('all general image uploads are re-encoded to strip EXIF metadata before public storage', async () => {
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function uploadImageFile(file){');
+  const end = html.indexOf('\nasync function submitModal', start);
+  const uploader = html.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'general image uploader must exist');
+  assert.ok(uploader.includes('createImageBitmap(file)'));
+  assert.ok(uploader.includes('canvas.toDataURL(file.type'));
+  assert.ok(uploader.includes("telegramApi('/api/uploads/image'"));
+  assert.ok(!uploader.includes('new FileReader()'), 'original EXIF-bearing bytes must not be uploaded directly');
+});
