@@ -390,10 +390,9 @@ async function checkModerator(){
  try{
   await api("/api/moderation/places");
   const anchor=document.getElementById("map-add-btn");
-  if(!anchor)return false;
   let button=document.getElementById("map-moderation-btn");
-  if(!button){button=document.createElement("button");button.id="map-moderation-btn";button.type="button";button.textContent="Модерация";anchor.after(button)}
-  button.onclick=loadModeration;
+  if(anchor&&!button){button=document.createElement("button");button.id="map-moderation-btn";button.type="button";button.textContent="Модерация";anchor.after(button)}
+  if(button)button.onclick=loadModeration;
   return true;
  }catch{document.getElementById("map-moderation-btn")?.remove();return false}
 }
