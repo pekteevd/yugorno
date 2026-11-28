@@ -9,7 +9,7 @@ const DEFAULT_FEATURED_DESTINATIONS = [
   { slug: 'u-ilem', title: 'Первые выходные «У Илем»', place: 'Марий Эл', date: 'Планируется', kind: 'Встреча', price: 'Условия уточняются', description: 'Знакомство с местом, деревенская жизнь и совместные дела.', details: 'Идея встречи: познакомиться с пространством У Илем, провести время у озера, приготовить общую еду и обсудить будущие события. Это не открытый набор и не подтверждённая дата.', image: 'trip-u-ilem' },
   { slug: 'teriberka', title: 'Дорога к северному морю', place: 'Териберка · Кольский полуостров', date: 'Сезон уточняется', kind: 'Автопутешествие', price: 'Бюджет уточняется', description: 'Северные пейзажи, побережье и остановки в интересных местах.', details: 'Идея маршрута: автомобильное путешествие к побережью Териберки с небольшими прогулками и знакомством с северными местами. Даты, состав группы и стоимость пока не объявлены.', image: 'trip-teriberka' }
 ];
-const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [], featuredDestinations: [] };
+const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [], featuredDestinations: [], authSettings: { whatsappLoginEnabled: false } };
 let writeQueue = Promise.resolve();
 
 function cleanText(value, max = 500) {
@@ -57,7 +57,8 @@ async function readStore() {
       impressions: Array.isArray(parsed.impressions) ? parsed.impressions : [],
       routes: Array.isArray(parsed.routes) ? parsed.routes : [],
       savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : [],
-      featuredDestinations: Array.isArray(parsed.featuredDestinations) ? parsed.featuredDestinations : []
+      featuredDestinations: Array.isArray(parsed.featuredDestinations) ? parsed.featuredDestinations : [],
+      authSettings: { whatsappLoginEnabled: parsed.authSettings?.whatsappLoginEnabled === true }
     };
   } catch (error) {
     if (error.code === 'ENOENT') return structuredClone(EMPTY);
@@ -587,4 +588,17 @@ export async function canViewMapUpload(userId, filename, isModerator = false) {
   const impression = store.impressions.find(item => (item.photoUrls || []).includes(url));
   if (!impression) return false;
   return impression.status === "published" || impression.authorId === String(userId || "") || isModerator;
+}
+
+
+export async function getAuthSettings() {
+  const store = await readStore();
+  return { whatsappLoginEnabled: store.authSettings?.whatsappLoginEnabled === true };
+}
+
+export async function setWhatsAppLoginEnabled(enabled) {
+  return update(store => {
+    store.authSettings = { ...(store.authSettings || {}), whatsappLoginEnabled: enabled === true };
+    return { whatsappLoginEnabled: store.authSettings.whatsappLoginEnabled };
+  });
 }
