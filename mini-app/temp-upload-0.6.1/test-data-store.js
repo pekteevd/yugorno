@@ -168,6 +168,33 @@ test('map places, impressions, moderation, routes and saves persist without expo
   await assert.rejects(() => store.createPlace(1, { title: 'Плохие координаты', category: 'Природа', lat: 120, lng: 0 }), TypeError);
 });
 
+test('map publications move to trash only after linked routes and impressions are removed, then restore intact', async () => {
+  const placeA = await store.createPlace(1301, { title: 'Точка для корзины', category: 'Природа', lat: 55.1, lng: 46.1 }, 'Автор');
+  const placeB = await store.createPlace(1301, { title: 'Вторая точка для корзины', category: 'Природа', lat: 55.2, lng: 46.2 }, 'Автор');
+  const impression = await store.createImpression(1301, placeA.id, { text: 'Впечатление для проверки корзины' }, 'Автор');
+  const route = await store.createRoute(1301, { title: 'Маршрут для проверки корзины', stopIds: [placeA.id, placeB.id] }, 'Автор');
+
+  await assert.rejects(() => store.trashPublication(1301, 'place', placeA.id), /связано с 1 маршрутами и 1 впечатлениями/);
+  assert.equal(await store.trashPublication(9999, 'route', route.id), null);
+
+  assert.equal((await store.trashPublication(1301, 'route', route.id)).status, 'deleted');
+  assert.equal((await store.trashPublication(1301, 'impression', impression.id)).status, 'deleted');
+  assert.equal((await store.trashPublication(1301, 'place', placeA.id)).status, 'deleted');
+
+  const trash = await store.listMyTrash(1301);
+  assert.equal(trash.some(item => item.id === route.id && item.kind === 'route'), true);
+  assert.equal(trash.some(item => item.id === impression.id && item.kind === 'impression'), true);
+  assert.equal(trash.some(item => item.id === placeA.id && item.kind === 'place'), true);
+
+  assert.equal((await store.restorePublication(1301, 'place', placeA.id)).status, 'pending');
+  assert.equal((await store.restorePublication(1301, 'impression', impression.id)).status, 'pending');
+  assert.equal((await store.restorePublication(1301, 'route', route.id)).status, 'pending');
+  assert.equal((await store.listMyTrash(1301)).length, 0);
+  assert.equal((await store.listMyPlaces(1301)).some(item => item.id === placeA.id), true);
+  assert.equal((await store.listMyRoutes(1301)).some(item => item.id === route.id), true);
+  assert.equal((await store.listMyImpressions(1301)).some(item => item.id === impression.id), true);
+});
+
 test('pending place and its attached impressions are reviewed together while published-place impressions stay separate', async () => {
   const p = await store.createPlace(1201, { title: 'Водопад', category: 'Природа', lat: 55, lng: 46 });
   const attached = await store.createImpression(1201, p.id, { text: 'После дождя' });
