@@ -567,6 +567,30 @@ test('map list photos use the nested card media container dimensions instead of 
 });
 
 
+test('featured destinations can be deleted by administrators and empty catalogs stay empty', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(server, /app\\.delete\\("\\/api\\/admin\\/destinations\\/:slug", requireTelegramUser, requireMapModerator/);
+  assert.match(server, /deleteFeaturedDestination/);
+  assert.match(store, /export async function deleteFeaturedDestination\\(slug\\)/);
+  assert.match(store, /featuredDestinationsInitialized/);
+  assert.match(html, /deleteFeaturedDestination\\('/);
+  assert.match(html, /Удалить штатное направление/);
+});
+
+test('journey point lists refresh when the user returns to the tab', () => {
+  assert.match(html, /function setJourneyTab\\(tab\\)[\\s\\S]*?loadJourneyTab\\(tab,true\\)/);
+});
+
+test('owner publication lists show descriptions and visible edit and trash actions', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  assert.match(map, /map-owner-description/);
+  assert.match(map, /data-owner-edit=/);
+  assert.match(map, /data-owner-trash=/);
+  assert.match(map, /Редактировать/);
+  assert.match(map, /В корзину/);
+});
+
 test('route creation opens its form even when more published places are needed', () => {
   const start = html.indexOf('async function openJourneyCreate(kind)');
   const end = html.indexOf('async function openDestinationEditor', start);
