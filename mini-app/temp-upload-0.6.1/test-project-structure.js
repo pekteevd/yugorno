@@ -588,10 +588,16 @@ test('profile exposes moderation to admins and moderators and WhatsApp stays dis
   assert.match(server, /settings\.whatsappLoginEnabled && whatsappConfigured/);
 });
 
-test('explore trip cards use compact accessible icon-only actions and detail action aligns to the right', () => {
+test('all discovery and journey cards use compact accessible icon-only open actions', () => {
   assert.match(html, /class="card-icon-action"[^>]+aria-label="Подробнее"/);
   assert.match(html, /class="card-foot-actions"/);
-  assert.match(html, /\.detail-actions\{display:flex;justify-content:flex-end/);
+  assert.match(html, /function journeyCard\([\\s\\S]*?journey-card-actions[\\s\\S]*?class="card-icon-action"/);
+  assert.doesNotMatch(html, /data-journey-kind="\\$\\{kind\\}"[^>]*>Подробнее<\\/button>/);
+  assert.match(html, /aria-label="Открыть поездку \\$\\{escapeHTML\\(t\\.title\\)\\}"/);
+  assert.match(html, /Открыть профиль Алексея/);
+  assert.match(html, /Открыть профиль Марины/);
+  assert.match(html, /Открыть профиль Ильи/);
+  assert.match(html, /\\.journey-card-actions\\{display:flex;justify-content:flex-end/);
 });
 
 test('local demo authentication takes precedence over stale WhatsApp browser sessions for owner actions', async () => {
