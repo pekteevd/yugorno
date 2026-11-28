@@ -8,10 +8,17 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test",
+    "test:browser": "node scripts/run-browser-tests.mjs",
+    "test:all": "npm test && npm run test:browser",
     "reset:local-publications": "node scripts/clean-local-publications.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "leaflet": "1.9.4",
+    "leaflet.markercluster": "1.5.3",
+    "playwright": "1.56.1"
   }
 }
