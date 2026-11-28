@@ -607,6 +607,13 @@ test('all discovery, community, journey and owner cards use compact accessible i
   assert.match(map, /map-trash-btn/);
 });
 
+test('Telegram authentication is initialized once and form submissions rely on verified credentials rather than UI timing', () => {
+  assert.equal((html.match(/function initTelegramWebApp/g) || []).length, 1);
+  assert.doesNotMatch(html, /if\(!window\.yugornoTelegramUser\|\|/);
+  assert.match(html, /const hasAuthenticatedTransport=Boolean\(window\.Telegram\?\.WebApp\?\.initData\|\|localStorage\.getItem\('yugorno-session'\)\|\|window\.yugornoLocalDemo\)/);
+  assert.match(html, /\.detail-actions\{display:flex;justify-content:flex-end/);
+});
+
 test('map management controls initialize even when Leaflet CDN is unavailable', async () => {
   const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
   assert.match(map, /async function boot\(\)\{bindControls\(\);bindAdd\(\);checkModerator\(\);[\s\S]*?await ensureLeaflet\(\)/);
