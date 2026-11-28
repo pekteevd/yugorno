@@ -76,7 +76,7 @@ const tileLayers={
  satellite:{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",attr:'Tiles © <a href="https://www.esri.com/">Esri</a>'},
  terrain:{url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",attr:'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, style © <a href="https://opentopomap.org/">OpenTopoMap</a>'}
 };
-function api(path,options={}){const headers={...(options.headers||{})};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
+function api(path,options={}){const headers={...(options.headers||{})};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
 function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function showToast(message){if(typeof window.toast==="function")window.toast(message);else console.info(message)}
 function hasOwnerSession(){return Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem("yugorno-session")||window.yugornoLocalDemo)}
@@ -389,9 +389,13 @@ function renderRouteOnMap(route){
 async function checkModerator(){
  try{
   await api("/api/moderation/places");
-  const button=document.createElement("button");button.type="button";button.textContent="Модерация";
-  button.onclick=loadModeration;document.getElementById("map-add-btn").after(button);
- }catch{}
+  const anchor=document.getElementById("map-add-btn");
+  if(!anchor)return false;
+  let button=document.getElementById("map-moderation-btn");
+  if(!button){button=document.createElement("button");button.id="map-moderation-btn";button.type="button";button.textContent="Модерация";anchor.after(button)}
+  button.onclick=loadModeration;
+  return true;
+ }catch{document.getElementById("map-moderation-btn")?.remove();return false}
 }
 async function loadModeration(){
  try{
@@ -434,11 +438,17 @@ async function loadModeration(){
  }catch(error){showToast("Не удалось открыть очередь модерации: "+error.message)}
 }
 
-async function trashOwnerPublication(kind,id,title){
+async function trashOwnerPublication(kind,id,title,button=null){
  if(!requireOwnerSession())return;
  if(!await askUserConfirmation('Переместить «'+title+'» в корзину? Её можно будет восстановить.'))return;
- try{await api('/api/my/publications/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id),{method:'DELETE'});await loadMyPublications();await loadPlaces();routes=(await api('/api/routes')).items||[];if(activeMode==="routes")renderSide();window.loadJourneyTab?.("points",true);window.loadJourneyTab?.("routes",true);showToast('Публикация перемещена в корзину')}
- catch(error){showToast(error.message)}
+ if(button){button.disabled=true;button.textContent='Перемещаем…'}
+ try{
+  await api('/api/my/publications/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id),{method:'DELETE'});
+  showToast('Публикация перемещена в корзину');
+  await loadMyPublications();await loadPlaces();routes=(await api('/api/routes')).items||[];
+  if(activeMode==="routes")renderSide();
+  window.loadJourneyTab?.("points",true);window.loadJourneyTab?.("routes",true);
+ }catch(error){showToast('Не удалось переместить в корзину: '+error.message);if(button){button.disabled=false;button.textContent='В корзину'}}
 }
 async function loadMyTrash(){
  if(!requireOwnerSession())return;
@@ -470,7 +480,7 @@ async function loadMyPublications(){
    return '<article class="map-place map-place-card">'+image+'<strong>'+safe(title)+'</strong><div class="map-muted">'+kind+' · Статус: '+safe(item.status||"")+'</div>'+((item.status==="hidden"||item.status==="archived")?'<div class="map-muted">Редактирование недоступно для скрытой или архивной публикации.</div>':'<button type="button" class="btn outline" data-owner-edit="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'">Редактировать</button>')+'<button type="button" class="btn outline" data-owner-trash="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'" data-owner-title="'+safe(title)+'">В корзину</button></article>';
   }).join(""):'<div class="map-empty">Пока нет собственных публикаций.</div>';
   hydrateOwnerImages(host);
-  host.querySelectorAll("[data-owner-trash]").forEach(button=>button.onclick=()=>trashOwnerPublication(button.dataset.ownerTrash,button.dataset.ownerId,button.dataset.ownerTitle));
+  host.querySelectorAll("[data-owner-trash]").forEach(button=>button.onclick=event=>{event.preventDefault();trashOwnerPublication(button.dataset.ownerTrash,button.dataset.ownerId,button.dataset.ownerTitle,button)});
   host.querySelectorAll("[data-owner-edit]").forEach(button=>button.onclick=()=>{
    const kind=button.dataset.ownerEdit,id=button.dataset.ownerId,item=items.find(entry=>entry.ownerKind===kind&&entry.id===id);
    if(!item)return;
@@ -551,7 +561,7 @@ function editOwnImpression(item){
 }
 
 function bindControls(){const trash=document.createElement("button");trash.type="button";trash.textContent="Корзина";trash.onclick=loadMyTrash;document.getElementById("map-add-btn").after(trash);const saved=document.createElement("button");saved.type="button";saved.textContent="Сохранённое";saved.onclick=async()=>{try{const data=await api("/api/my/saved-places");document.getElementById("map-side-title").textContent="Сохранённые места";document.getElementById("map-side-content").innerHTML=data.items.length?data.items.map(p=>'<div class="map-place"><button type="button" data-place="'+safe(p.id)+'">'+safe(p.title)+'</button><div class="map-muted">'+safe(p.category)+'</div></div>').join(""):'<div class="map-empty">Пока ничего не сохранено</div>';document.getElementById("map-side-content").querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>openPlace(b.dataset.place))}catch(e){showToast(e.message)}};document.getElementById("map-add-btn").after(saved);const mine=document.createElement("button");mine.type="button";mine.textContent="Мои публикации";mine.onclick=loadMyPublications;document.getElementById("map-add-btn").after(mine);document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));document.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>setLayer(b.dataset.layer)));document.getElementById("map-search-btn").onclick=loadPlaces;document.getElementById("map-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadPlaces()});document.getElementById("map-category").onchange=loadPlaces}
-window.YugornoMap={openPlace:id=>{if(typeof window.showView==="function")window.showView("map");setTimeout(()=>openPlace(id),140)},showRoute:async id=>{try{routes=(await api("/api/routes")).items;const route=routes.find(item=>item.id===id);if(!route)return;if(typeof window.showView==="function")window.showView("map");setTimeout(()=>renderRouteOnMap(route),180)}catch(error){showToast("Не удалось открыть маршрут: "+error.message)}},refreshPlaces:()=>loadPlaces(),refreshMeetings:()=>loadMeetings()};
+window.YugornoMap={openPlace:id=>{if(typeof window.showView==="function")window.showView("map");setTimeout(()=>openPlace(id),140)},showRoute:async id=>{try{routes=(await api("/api/routes")).items;const route=routes.find(item=>item.id===id);if(!route)return;if(typeof window.showView==="function")window.showView("map");setTimeout(()=>renderRouteOnMap(route),180)}catch(error){showToast("Не удалось открыть маршрут: "+error.message)}},openModeration:async()=>{if(typeof window.showView==="function")window.showView("map");if(!await checkModerator()){showToast("Доступ к модерации не подтверждён для этой учётной записи");return}await loadModeration()},refreshModeratorAccess:()=>checkModerator(),refreshPlaces:()=>loadPlaces(),refreshMeetings:()=>loadMeetings()};
 async function boot(){try{await ensureLeaflet();if(!window.L.markerClusterGroup){for(const [key,url] of [["mc","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"],["mcd","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"]]){const link=document.createElement("link");link.rel="stylesheet";link.href=url;link.dataset[key]="1";document.head.append(link)}await loadScript("https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")}initMap();bindControls();bindAdd();checkModerator();setLayer("standard");await loadPlaces();await loadMeetings();document.querySelector('[data-mode="map"]').classList.add("active");document.querySelectorAll('.nav button[data-view="map"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>{map?.invalidateSize();loadPlaces()},100)));}catch(e){document.getElementById("yugorno-map").innerHTML='<div class="map-empty">Не удалось загрузить карту. Проверь подключение к интернету.</div>';console.error(e)}}
 boot();
 })();

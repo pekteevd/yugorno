@@ -565,3 +565,39 @@ test('map list photos use the nested card media container dimensions instead of 
   assert.match(map, /\.map-place-card \.map-card-media \.map-place-photo/);
   assert.doesNotMatch(map, /\.map-place-card>\.map-place-photo/);
 });
+
+
+test('route creation opens its form even when more published places are needed', () => {
+  const start = html.indexOf('async function openJourneyCreate(kind)');
+  const end = html.indexOf('async function openDestinationEditor', start);
+  const flow = html.slice(start, end);
+  assert.match(flow, /openModal\(kind\)/);
+  assert.doesNotMatch(flow, /journeyPlaces\.length<2\)\{toast\([^;]+;return\}/);
+  assert.match(html, /Добавить точки на карте/);
+});
+
+test('profile exposes moderation to admins and moderators and WhatsApp stays disabled until an admin enables it', async () => {
+  const server = await readFile(new URL('./server.js', import.meta.url), 'utf8');
+  const store = await readFile(new URL('./data-store.js', import.meta.url), 'utf8');
+  assert.match(html, /id="profile-admin-tools" hidden/);
+  assert.match(html, /openModerationFromProfile/);
+  assert.match(html, /id="admin-whatsapp-toggle"/);
+  assert.match(html, /id="whatsapp-login-controls" hidden/);
+  assert.match(store, /whatsappLoginEnabled: false/);
+  assert.match(server, /app\.patch\("\/api\/admin\/settings", requireTelegramUser, requireMapAdmin/);
+  assert.match(server, /settings\.whatsappLoginEnabled && whatsappConfigured/);
+});
+
+test('explore trip cards use compact accessible icon-only actions and detail action aligns to the right', () => {
+  assert.match(html, /class="card-icon-action"[^>]+aria-label="Подробнее"/);
+  assert.match(html, /class="card-foot-actions"/);
+  assert.match(html, /\.detail-actions\{display:flex;justify-content:flex-end/);
+});
+
+test('local demo authentication takes precedence over stale WhatsApp browser sessions for owner actions', async () => {
+  const map = await readFile(new URL('./public/map.js', import.meta.url), 'utf8');
+  const html = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  assert.match(map, /else if\(window\.yugornoLocalDemo\)headers\["X-Local-Demo-User"\]/);
+  assert.match(html, /if\(window\.yugornoLocalDemo\)return \{'X-Local-Demo-User':'local-tester'\}/);
+  assert.match(map, /trashOwnerPublication\(button\.dataset\.ownerTrash,button\.dataset\.ownerId,button\.dataset\.ownerTitle,button\)/);
+});
