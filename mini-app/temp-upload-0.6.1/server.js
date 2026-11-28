@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID, randomInt, createHmac, timingSafeEqual } from "node:crypto";
 import { validateTelegramInitData } from "./telegram-auth.js";
-import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, canViewMapUpload } from "./data-store.js";
+import { createTrip, listTrips, getTrip, updateTrip, unpublishTrip, createCommunity, listCommunities, updateCommunity, unpublishCommunity, listMyCommunities, listCommunityMembers, removeCommunityMember, getProfile, saveProfile, expressTripInterest, joinCommunity, listMyTrips, listTripInterests, listPlaces, getPlace, listMyPlaces, createPlace, updatePlace, moderatePlace, createImpression, listImpressions, moderateImpression, listRoutes, createRoute, savePlace, unsavePlace, listSavedPlaces, listMapModerationQueue, moderateRoute, listMyRoutes, updateRoute, listMyImpressions, updateImpression, trashPublication, restorePublication, listMyTrash, canViewMapUpload, listFeaturedDestinations, updateFeaturedDestination, deleteFeaturedDestination, getAuthSettings, setWhatsAppLoginEnabled } from "./data-store.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -12,6 +12,7 @@ const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.
 const UPLOADS_DIR = path.resolve(process.env.YUGORNO_UPLOAD_DIR || path.join(DATA_DIR, "uploads"));
 const PRIVATE_UPLOADS_DIR = path.resolve(process.env.YUGORNO_PRIVATE_UPLOAD_DIR || path.join(DATA_DIR, "private-uploads"));
 const MAP_MODERATORS = new Set((process.env.YUGORNO_MODERATOR_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
+const MAP_ADMINS = new Set((process.env.YUGORNO_ADMIN_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
 const BOT_TOKEN = process.env.BOT_TOKEN?.trim();
 const BOT_USERNAME = process.env.BOT_USERNAME?.replace(/^@/, "").trim() || "YugornoTravelBot";
 const WEBAPP_URL = process.env.WEBAPP_URL?.trim();
@@ -31,7 +32,7 @@ const waOtpChallenges = new Map();
 const waOtpCooldown = new Map();
 
 app.disable("x-powered-by");
-app.use(express.json({ limit: "8mb" }));
+app.use(express.json({ limit: "22mb" }));
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -47,7 +48,7 @@ app.post("/api/uploads/image", requireTelegramUser, async (req, res, next) => {
     const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) return res.status(400).json({ ok: false, error: "unsupported_image_format" });
     const buffer = Buffer.from(match[2], "base64");
-    if (!buffer.length || buffer.length > 5 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
+    if (!buffer.length || buffer.length > 15 * 1024 * 1024) return res.status(413).json({ ok: false, error: "image_too_large" });
     const signatures = {
       "image/jpeg": buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
       "image/png": buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
@@ -70,9 +71,10 @@ app.get("/api/map-uploads/:filename", async (req, res, next) => {
     if (!/^[a-f0-9-]{36}\.(?:jpg|png|webp)$/i.test(filename)) return res.sendStatus(404);
     const initData = req.get("X-Telegram-Init-Data");
     const auth = initData ? validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS) : null;
-    const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
+    const authSettings = await getAuthSettings();
+    const phoneSession = authSettings.whatsappLoginEnabled ? verifyPhoneSession(req.get("X-Yugorno-Session")) : null;
     const userId = auth?.ok && auth.user?.id ? String(auth.user.id) : phoneSession?.id || (isLocalDemoAdminRequest(req) ? "local-tester" : null);
-    const isModerator = isLocalDemoAdminRequest(req) || MAP_MODERATORS.has(String(userId || ""));
+    const isModerator = isLocalDemoAdminRequest(req) || MAP_ADMINS.has(String(userId || "")) || MAP_MODERATORS.has(String(userId || ""));
     const allowed = await canViewMapUpload(userId, filename, isModerator);
     if (!allowed) return res.sendStatus(404);
     const isPublic = await canViewMapUpload(null, filename, false);
@@ -85,19 +87,48 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "yugorno", version: "0.6.1" });
 });
 
-app.get("/api/status", (_req, res) => {
-  res.json({
-    app: "Югорно",
-    botConfigured: botEnabled,
-    miniAppConfigured: Boolean(WEBAPP_URL),
-    telegramAuthAvailable: botEnabled,
-    whatsappAuthAvailable: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_OTP_TEMPLATE && SESSION_SECRET),
-    botPollingEnabled: botEnabled && !botPollingDisabled,
-    botUsername: BOT_USERNAME,
-    localDemoEnabled
-  });
-});
 
+function optionalAuthenticatedUser(req, allowWhatsApp = false) {
+  if (isLocalDemoAdminRequest(req)) return { id: "local-tester", first_name: "Локальный тестировщик", authMethod: "local-demo" };
+  const initData = req.get("X-Telegram-Init-Data");
+  const auth = validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS);
+  if (auth.ok && auth.user?.id) return { ...auth.user, authMethod: "telegram" };
+  const phoneSession = allowWhatsApp ? verifyPhoneSession(req.get("X-Yugorno-Session")) : null;
+  if (phoneSession) return { id: phoneSession.id, first_name: phoneSession.phone, phone: phoneSession.phone, authMethod: "whatsapp" };
+  return null;
+}
+function userRole(userId) {
+  const id = String(userId || "");
+  if (id === "local-tester" || MAP_ADMINS.has(id)) return "admin";
+  if (MAP_MODERATORS.has(id)) return "moderator";
+  return "user";
+}
+app.get("/api/session", async (req, res, next) => {
+  try {
+    const settings = await getAuthSettings();
+    const user = optionalAuthenticatedUser(req, settings.whatsappLoginEnabled);
+    if (!user) return res.json({ ok: true, authenticated: false, role: "guest", user: null });
+    const { id, first_name, last_name, username, phone, authMethod } = user;
+    res.json({ ok: true, authenticated: true, role: userRole(id), user: { id, first_name, last_name, username, phone, authMethod } });
+  } catch (error) { next(error); }
+});
+app.get("/api/status", async (_req, res, next) => {
+  try {
+    const settings = await getAuthSettings();
+    const whatsappConfigured = Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_OTP_TEMPLATE && SESSION_SECRET);
+    res.json({
+      app: "Югорно",
+      botConfigured: botEnabled,
+      miniAppConfigured: Boolean(WEBAPP_URL),
+      telegramAuthAvailable: botEnabled,
+      whatsappLoginEnabled: settings.whatsappLoginEnabled,
+      whatsappAuthAvailable: settings.whatsappLoginEnabled && whatsappConfigured,
+      botPollingEnabled: botEnabled && !botPollingDisabled,
+      botUsername: BOT_USERNAME,
+      localDemoEnabled
+    });
+  } catch (error) { next(error); }
+});
 
 
 function signPhoneSession(phone) {
@@ -129,6 +160,8 @@ async function sendWhatsAppOtp(phone, code) {
   if (!response.ok) { const detail = await response.text(); console.error("WhatsApp OTP delivery failed:", detail.slice(0, 500)); throw new Error("whatsapp_delivery_failed"); }
 }
 app.post("/api/auth/whatsapp/send-code", async (req, res) => {
+  const settings = await getAuthSettings();
+  if (!settings.whatsappLoginEnabled) return res.status(403).json({ ok: false, error: "whatsapp_login_disabled" });
   const phone = normalizePhone(req.body?.phone);
   if (!phone) return res.status(400).json({ ok: false, error: "phone_must_be_e164" });
   if (!SESSION_SECRET) return res.status(503).json({ ok: false, error: "session_secret_not_configured" });
@@ -146,7 +179,9 @@ app.post("/api/auth/whatsapp/send-code", async (req, res) => {
     res.status(configured ? 502 : 503).json({ ok: false, error: error.message });
   }
 });
-app.post("/api/auth/whatsapp/verify-code", (req, res) => {
+app.post("/api/auth/whatsapp/verify-code", async (req, res) => {
+  const settings = await getAuthSettings();
+  if (!settings.whatsappLoginEnabled) return res.status(403).json({ ok: false, error: "whatsapp_login_disabled" });
   const phone = normalizePhone(req.body?.phone);
   const code = String(req.body?.code || "").trim();
   if (!phone || !/^\d{6}$/.test(code)) return res.status(400).json({ ok: false, error: "invalid_phone_or_code" });
@@ -167,22 +202,30 @@ app.post("/api/auth/telegram", (req, res) => {
   return res.json({ ok: true, user: result.user, authDate: result.authDate });
 });
 
-function requireTelegramUser(req, res, next) {
-  const host = String(req.headers.host || '').split(':')[0].toLowerCase();
-  const remote = req.socket?.remoteAddress || '';
-  const loopbackHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-  const loopbackRemote = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
-  if (localDemoEnabled && loopbackHost && loopbackRemote && req.get('X-Local-Demo-User') === 'local-tester') {
-    req.telegramUser = { id: 'local-tester', first_name: 'Локальный тестировщик' };
-    return next();
-  }
-  const phoneSession = verifyPhoneSession(req.get("X-Yugorno-Session"));
-  if (phoneSession) { req.telegramUser = { id: phoneSession.id, first_name: phoneSession.phone, phone: phoneSession.phone }; return next(); }
-  const initData = req.get("X-Telegram-Init-Data") || req.body?.initData;
-  const result = validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS);
-  if (!result.ok || !result.user?.id) return res.status(401).json({ ok: false, error: "telegram_auth_required" });
-  req.telegramUser = result.user;
-  next();
+async function requireTelegramUser(req, res, next) {
+  try {
+    const host = String(req.headers.host || '').split(':')[0].toLowerCase();
+    const remote = req.socket?.remoteAddress || '';
+    const loopbackHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    const loopbackRemote = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+    if (localDemoEnabled && loopbackHost && loopbackRemote && req.get('X-Local-Demo-User') === 'local-tester') {
+      req.telegramUser = { id: 'local-tester', first_name: 'Локальный тестировщик' };
+      return next();
+    }
+    const initData = req.get("X-Telegram-Init-Data") || req.body?.initData;
+    const result = validateTelegramInitData(initData, botEnabled ? BOT_TOKEN : "", AUTH_MAX_AGE_SECONDS);
+    if (result.ok && result.user?.id) {
+      req.telegramUser = result.user;
+      return next();
+    }
+    const settings = await getAuthSettings();
+    const phoneSession = settings.whatsappLoginEnabled ? verifyPhoneSession(req.get("X-Yugorno-Session")) : null;
+    if (phoneSession) {
+      req.telegramUser = { id: phoneSession.id, first_name: phoneSession.phone, phone: phoneSession.phone };
+      return next();
+    }
+    return res.status(401).json({ ok: false, error: "telegram_auth_required" });
+  } catch (error) { next(error); }
 }
 
 app.get("/api/trips", async (_req, res, next) => {
@@ -264,6 +307,24 @@ app.post("/api/communities/:id/join", requireTelegramUser, async (req, res, next
   } catch (error) { next(error); }
 });
 
+app.get("/api/my/trash", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyTrash(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.delete("/api/my/publications/:kind/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await trashPublication(req.telegramUser.id, req.params.kind, req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "publication_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(409).json({ ok: false, error: error.message }); next(error); }
+});
+app.post("/api/my/trash/:kind/:id/restore", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await restorePublication(req.telegramUser.id, req.params.kind, req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "trash_item_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+
 app.get("/api/my/trips", requireTelegramUser, async (req, res, next) => {
   try { res.json({ ok: true, items: await listMyTrips(req.telegramUser.id) }); } catch (error) { next(error); }
 });
@@ -302,13 +363,49 @@ function isLocalDemoAdminRequest(req) {
   return localDemoEnabled && loopbackHost && loopbackRemote && req.get('X-Local-Demo-User') === 'local-tester';
 }
 function requireMapModerator(req, res, next) {
-  const userId = String(req.telegramUser?.id || "");
-  if (!isLocalDemoAdminRequest(req) && !MAP_MODERATORS.has(userId)) return res.status(403).json({ ok: false, error: "moderator_required" });
+  const role = userRole(req.telegramUser?.id);
+  if (role !== "admin" && role !== "moderator") return res.status(403).json({ ok: false, error: "moderator_required" });
   next();
 }
+function requireMapAdmin(req, res, next) {
+  if (userRole(req.telegramUser?.id) !== "admin") return res.status(403).json({ ok: false, error: "admin_required" });
+  next();
+}
+app.get("/api/admin/settings", requireTelegramUser, requireMapAdmin, async (_req, res, next) => {
+  try { res.json({ ok: true, settings: await getAuthSettings() }); } catch (error) { next(error); }
+});
+app.patch("/api/admin/settings", requireTelegramUser, requireMapAdmin, async (req, res, next) => {
+  try {
+    if (typeof req.body?.whatsappLoginEnabled !== "boolean") return res.status(400).json({ ok: false, error: "whatsapp_setting_must_be_boolean" });
+    const settings = await setWhatsAppLoginEnabled(req.body.whatsappLoginEnabled);
+    res.json({ ok: true, settings });
+  } catch (error) { next(error); }
+});
 function authorLabel(user) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username || "";
 }
+
+app.get("/api/destinations", async (_req, res, next) => {
+  try { res.json({ ok: true, items: await listFeaturedDestinations() }); } catch (error) { next(error); }
+});
+app.get("/api/admin/destinations", requireTelegramUser, requireMapModerator, async (_req, res, next) => {
+  try { res.json({ ok: true, items: await listFeaturedDestinations() }); } catch (error) { next(error); }
+});
+app.patch("/api/admin/destinations/:slug", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await updateFeaturedDestination(req.params.slug, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "destination_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.delete("/api/admin/destinations/:slug", requireTelegramUser, requireMapModerator, async (req, res, next) => {
+  try {
+    const item = await deleteFeaturedDestination(req.params.slug);
+    if (!item) return res.status(404).json({ ok: false, error: "destination_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { next(error); }
+});
+
 app.get("/api/places", async (req, res, next) => {
   try {
     const items = await listPlaces({ q: req.query.q, category: req.query.category, west: req.query.west, east: req.query.east, south: req.query.south, north: req.query.north });
@@ -324,6 +421,26 @@ app.get("/api/places/:id", async (req, res, next) => {
 });
 app.get("/api/my/places", requireTelegramUser, async (req, res, next) => {
   try { res.json({ ok: true, items: await listMyPlaces(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.get("/api/my/routes", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyRoutes(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.patch("/api/my/routes/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await updateRoute(req.telegramUser.id, req.params.id, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "route_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
+});
+app.get("/api/my/impressions", requireTelegramUser, async (req, res, next) => {
+  try { res.json({ ok: true, items: await listMyImpressions(req.telegramUser.id) }); } catch (error) { next(error); }
+});
+app.patch("/api/my/impressions/:id", requireTelegramUser, async (req, res, next) => {
+  try {
+    const item = await updateImpression(req.telegramUser.id, req.params.id, req.body || {});
+    if (!item) return res.status(404).json({ ok: false, error: "impression_not_found" });
+    res.json({ ok: true, item });
+  } catch (error) { if (error instanceof TypeError) return res.status(400).json({ ok: false, error: error.message }); next(error); }
 });
 app.post("/api/places", requireTelegramUser, async (req, res, next) => {
   try {

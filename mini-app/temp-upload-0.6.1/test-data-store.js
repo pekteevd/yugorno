@@ -8,6 +8,33 @@ const temp = await mkdtemp(path.join(os.tmpdir(), 'yugorno-store-'));
 process.env.YUGORNO_DATA_DIR = temp;
 const store = await import(`./data-store.js?test=${Date.now()}`);
 
+test('stores trip dates price and capacity and allows owner updates', async () => {
+  const trip = await store.createTrip(102, { title: 'Север', place: 'Териберка', kind: 'Автопутешествие', startDate: '2027-01-10', endDate: '2027-01-15', price: '25 000 ₽', capacity: 6 });
+  assert.equal(trip.startDate, '2027-01-10');
+  assert.equal(trip.endDate, '2027-01-15');
+  assert.equal(trip.price, '25 000 ₽');
+  assert.equal(trip.capacity, 6);
+  const updated = await store.updateTrip(102, trip.id, { price: '30 000 ₽', capacity: 4 });
+  assert.equal(updated.price, '30 000 ₽');
+  assert.equal(updated.capacity, 4);
+});
+
+test('featured demo destinations remain available and can be edited by slug', async () => {
+  const before = await store.listFeaturedDestinations();
+  assert.deepEqual(before.map(item => item.slug).sort(), ['karelia', 'teriberka', 'u-ilem']);
+  const updated = await store.updateFeaturedDestination('teriberka', { title: 'Северное побережье', place: 'Териберка', details: 'Обновлённая программа' });
+  assert.equal(updated.title, 'Северное побережье');
+  assert.equal((await store.listFeaturedDestinations()).find(item => item.slug === 'teriberka').details, 'Обновлённая программа');
+  assert.equal(await store.updateFeaturedDestination('unknown', { title: 'x' }), null);
+  const removed = await store.deleteFeaturedDestination('teriberka');
+  assert.equal(removed.slug, 'teriberka');
+  assert.deepEqual((await store.listFeaturedDestinations()).map(item => item.slug).sort(), ['karelia', 'u-ilem']);
+  assert.equal(await store.deleteFeaturedDestination('unknown'), null);
+  await store.deleteFeaturedDestination('karelia');
+  await store.deleteFeaturedDestination('u-ilem');
+  assert.deepEqual(await store.listFeaturedDestinations(), [], 'an intentionally empty destination catalog must stay empty instead of restoring defaults');
+});
+
 test('creates and lists published trips with escaped-as-text values preserved', async () => {
   const trip = await store.createTrip(101, { title: 'Лес <тропа>', place: 'Карелия', date: 'Июль', kind: 'Поход', description: 'Тихий маршрут' });
   assert.equal(trip.status, 'published');
@@ -67,11 +94,20 @@ test('owners can edit and unpublish only their own trips and communities', async
   assert.equal(changedCommunity.title, 'Новое сообщество');
   assert.equal(await store.unpublishTrip(701, trip.id), null);
   assert.equal(await store.unpublishCommunity(701, community.id), null);
-  assert.equal((await store.unpublishTrip(700, trip.id)).status, 'unpublished');
-  assert.equal((await store.unpublishCommunity(700, community.id)).status, 'unpublished');
+  assert.equal((await store.unpublishTrip(700, trip.id)).status, 'deleted');
+  assert.equal((await store.unpublishCommunity(700, community.id)).status, 'deleted');
   assert.equal(await store.getTrip(trip.id), null);
   assert.equal((await store.listTrips()).some(item => item.id === trip.id), false);
   assert.equal((await store.listCommunities()).some(item => item.id === community.id), false);
+  const trash = await store.listMyTrash(700);
+  assert.equal(trash.some(item => item.id === trip.id && item.kind === 'trip'), true);
+  assert.equal(trash.some(item => item.id === community.id && item.kind === 'community'), true);
+  assert.equal(await store.restorePublication(701, 'trip', trip.id), null);
+  assert.equal(await store.restorePublication(701, 'community', community.id), null);
+  assert.equal((await store.restorePublication(700, 'trip', trip.id)).status, 'published');
+  assert.equal((await store.restorePublication(700, 'community', community.id)).status, 'published');
+  assert.equal((await store.listTrips()).some(item => item.id === trip.id), true);
+  assert.equal((await store.listCommunities()).some(item => item.id === community.id), true);
 });
 
 test('community owners can see member profiles but public data never exposes Telegram ids', async () => {
@@ -137,6 +173,33 @@ test('map places, impressions, moderation, routes and saves persist without expo
   await store.savePlace(1103, a.id);
   assert.equal((await store.listSavedPlaces(1103)).length, 1);
   await assert.rejects(() => store.createPlace(1, { title: 'Плохие координаты', category: 'Природа', lat: 120, lng: 0 }), TypeError);
+});
+
+test('map publications move to trash only after linked routes and impressions are removed, then restore intact', async () => {
+  const placeA = await store.createPlace(1301, { title: 'Точка для корзины', category: 'Природа', lat: 55.1, lng: 46.1 }, 'Автор');
+  const placeB = await store.createPlace(1301, { title: 'Вторая точка для корзины', category: 'Природа', lat: 55.2, lng: 46.2 }, 'Автор');
+  const impression = await store.createImpression(1301, placeA.id, { text: 'Впечатление для проверки корзины' }, 'Автор');
+  const route = await store.createRoute(1301, { title: 'Маршрут для проверки корзины', stopIds: [placeA.id, placeB.id] }, 'Автор');
+
+  await assert.rejects(() => store.trashPublication(1301, 'place', placeA.id), /связано с 1 маршрутами и 1 впечатлениями/);
+  assert.equal(await store.trashPublication(9999, 'route', route.id), null);
+
+  assert.equal((await store.trashPublication(1301, 'route', route.id)).status, 'deleted');
+  assert.equal((await store.trashPublication(1301, 'impression', impression.id)).status, 'deleted');
+  assert.equal((await store.trashPublication(1301, 'place', placeA.id)).status, 'deleted');
+
+  const trash = await store.listMyTrash(1301);
+  assert.equal(trash.some(item => item.id === route.id && item.kind === 'route'), true);
+  assert.equal(trash.some(item => item.id === impression.id && item.kind === 'impression'), true);
+  assert.equal(trash.some(item => item.id === placeA.id && item.kind === 'place'), true);
+
+  assert.equal((await store.restorePublication(1301, 'place', placeA.id)).status, 'pending');
+  assert.equal((await store.restorePublication(1301, 'impression', impression.id)).status, 'pending');
+  assert.equal((await store.restorePublication(1301, 'route', route.id)).status, 'pending');
+  assert.equal((await store.listMyTrash(1301)).length, 0);
+  assert.equal((await store.listMyPlaces(1301)).some(item => item.id === placeA.id), true);
+  assert.equal((await store.listMyRoutes(1301)).some(item => item.id === route.id), true);
+  assert.equal((await store.listMyImpressions(1301)).some(item => item.id === impression.id), true);
 });
 
 test('pending place and its attached impressions are reviewed together while published-place impressions stay separate', async () => {
@@ -205,7 +268,8 @@ test('approximate map coordinates are rounded before being returned publicly', a
   assert.equal(place.lat, 56.12);
   assert.equal(place.lng, 47.65);
   const ownPlaces = await store.listMyPlaces(1601);
-  assert.equal(ownPlaces.find(item => item.id === place.id).lat, 56.12);
+  assert.equal(ownPlaces.find(item => item.id === place.id).lat, 56.123456);
+  assert.equal(ownPlaces.find(item => item.id === place.id).lng, 47.654321);
   await store.moderatePlace(place.id, 'published');
   assert.equal((await store.listPlaces()).find(item => item.id === place.id).lng, 47.65);
   assert.equal((await store.getPlace(place.id)).lat, 56.12);

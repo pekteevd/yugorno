@@ -8,6 +8,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <title>Югорно — Магия троп</title>
 <style>
+.photo-remove-option{display:grid;gap:4px;font-size:11px;color:var(--muted)}.photo-remove-option input{width:auto;justify-self:start}.photo-remove-option img{width:100%;height:92px;object-fit:cover;border-radius:10px}
 .photo-gallery-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-top:10px}.photo-gallery-preview img{width:100%;height:92px;object-fit:cover;border-radius:10px}.detail-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0 14px}.detail-gallery img{width:100%;max-height:220px;object-fit:cover;border-radius:12px}
 :root{--forest:#203d35;--forest2:#315548;--moss:#71866a;--cream:#f4f1e8;--paper:#fffdf8;--ink:#202b26;--muted:#748078;--line:#e5e4da;--orange:#d87945;--shadow:0 12px 35px #1e352510;--image-hero:url("https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=85");--image-trip-karelia:url("https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=800&q=80");--image-trip-u-ilem:url("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80");--image-trip-teriberka:url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80");--image-community-u-ilem:url("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=700&q=80");--image-community-road:url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=700&q=80");--image-community-trails:url("https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=700&q=80")}
 *{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -22,10 +23,10 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 .hero .tag{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:#dce8d7;font-weight:800}.hero h2{font-size:34px;max-width:570px;line-height:1.08;margin:10px 0}.hero p{max-width:530px;color:#edf1e9;margin:0 0 20px}.actions{display:flex;gap:10px;flex-wrap:wrap}
 .btn{border:0;border-radius:11px;padding:11px 16px;font-weight:750;background:var(--forest);color:white}.btn.light{background:#fff;color:var(--forest)}.btn.outline{background:transparent;color:var(--forest);border:1px solid var(--line)}.btn.orange{background:var(--orange);color:white}
 .section-head{display:flex;justify-content:space-between;align-items:end;margin:30px 0 14px}.section-head h3{font-size:20px;margin:0}.section-head span{font-size:13px;color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card{background:var(--paper);border:1px solid var(--line);border-radius:17px;overflow:hidden;box-shadow:var(--shadow)}.card-img{height:145px;background-size:cover;background-position:center;position:relative}.pill{position:absolute;top:12px;left:12px;background:#fffdf0eF;color:var(--forest);border-radius:30px;padding:5px 9px;font-size:11px;font-weight:800}.card-body{padding:15px}.card h4{margin:0 0 7px;font-size:16px}.meta{color:var(--muted);font-size:12px;display:flex;gap:12px;flex-wrap:wrap}.card p{font-size:13px;color:#5e6a62;margin:9px 0 13px}.card-foot{display:flex;align-items:center;justify-content:space-between}.price{font-size:13px;font-weight:800;color:var(--forest)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card{background:var(--paper);border:1px solid var(--line);border-radius:17px;overflow:hidden;box-shadow:var(--shadow)}.card-img{height:145px;background-size:cover;background-position:center;position:relative}.pill{position:absolute;top:12px;left:12px;background:#fffdf0eF;color:var(--forest);border-radius:30px;padding:5px 9px;font-size:11px;font-weight:800}.card-body{padding:15px}.card h4{margin:0 0 7px;font-size:16px}.meta{color:var(--muted);font-size:12px;display:flex;gap:12px;flex-wrap:wrap}.card p{font-size:13px;color:#5e6a62;margin:9px 0 13px}.card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}.price{min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:800;color:var(--forest)}.card-foot-actions{display:flex;align-items:center;gap:8px;flex:none}.card-icon-action{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--forest);cursor:pointer}.card-icon-action svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.card-icon-action:focus-visible{outline:2px solid var(--moss);outline-offset:2px}
 .feature-row{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:17px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:17px;padding:19px}.panel h3{margin:0 0 12px;font-size:18px}.community{display:flex;gap:13px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}.community:first-of-type{border-top:0}.community-icon{width:43px;height:43px;border-radius:13px;background:#e7ebdf;display:grid;place-items:center;font-size:22px}.community strong{display:block;font-size:14px}.community small{color:var(--muted)}
 .stat{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}.stat:last-child{border:0}.stat b{color:var(--forest)}
-.view{display:none}.view.active{display:block}.detail-page{display:none;background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}.detail-page.active{display:block}.detail-page>.detail-back{margin:20px 0 0 20px}.detail-cover{width:100%;max-height:390px;min-height:180px;object-fit:cover;display:block;background:#e7ebdf}.detail-content{padding:clamp(18px,4vw,36px);max-width:900px}.detail-content h2{font-size:clamp(25px,4vw,36px);line-height:1.15;margin:8px 0 12px}.detail-meta{color:var(--muted);font-size:14px;margin-bottom:22px}.detail-description{font-size:16px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}.detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.detail-back{margin-bottom:16px}
+.view{display:none}.view.active{display:block}.detail-page{display:none;background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}.detail-page.active{display:block}.detail-page>.detail-back{margin:20px 0 0 20px}.detail-cover{width:100%;max-height:390px;min-height:180px;object-fit:cover;display:block;background:#e7ebdf}.detail-content{padding:clamp(18px,4vw,36px);max-width:900px}.detail-content h2{font-size:clamp(25px,4vw,36px);line-height:1.15;margin:8px 0 12px}.detail-meta{color:var(--muted);font-size:14px;margin-bottom:22px}.detail-description{font-size:16px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}.detail-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:24px}.detail-back{margin-bottom:16px}
 .list{display:grid;gap:12px}.row-card{display:flex;gap:16px;background:var(--paper);padding:13px;border:1px solid var(--line);border-radius:15px;align-items:center}.manage-row{flex-wrap:wrap}.row-img{width:105px;height:82px;border-radius:10px;background-size:cover;background-position:center;flex:none}.row-card p{margin:5px 0;color:var(--muted);font-size:13px}
 .mapbox{min-height:360px;border-radius:18px;background:linear-gradient(135deg,#d9e1d1,#b7c9b5);position:relative;overflow:hidden;padding:24px;background-image:linear-gradient(30deg,transparent 48%,#ffffff80 49%,#ffffff80 50%,transparent 51%),linear-gradient(120deg,transparent 48%,#ffffff70 49%,#ffffff70 50%,transparent 51%);background-size:130px 130px}
 .map-label{position:absolute;background:#fffdf0;border-radius:10px;padding:8px 11px;font-size:12px;font-weight:750;box-shadow:var(--shadow)}.pin{position:absolute;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--orange);border:3px solid white;box-shadow:0 3px 10px #0002}.pin:after{content:"";position:absolute;width:8px;height:8px;background:white;border-radius:50%;top:8px;left:8px}
@@ -35,6 +36,11 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 @media(max-width:850px){.app{display:block}aside{padding:13px 15px;gap:10px}.brand{display:flex;align-items:baseline;gap:10px}.brand-name{font-size:22px}.nav{display:flex;overflow:auto;gap:4px}.nav button{white-space:nowrap;padding:9px 12px;font-size:13px}.side-note{display:none}main{padding:22px 16px 45px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:290px;padding:23px}.hero h2{font-size:29px}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.feature-row{grid-template-columns:1fr}.top h1{font-size:25px}.user span{display:none}.hero{min-height:330px}.row-card{align-items:flex-start}.row-img{width:85px;height:85px}}
 
+.journey-card-media{position:relative;width:100%;height:145px;overflow:hidden;background:#e9eee5}.journey-card-media-open{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;cursor:pointer}.journey-card-title{border:0;background:transparent;padding:0;color:inherit;font:inherit;font-weight:inherit;text-align:left;cursor:pointer}
+.journey-card-map{display:block;width:100%;height:145px;border:0;background:#e9eee5}.journey-route-map{display:block;width:100%;height:145px;background:#e9eee5;border-radius:12px}.journey-card-image{display:block;width:100%;height:145px;object-fit:cover}.journey-card-placeholder{display:grid;place-items:center;height:145px;background:#e9eee5;font-size:34px}
+.journey-create-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.journey-create-actions .btn{width:100%;min-height:36px;padding:7px 10px;font-size:13px;line-height:1.2;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+@media(max-width:560px){.journey-create-actions{grid-template-columns:1fr;gap:7px}.journey-create-actions .btn{min-height:36px;justify-content:flex-start;padding:7px 12px}}
 .journey-tabs button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--forest);padding:10px 15px;font-weight:750}
 .journey-tabs button.active{background:var(--forest);border-color:var(--forest);color:#fff}
 .journey-pane{display:none}.journey-pane.active{display:block}.journey-intro{font-size:13px;color:var(--muted);margin:4px 0 14px}
@@ -44,7 +50,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
 .journey-card-placeholder{height:132px;border-radius:11px;background:#e8ece4;display:grid;place-items:center;font-size:34px}
 .journey-card-body{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
 .journey-card h4{margin:2px 0 6px;font-size:16px}.journey-card p{margin:7px 0 10px;color:#5e6a62;font-size:13px;line-height:1.5}
-.journey-card .meta{font-size:12px}.journey-card .btn{margin-top:auto}
+.journey-card .meta{font-size:12px}.journey-card-actions{display:flex;justify-content:flex-end;align-items:center;width:100%;margin-top:auto;padding-top:4px}.journey-card-actions .card-icon-action{width:38px;height:38px;flex:0 0 38px}
 .journey-empty{grid-column:1/-1;padding:26px;text-align:center;background:var(--paper);border:1px dashed #cbd1c7;border-radius:15px;color:var(--muted)}
 @media(max-width:700px){.journey-cards{grid-template-columns:1fr}.journey-card{grid-template-columns:112px minmax(0,1fr)}.journey-card-image,.journey-card-placeholder{height:116px}}
 @media(max-width:390px){.journey-card{grid-template-columns:92px minmax(0,1fr);gap:10px;padding:8px}.journey-card-image,.journey-card-placeholder{height:100px}}
@@ -67,7 +73,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
   <div class="side-note">Путешествия начинаются с людей.<br><br>Рабочая сборка Югорно · 0.6.1</div>
 </aside>
 <main>
-  <div class="top"><div><div class="eyebrow">Платформа путешествий и встреч</div><h1 id="page-title">Открывай. Знакомься. Путешествуй.</h1></div><div class="user"><div class="avatar">Ю</div><span>Гость Югорно</span></div></div>
+  <div class="top"><div><div class="eyebrow">Платформа путешествий и встреч</div><h1 id="page-title">Открывай. Знакомься. Путешествуй.</h1></div><div style="display:flex;align-items:center;gap:8px"><div class="user"><div class="avatar">Ю</div><span>Гость Югорно</span></div><button id="account-access-button" class="btn outline" type="button" onclick="openAccountAccess()">Войти</button></div></div>
   <section id="detail-page" class="detail-page" aria-live="polite"></section>
 
   <section class="view active" id="home">
@@ -75,7 +81,7 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
       <div class="tag">Место для тех, кому по пути</div>
       <h2>Следующее путешествие может начаться со знакомства.</h2>
       <p>Находи попутчиков, открывай необычные места, присоединяйся к поездкам или собирай собственную компанию.</p>
-      <div class="actions"><button class="btn light" onclick="showView('discover')">Исследовать поездки</button><button class="btn" onclick="openModal('trip')">＋ Создать путешествие</button></div>
+      <div class="actions"><button class="btn light" onclick="showView('discover')">Исследовать поездки</button><button class="btn" onclick="openModal('trip')">＋ Создать поездку</button></div>
     </div>
     <div class="section-head"><h3>Куда можно отправиться</h3><span>Опубликованные поездки и идеи направлений</span></div>
     <div class="grid" id="home-trips"></div>
@@ -104,23 +110,28 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
         <p id="people-own-interest"></p>
         <button class="btn outline" type="button" onclick="showView('profile')">Редактировать профиль</button>
       </div></article>
-      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">А</div><h4>Алексей</h4><div class="meta">Москва · Походы и горы</div><p>Любит пешие маршруты и путешествия по природным местам.</p><button class="btn outline" type="button" onclick="openPersonPreview('Алексей','Москва','Походы и горы')">Подробнее</button></div></article>
-      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">М</div><h4>Марина</h4><div class="meta">Санкт-Петербург · Природа и фотография</div><p>Собирает впечатления и фотографирует северные пейзажи.</p><button class="btn outline" type="button" onclick="openPersonPreview('Марина','Санкт-Петербург','Природа и фотография')">Подробнее</button></div></article>
-      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">И</div><h4>Илья</h4><div class="meta">Петрозаводск · Автопутешествия</div><p>Предпочитает дороги, небольшие компании и новые места.</p><button class="btn outline" type="button" onclick="openPersonPreview('Илья','Петрозаводск','Автопутешествия')">Подробнее</button></div></article>
+      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">А</div><h4>Алексей</h4><div class="meta">Москва · Походы и горы</div><p>Любит пешие маршруты и путешествия по природным местам.</p><button class="card-icon-action" style="align-self:flex-end" type="button" aria-label="Открыть профиль Алексея" title="Открыть профиль" onclick="openPersonPreview('Алексей','Москва','Походы и горы')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
+      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">М</div><h4>Марина</h4><div class="meta">Санкт-Петербург · Природа и фотография</div><p>Собирает впечатления и фотографирует северные пейзажи.</p><button class="card-icon-action" style="align-self:flex-end" type="button" aria-label="Открыть профиль Марины" title="Открыть профиль" onclick="openPersonPreview('Марина','Санкт-Петербург','Природа и фотография')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
+      <article class="card"><div class="card-body"><div class="avatar" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">И</div><h4>Илья</h4><div class="meta">Петрозаводск · Автопутешествия</div><p>Предпочитает дороги, небольшие компании и новые места.</p><button class="card-icon-action" style="align-self:flex-end" type="button" aria-label="Открыть профиль Ильи" title="Открыть профиль" onclick="openPersonPreview('Илья','Петрозаводск','Автопутешествия')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
     </div>
   </section>
 
   <section class="view" id="trips">
-    <div class="section-head"><h3>Путешествия</h3><button class="btn" onclick="openModal('trip')">＋ Создать путешествие</button></div>
+    <div class="section-head"><h3>Путешествия</h3></div>
     <div class="journey-tabs" role="tablist" aria-label="Разделы путешествий">
       <button type="button" class="active" data-journey-tab="points" role="tab" aria-selected="true">📍 Точки</button>
       <button type="button" data-journey-tab="routes" role="tab" aria-selected="false">🧭 Маршруты</button>
       <button type="button" data-journey-tab="meetings" role="tab" aria-selected="false">🤝 Встречи</button>
       <button type="button" data-journey-tab="trips" role="tab" aria-selected="false">🎒 Поездки</button>
     </div>
+    <div class="journey-create-actions">
+      <button class="btn outline" type="button" onclick="openJourneyCreate('route')"><span aria-hidden="true">🧭</span> Создать маршрут</button>
+      <button class="btn outline" type="button" onclick="openJourneyCreate('meeting')"><span aria-hidden="true">🤝</span> Создать встречу</button>
+      <button class="btn" type="button" onclick="openJourneyCreate('trip')"><span aria-hidden="true">🎒</span> Создать поездку</button>
+    </div>
     <section class="journey-pane active" id="journey-points" role="tabpanel"><div class="journey-intro">Интересные места, природные объекты и открытия сообщества.</div><div class="journey-cards" id="journey-point-list"><div class="empty">Загружаем точки…</div></div></section>
-    <section class="journey-pane" id="journey-routes" role="tabpanel" hidden><div class="journey-intro">Маршруты, собранные из опубликованных точек.</div><div class="journey-cards" id="journey-route-list"></div></section>
-    <section class="journey-pane" id="journey-meetings" role="tabpanel" hidden><div class="journey-intro">Встречи и совместные выезды. Пока они публикуются через общий формат путешествий «Встреча».</div><div class="journey-cards" id="journey-meeting-list"></div></section>
+    <section class="journey-pane" id="journey-routes" role="tabpanel" hidden><div class="journey-intro">Постоянные маршруты с последовательностью точек и GPX-треком. Новые маршруты проходят модерацию.</div><div class="journey-cards" id="journey-route-list"></div></section>
+    <section class="journey-pane" id="journey-meetings" role="tabpanel" hidden><div class="journey-intro">События в конкретном месте и в конкретное время. Участники могут открыть встречу и присоединиться.</div><div class="journey-cards" id="journey-meeting-list"></div></section>
     <section class="journey-pane" id="journey-trips" role="tabpanel" hidden><div class="journey-intro">Авторские поездки, поиск попутчиков и путешествия участников.</div><div class="journey-cards" id="journey-trip-list"></div></section>
     <div class="list" id="trip-list" hidden></div>
     <section class="panel" id="my-trips-panel" hidden style="margin-top:20px"><h3>Мои публикации</h3><div class="list" id="my-trip-list"></div></section>
@@ -135,16 +146,39 @@ main{padding:30px 36px 60px;min-width:0}.top{display:flex;justify-content:space-
   <section class="view" id="communities">
     <div class="section-head"><h3>Сообщества Югорно</h3><button class="btn" onclick="openModal('community')">＋ Создать сообщество</button></div>
     <div class="grid">
-      <article class="card"><div class="card-img" data-image="community-u-ilem"></div><div class="card-body"><h4>У Илем</h4><div class="meta">Марий Эл · первые участники</div><p>Деревня, озеро, лес, встречи у костра и совместное создание пространства.</p><button class="btn outline" onclick="openCommunityPreview('У Илем','Марий Эл · первые участники','Деревня, озеро, лес, встречи у костра и совместное создание пространства.')">О сообществе</button></div></article>
-      <article class="card"><div class="card-img" data-image="community-road"></div><div class="card-body"><h4>Автопутешествия</h4><div class="meta">Дороги · экипажи · маршруты</div><p>Собираем компании, делимся дорогами и планируем поездки.</p><button class="btn outline" onclick="openCommunityPreview('Автопутешествия','Дороги · экипажи · маршруты','Собираем компании, делимся дорогами и планируем поездки.')">О сообществе</button></div></article>
-      <article class="card"><div class="card-img" data-image="community-trails"></div><div class="card-body"><h4>Пешие тропы</h4><div class="meta">Походы · прогулки · природа</div><p>Маршруты разной сложности и люди, с которыми интересно идти.</p><button class="btn outline" onclick="openCommunityPreview('Пешие тропы','Походы · прогулки · природа','Маршруты разной сложности и люди, с которыми интересно идти.')">О сообществе</button></div></article>
+      <article class="card"><div class="card-img" data-image="community-u-ilem"></div><div class="card-body"><h4>У Илем</h4><div class="meta">Марий Эл · первые участники</div><p>Деревня, озеро, лес, встречи у костра и совместное создание пространства.</p><button class="card-icon-action" type="button" aria-label="Открыть сообщество У Илем" title="Открыть сообщество" onclick="openCommunityPreview('У Илем','Марий Эл · первые участники','Деревня, озеро, лес, встречи у костра и совместное создание пространства.')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
+      <article class="card"><div class="card-img" data-image="community-road"></div><div class="card-body"><h4>Автопутешествия</h4><div class="meta">Дороги · экипажи · маршруты</div><p>Собираем компании, делимся дорогами и планируем поездки.</p><button class="card-icon-action" type="button" aria-label="Открыть сообщество Автопутешествия" title="Открыть сообщество" onclick="openCommunityPreview('Автопутешествия','Дороги · экипажи · маршруты','Собираем компании, делимся дорогами и планируем поездки.')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
+      <article class="card"><div class="card-img" data-image="community-trails"></div><div class="card-body"><h4>Пешие тропы</h4><div class="meta">Походы · прогулки · природа</div><p>Маршруты разной сложности и люди, с которыми интересно идти.</p><button class="card-icon-action" type="button" aria-label="Открыть сообщество Пешие тропы" title="Открыть сообщество" onclick="openCommunityPreview('Пешие тропы','Походы · прогулки · природа','Маршруты разной сложности и люди, с которыми интересно идти.')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></article>
     </div>
     <section class="panel" id="my-communities-panel" hidden style="margin-top:20px"><h3>Мои сообщества</h3><div class="list" id="my-community-list"></div></section>
   </section>
 
   <section class="view" id="profile">
     <div class="section-head"><h3>Мой профиль</h3><span>Профиль участника Югорно</span></div>
-    <div class="panel" style="max-width:650px"><div style="display:flex;align-items:center;gap:15px;margin-bottom:20px"><div class="avatar" id="profile-avatar" style="width:65px;height:65px;font-size:22px">К</div><div><h3 id="profile-display-name" style="margin:0">КУНДЫШ</h3><small id="profile-account-note" style="color:var(--muted)">Локальный администратор тестовой версии</small></div></div><div id="profile-summary"><div class="field"><label>Имя</label><div id="profile-summary-name">КУНДЫШ</div></div><div class="field"><label>Город или регион</label><div id="profile-summary-city">Не указан</div></div><div class="field"><label>Интересы</label><div id="profile-summary-interest">Не указаны</div></div><button class="btn" type="button" onclick="setProfileEditMode(true)">Редактировать профиль</button></div><div id="profile-edit-form" hidden><div class="field"><label>Фотография профиля</label><input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp"><small style="color:var(--muted)">JPG, PNG или WebP, до 5 МБ</small><img id="profile-photo-preview" alt="Предпросмотр фото профиля" style="display:none;width:88px;height:88px;object-fit:cover;border-radius:50%;margin-top:10px"></div><div class="field"><label>Как к вам обращаться</label><input id="profile-name" placeholder="Ваше имя"></div><div class="field"><label>Город или регион</label><input id="profile-city" placeholder="Например, Йошкар-Ола"></div><div class="field"><label>Что вам интересно</label><select id="profile-interest"><option>Авторские путешествия</option><option>Поиск попутчиков</option><option>Походы и природа</option><option>Культура и локальные места</option><option>Фестивали и события</option></select></div><button class="btn" type="button" onclick="saveProfile()">Сохранить изменения</button><button class="btn outline" type="button" onclick="setProfileEditMode(false)">Отмена</button></div><p style="font-size:12px;color:var(--muted);margin-top:12px">Локальный профиль хранится на этом компьютере. В Telegram он будет связан с аккаунтом участника.</p></div>
+    <div class="panel" id="account-panel" style="max-width:650px;margin-bottom:16px">
+      <h3 style="margin:0 0 8px">Доступ к аккаунту</h3>
+      <p id="account-state" style="color:var(--muted);margin:0 0 12px">Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.</p>
+      <div id="account-login-controls">
+        <div id="whatsapp-login-controls" hidden>
+          <div class="field"><label for="account-phone">Номер телефона для входа</label><input id="account-phone" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00"></div>
+          <button class="btn outline" id="account-request-code" type="button" onclick="requestWhatsappCode()">Получить код</button>
+          <div class="field" id="account-code-field" hidden><label for="account-code">Код из WhatsApp</label><input id="account-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 цифр"></div>
+          <button class="btn" id="account-verify-button" type="button" onclick="verifyWhatsappCode()" hidden>Войти</button>
+          <p id="account-login-note" style="font-size:12px;color:var(--muted);margin:10px 0 0">Вход по WhatsApp отключён. В Telegram вход выполняется автоматически.</p>
+        </div>
+        <div id="local-demo-login" hidden style="margin-top:12px"><button class="btn outline" type="button" onclick="loginLocalDemo()">Войти как локальный тестовый администратор</button></div>
+      </div>
+      <button class="btn outline" id="account-logout-button" type="button" onclick="logoutAccount()" hidden>Выйти из аккаунта</button>
+    </div>
+    <div class="panel" id="profile-admin-tools" hidden style="max-width:650px;margin-bottom:16px">
+      <h3 style="margin:0 0 12px">Управление платформой</h3>
+      <button class="btn outline" type="button" onclick="openModerationFromProfile()">Модерация</button>
+      <div id="admin-whatsapp-settings" hidden style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:700"><input id="admin-whatsapp-toggle" type="checkbox" onchange="saveWhatsAppLoginSetting()" style="width:auto"> Разрешить вход через WhatsApp</label>
+        <p id="admin-whatsapp-note" style="font-size:12px;color:var(--muted);margin:8px 0 0">По умолчанию выключено. Telegram остаётся основным способом входа.</p>
+      </div>
+    </div>
+    <div class="panel" style="max-width:650px"><div style="display:flex;align-items:center;gap:15px;margin-bottom:20px"><div class="avatar" id="profile-avatar" style="width:65px;height:65px;font-size:22px">Ю</div><div><h3 id="profile-display-name" style="margin:0">Путешественник</h3><small id="profile-account-note" style="color:var(--muted)">Гостевой просмотр</small></div></div><div id="profile-summary"><div class="field"><label>Имя</label><div id="profile-summary-name">Не указано</div></div><div class="field"><label>Город или регион</label><div id="profile-summary-city">Не указан</div></div><div class="field"><label>Интересы</label><div id="profile-summary-interest">Не указаны</div></div><button class="btn" type="button" onclick="setProfileEditMode(true)">Редактировать профиль</button></div><div id="profile-edit-form" hidden><div class="field"><label>Фотография профиля</label><input id="profile-photo" type="file" accept="image/jpeg,image/png,image/webp"><small style="color:var(--muted)">JPG, PNG или WebP, до 15 МБ</small><img id="profile-photo-preview" alt="Предпросмотр фото профиля" style="display:none;width:88px;height:88px;object-fit:cover;border-radius:50%;margin-top:10px"></div><div class="field"><label>Как к вам обращаться</label><input id="profile-name" placeholder="Ваше имя"></div><div class="field"><label>Город или регион</label><input id="profile-city" placeholder="Например, Йошкар-Ола"></div><div class="field"><label>Что вам интересно</label><select id="profile-interest"><option>Авторские путешествия</option><option>Поиск попутчиков</option><option>Походы и природа</option><option>Культура и локальные места</option><option>Фестивали и события</option></select></div><button class="btn" type="button" onclick="saveProfile()">Сохранить изменения</button><button class="btn outline" type="button" onclick="setProfileEditMode(false)">Отмена</button></div><p style="font-size:12px;color:var(--muted);margin-top:12px">В гостевом режиме профиль хранится только в этом браузере. После входа изменения привязываются к вашему аккаунту.</p></div>
   </section>
 </main>
 </div>
@@ -160,27 +194,64 @@ const titles={home:'Открывай. Знакомься. Путешествуй
 function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function tripCard(t){
   const imageKey=['trip-karelia','trip-u-ilem','trip-teriberka'].includes(t.image)?t.image:'trip-karelia';
-  const action=t.published?`<button class="btn outline" onclick="openTripDetails('${escapeHTML(t.id)}')">Подробнее</button>`:`<button class="btn outline" onclick="openTripPreview('${escapeHTML(t.slug)}')">Подробнее</button>`;
-  return `<article class="card"><div class="card-img" style="background-image:${t.imageUrl?`url('${escapeHTML(t.imageUrl)}')`:`var(--image-${imageKey}, none)`}"><span class="pill">${escapeHTML(t.kind)}</span></div><div class="card-body"><h4>${escapeHTML(t.title)}</h4><div class="meta"><span>⌖ ${escapeHTML(t.place)}</span><span>◷ ${escapeHTML(t.date)}</span></div><p>${escapeHTML(t.desc)}</p><div class="card-foot"><span class="price">${escapeHTML(t.price||'Условия уточняются')}</span>${action}</div></div></article>`
+  const openAction=t.published
+    ?`<button class="card-icon-action" type="button" aria-label="Подробнее" title="Подробнее" onclick="openTripDetails('${escapeHTML(t.id)}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button>`
+    :`<button class="card-icon-action" type="button" aria-label="Открыть направление" title="Открыть направление" onclick="openTripPreview('${escapeHTML(t.slug)}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button>`;
+  const editAction=t.slug&&window.yugornoIsModerator?`<button class="card-icon-action" type="button" aria-label="Редактировать направление" title="Редактировать направление" onclick="openDestinationEditor('${escapeHTML(t.slug)}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16z"/></svg></button>`:'';
+  const deleteAction=t.slug&&window.yugornoIsModerator?`<button class="card-icon-action" type="button" aria-label="Удалить направление" title="Удалить направление" onclick="deleteFeaturedDestination('${escapeHTML(t.slug)}','${escapeHTML(t.title)}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6"/></svg></button>`:'';
+  return `<article class="card"><div class="card-img" style="background-image:${t.imageUrl?`url('${escapeHTML(t.imageUrl)}')`:`var(--image-${imageKey}, none)`}"><span class="pill">${escapeHTML(t.kind)}</span></div><div class="card-body"><h4>${escapeHTML(t.title)}</h4><div class="meta"><span>⌖ ${escapeHTML(t.place)}</span><span>◷ ${escapeHTML(t.date)}</span></div><p>${escapeHTML(t.desc)}</p><div class="card-foot"><span class="price">${escapeHTML(t.price||'Условия уточняются')}</span><div class="card-foot-actions">${openAction}${editAction}${deleteAction}</div></div></div></article>`
 }
 function renderTrips(){
-  const homeItems=trips.filter(t=>t.published).slice(0,3);
+  const homeItems=trips.filter(t=>!t.published).slice(0,3);
   document.getElementById('home-trips').innerHTML=(homeItems.length?homeItems:trips.filter(t=>!t.published).slice(0,3)).map(tripCard).join('');
   document.getElementById('discover-trips').innerHTML=trips.map(tripCard).join('');
   const published=trips.filter(t=>t.published);
-  document.getElementById('trip-list').innerHTML=published.length?published.map(t=>`<article class="row-card"><div class="row-img" style="background-image:${(t.imageUrl||t.imageUrls?.[0])?`url('${escapeHTML(t.imageUrl||t.imageUrls[0])}')`:`var(--image-${['trip-karelia','trip-u-ilem','trip-teriberka'].includes(t.image)?t.image:'trip-karelia'}, none)`}"></div><div style="flex:1"><h4 style="margin:0">${escapeHTML(t.title)}</h4><p>${escapeHTML(t.place)} · ${escapeHTML(t.date)} · ${escapeHTML(t.kind)}</p><div class="meta">${escapeHTML(t.price||'Условия уточняются')}</div></div><button class="btn outline" onclick="openTripDetails('${escapeHTML(t.id)}')">Открыть</button></article>`).join(''):`<div class="panel"><h3>Пока нет опубликованных путешествий</h3><p>Здесь появятся реальные поездки участников. Можно создать собственную публикацию.</p><button class="btn" onclick="openModal('trip')">＋ Создать путешествие</button></div>`;
+  document.getElementById('trip-list').innerHTML=published.length?published.map(t=>`<article class="row-card"><div class="row-img" style="background-image:${(t.imageUrl||t.imageUrls?.[0])?`url('${escapeHTML(t.imageUrl||t.imageUrls[0])}')`:`var(--image-${['trip-karelia','trip-u-ilem','trip-teriberka'].includes(t.image)?t.image:'trip-karelia'}, none)`}"></div><div style="flex:1"><h4 style="margin:0">${escapeHTML(t.title)}</h4><p>${escapeHTML(t.place)} · ${escapeHTML(t.date)} · ${escapeHTML(t.kind)}</p><div class="meta">${escapeHTML(t.price||'Условия уточняются')}</div></div><button class="card-icon-action" type="button" aria-label="Открыть поездку ${escapeHTML(t.title)}" title="Открыть поездку" onclick="openTripDetails('${escapeHTML(t.id)}')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></article>`).join(''):`<div class="panel"><h3>Пока нет опубликованных путешествий</h3><p>Здесь появятся реальные поездки участников.</p></div>`;
 }
 
+let activeDestinationSlug='';
+async function openJourneyCreate(kind){
+  if(kind==='route'){
+    try{journeyPlaces=(await telegramApi('/api/places')).items||[]}catch(error){toast(error.message||'Не удалось загрузить точки');return}
+  }
+  openModal(kind);
+}
+async function openDestinationEditor(slug){
+  const item=trips.find(trip=>trip.slug===slug);if(!item)return;
+  activeDestinationSlug=slug;openModal('destination',item);
+}
+async function deleteFeaturedDestination(slug,title){
+  if(!window.yugornoIsModerator)return;
+  if(!await askConfirm('Удалить штатное направление «'+title+'» из каталога? Это действие нельзя отменить.'))return;
+  try{
+    await telegramApi('/api/admin/destinations/'+encodeURIComponent(slug),{method:'DELETE'});
+    await loadFeaturedDestinations();
+    toast('Направление удалено из каталога');
+  }catch(error){toast(error.message||'Не удалось удалить направление')}
+}
+async function loadFeaturedDestinations(){
+  try{
+    const result=await telegramApi('/api/destinations');
+    const published=trips.filter(item=>item.published);
+    trips.splice(0,trips.length,...result.items.map(item=>({ ...item,desc:item.description||'',imageUrl:item.imageUrl||'',published:false })),...published);
+    renderTrips();
+    try{await telegramApi('/api/admin/destinations');window.yugornoIsModerator=true;renderTrips()}catch{window.yugornoIsModerator=false}
+  }catch(error){console.warn('Направления не загружены:',error.message)}
+}
 let activeJourneyTab='points';
 let journeyPlaces=[],journeyRoutes=[],journeyTrips=[];
 function journeyImage(url,alt){return url?`<img class="journey-card-image" src="${escapeHTML(url)}" alt="${escapeHTML(alt||'Фотография')}" loading="lazy">`:`<div class="journey-card-placeholder" aria-hidden="true">🌿</div>`}
-function journeyCard({image,title,meta,description,button,id,icon='📍'}){return `<article class="journey-card">${image||`<div class="journey-card-placeholder">${icon}</div>`}<div class="journey-card-body"><h4>${escapeHTML(title||'Без названия')}</h4><div class="meta">${escapeHTML(meta||'')}</div><p>${escapeHTML(description||'Описание пока не добавлено')}</p><button class="btn outline" type="button" data-journey-open="${escapeHTML(id||'')}" data-journey-kind="${escapeHTML(button||'place')}">Подробнее</button></div></article>`}
-function renderJourneyPoints(){const host=document.getElementById('journey-point-list');host.innerHTML=journeyPlaces.length?journeyPlaces.map(p=>journeyCard({image:journeyImage(p.photoUrls?.[0],p.title),title:p.title,meta:[p.category,p.region].filter(Boolean).join(' · '),description:p.description,id:p.id,button:'place'})).join(''):'<div class="journey-empty">Пока нет опубликованных точек. Добавленные места появятся здесь автоматически.</div>'}
-function renderJourneyRoutes(){const host=document.getElementById('journey-route-list');host.innerHTML=journeyRoutes.length?journeyRoutes.map(r=>{const first=r.stops?.find(s=>s.photoUrls?.length);const image=journeyImage(first?.photoUrls?.[0],r.title);return journeyCard({image,title:r.title,meta:[r.transport,r.stops?.length?`${r.stops.length} точек`:''].filter(Boolean).join(' · '),description:r.description||((r.stops||[]).map(s=>s.title).join(' → ')),id:r.id,button:'route'})}).join(''):'<div class="journey-empty">Пока нет опубликованных маршрутов. Сначала добавьте точки, затем соберите из них маршрут.</div>'}
-function renderJourneyTrips(){const host=document.getElementById('journey-trip-list');host.innerHTML=journeyTrips.filter(t=>t.kind!=='Встреча').length?journeyTrips.filter(t=>t.kind!=='Встреча').map(t=>journeyCard({image:journeyImage(t.imageUrl||t.imageUrls?.[0],t.title),title:t.title,meta:[t.place,t.date,t.kind].filter(Boolean).join(' · '),description:t.description,id:t.id,button:'trip'})).join(''):'<div class="journey-empty">Пока нет опубликованных поездок. Здесь появятся авторские путешествия и предложения попутчиков.</div>'}
-function renderJourneyMeetings(){const host=document.getElementById('journey-meeting-list');const items=journeyTrips.filter(t=>t.kind==='Встреча');host.innerHTML=items.length?items.map(t=>journeyCard({image:journeyImage(t.imageUrl||t.imageUrls?.[0],t.title),title:t.title,meta:[t.place,t.date,'Встреча'].filter(Boolean).join(' · '),description:t.description,id:t.id,button:'trip'})).join(''):'<div class="journey-empty">Пока нет опубликованных встреч. На этом этапе встречи создаются как публикации путешествий с форматом «Встреча».</div>'}
+function journeyFirstPhoto(item){return item?.imageUrl||item?.imageUrls?.[0]||item?.photoUrls?.[0]||''}
+function journeyPointMap(point){if(point?.lat===null||point?.lat===undefined||point?.lat===''||point?.lng===null||point?.lng===undefined||point?.lng==='')return '';const lat=Number(point.lat),lng=Number(point.lng);if(!Number.isFinite(lat)||!Number.isFinite(lng))return '';const padLat=.003,padLng=Math.max(.003,.006/Math.max(.2,Math.cos(lat*Math.PI/180)));const bbox=[lng-padLng,lat-padLat,lng+padLng,lat+padLat].map(value=>value.toFixed(6)).join(',');const src='https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+lat.toFixed(6)+','+lng.toFixed(6);return `<iframe class="journey-card-map" src="${escapeHTML(src)}" title="Карта: ${escapeHTML(point.title||'точка')}" loading="lazy" referrerpolicy="no-referrer"></iframe>`}
+function journeyRouteMap(route){const source=Array.isArray(route.trackPoints)&&route.trackPoints.length>1?route.trackPoints:(route.stops||[]).filter(stop=>Number.isFinite(Number(stop.lat))&&Number.isFinite(Number(stop.lng)));const points=source.map(point=>({lat:Number(point.lat),lng:Number(point.lng)})).filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lng));if(points.length<2)return '';const minLat=Math.min(...points.map(p=>p.lat)),maxLat=Math.max(...points.map(p=>p.lat)),minLng=Math.min(...points.map(p=>p.lng)),maxLng=Math.max(...points.map(p=>p.lng));const spanLat=Math.max(maxLat-minLat,.0001),spanLng=Math.max(maxLng-minLng,.0001);const coords=points.map(p=>({x:18+(p.lng-minLng)/spanLng*284,y:18+(maxLat-p.lat)/spanLat*114}));const path=coords.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');const dots=coords.filter((p,i)=>i===0||i===coords.length-1||i%Math.max(1,Math.floor(coords.length/8))===0).map(p=>'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="#d87945" stroke="#fff" stroke-width="2"/>').join('');return '<svg class="journey-route-map" viewBox="0 0 320 150" role="img" aria-label="Схема реального GPS-трека или последовательности остановок"><rect width="320" height="150" rx="12" fill="#e9eee5"/><path d="M0 38H320M0 75H320M0 112H320M80 0V150M160 0V150M240 0V150" stroke="#cbd5c8" stroke-width="1" stroke-dasharray="3 5"/><path d="'+path+'" fill="none" stroke="#315548" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'+dots+'</svg>'}
+function journeyCard({image,title,meta,description,button,id,icon='📍'}){const safeId=escapeHTML(id||''),kind=escapeHTML(button||'place'),label=escapeHTML(title||'Без названия');return `<article class="journey-card"><div class="journey-card-media">${image||`<div class="journey-card-placeholder">${icon}</div>`}<button class="journey-card-media-open" type="button" aria-label="Открыть публикацию: ${label}" data-journey-open="${safeId}" data-journey-kind="${kind}"></button></div><div class="journey-card-body"><h4><button class="journey-card-title" type="button" data-journey-open="${safeId}" data-journey-kind="${kind}">${label}</button></h4><div class="meta">${escapeHTML(meta||'')}</div><p>${escapeHTML(description||'Описание пока не добавлено')}</p><div class="journey-card-actions"><button class="card-icon-action" type="button" aria-label="Открыть ${label}" title="Открыть" data-journey-open="${safeId}" data-journey-kind="${kind}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div></div></article>`}
+function renderJourneyPoints(){const host=document.getElementById('journey-point-list');host.innerHTML=journeyPlaces.length?journeyPlaces.map(p=>{const photo=journeyFirstPhoto(p);return journeyCard({image:photo?journeyImage(photo,p.title):(journeyPointMap(p)||journeyImage('',p.title)),title:p.title,meta:[p.category,p.region].filter(Boolean).join(' · '),description:p.description,id:p.id,button:'place'})}).join(''):'<div class="journey-empty">Пока нет опубликованных точек. Добавленные места появятся здесь автоматически.</div>'}
+function renderJourneyRoutes(){const host=document.getElementById('journey-route-list');host.innerHTML=journeyRoutes.length?journeyRoutes.map(r=>{const first=r.stops?.find(s=>journeyFirstPhoto(s));const photo=journeyFirstPhoto(first);const image=photo?journeyImage(photo,r.title):(journeyRouteMap(r)||journeyImage('',r.title));return journeyCard({image,title:r.title,meta:[r.transport,r.stops?.length?`${r.stops.length} точек`: ''].filter(Boolean).join(' · '),description:r.description||((r.stops||[]).map(s=>s.title).join(' → ')),id:r.id,button:'route'})}).join(''):'<div class="journey-empty">Пока нет опубликованных маршрутов. Сначала добавьте точки, затем соберите из них маршрут.</div>'}
+function renderJourneyTrips(){const host=document.getElementById('journey-trip-list');host.innerHTML=journeyTrips.filter(t=>t.kind!=='Встреча').length?journeyTrips.filter(t=>t.kind!=='Встреча').map(t=>journeyCard({image:journeyImage(journeyFirstPhoto(t),t.title),title:t.title,meta:[t.place,t.startDate&&t.endDate?`${t.startDate} – ${t.endDate}`:t.date,t.kind,t.price,t.capacity?`Мест: ${t.capacity}`:''].filter(Boolean).join(' · '),description:t.description,id:t.id,button:'trip'})).join(''):'<div class="journey-empty">Пока нет опубликованных поездок. Здесь появятся авторские путешествия и предложения попутчиков.</div>'}
+function renderJourneyMeetings(){const host=document.getElementById('journey-meeting-list');const items=journeyTrips.filter(t=>t.kind==='Встреча');host.innerHTML=items.length?items.map(t=>{const photo=journeyFirstPhoto(t);return journeyCard({image:photo?journeyImage(photo,t.title):(journeyPointMap(t)||'<div class="journey-card-placeholder" aria-hidden="true">🤝</div>'),title:t.title,meta:[t.place,t.date,'Встреча'].filter(Boolean).join(' · '),description:t.description,id:t.id,button:'trip'})}).join(''):'<div class="journey-empty">Пока нет опубликованных встреч. На этом этапе встречи создаются как публикации путешествий с форматом «Встреча».</div>'}
 async function loadJourneyTab(tab,force=false){activeJourneyTab=tab;const hostId={points:'journey-point-list',routes:'journey-route-list',meetings:'journey-meeting-list',trips:'journey-trip-list'}[tab];const host=document.getElementById(hostId);if(!host)return;if(!force&&host.dataset.loaded==='true')return;host.innerHTML='<div class="journey-empty">Загружаем публикации…</div>';try{if(tab==='points'){journeyPlaces=(await telegramApi('/api/places')).items||[];renderJourneyPoints()}else if(tab==='routes'){journeyRoutes=(await telegramApi('/api/routes')).items||[];renderJourneyRoutes()}else{journeyTrips=(await telegramApi('/api/trips')).items||[];if(tab==='meetings')renderJourneyMeetings();else renderJourneyTrips()}host.dataset.loaded='true'}catch(error){host.innerHTML=`<div class="journey-empty">Не удалось загрузить данные: ${escapeHTML(error.message||'ошибка запроса')}</div>`}}
-function setJourneyTab(tab){document.querySelectorAll('[data-journey-tab]').forEach(button=>{const active=button.dataset.journeyTab===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active))});document.querySelectorAll('.journey-pane').forEach(pane=>{const active=pane.id==='journey-'+tab;pane.classList.toggle('active',active);pane.hidden=!active});loadJourneyTab(tab)}
+function setJourneyTab(tab){document.querySelectorAll('[data-journey-tab]').forEach(button=>{const active=button.dataset.journeyTab===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active))});document.querySelectorAll('.journey-pane').forEach(pane=>{const active=pane.id==='journey-'+tab;pane.classList.toggle('active',active);pane.hidden=!active});loadJourneyTab(tab,true)}
+window.loadJourneyTab=loadJourneyTab;
 function openJourneyItem(kind,id){if(kind==='place'){if(window.YugornoMap?.openPlace)window.YugornoMap.openPlace(id);else{showView('map');toast('Откройте точку на карте после загрузки карты')}}else if(kind==='route'){if(window.YugornoMap?.showRoute)window.YugornoMap.showRoute(id);else{showView('map');toast('Карта ещё загружается')}}else if(kind==='trip')openTripDetails(id)}
 document.querySelectorAll('[data-journey-tab]').forEach(button=>button.addEventListener('click',()=>setJourneyTab(button.dataset.journeyTab)));
 document.getElementById('trips').addEventListener('click',event=>{const button=event.target.closest('[data-journey-open]');if(button)openJourneyItem(button.dataset.journeyKind,button.dataset.journeyOpen)});
@@ -219,7 +290,7 @@ function openDetailPage(data,{pushHistory=true}={}){
   const description=document.createElement('div');description.className='detail-description';description.textContent=data.description||'Описание пока не добавлено';
   body.append(eyebrow,title,meta,description);
   if(data.notice){const note=document.createElement('p');note.style.cssText='color:var(--muted);margin-top:22px';note.textContent=data.notice;body.append(note)}
-  if(data.type==='trip'&&data.published&&data.id){const action=document.createElement('button');action.className='btn';action.textContent='Откликнуться';action.addEventListener('click',()=>expressInterest(data.id));const actions=document.createElement('div');actions.className='detail-actions';actions.append(action);body.append(actions)}
+  if(data.type==='trip'&&data.published&&data.id){const action=document.createElement('button');action.className='btn';action.textContent=data.kind==='Встреча'?'Присоединиться':'Откликнуться';action.addEventListener('click',()=>expressInterest(data.id));const actions=document.createElement('div');actions.className='detail-actions';actions.append(action);body.append(actions)}
   if(data.type==='community'&&data.published&&data.id){const action=document.createElement('button');action.className='btn';action.textContent='Присоединиться';action.addEventListener('click',()=>joinPublishedCommunity(data.id));const actions=document.createElement('div');actions.className='detail-actions';actions.append(action);body.append(actions)}
   content.append(body);page.append(content);page.classList.add('active');
   document.getElementById('page-title').textContent=data.title||'Югорно';window.scrollTo({top:0,behavior:'smooth'});
@@ -229,51 +300,178 @@ function getImageUrl(key){const value=getComputedStyle(document.documentElement)
 function closeDetailPage(fromPopState=false){const page=document.getElementById('detail-page');page.classList.remove('active');page.replaceChildren();showView(detailReturnView||'home');if(detailHistoryActive&&!fromPopState){detailHistoryActive=false;history.back()}else detailHistoryActive=false}
 window.addEventListener('popstate',()=>{if(document.getElementById('detail-page').classList.contains('active'))closeDetailPage(true);});
 
-function showView(id){const detail=document.getElementById('detail-page');if(detail){detail.classList.remove('active');detail.replaceChildren()}if(detailHistoryActive){history.replaceState(null,'',location.pathname+location.search)}detailHistoryActive=false;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));document.getElementById('page-title').textContent=titles[id]||titles.home;window.scrollTo({top:0,behavior:'smooth'})}
+function showView(id){const detail=document.getElementById('detail-page');if(detail){detail.classList.remove('active');detail.replaceChildren()}if(detailHistoryActive){history.replaceState(null,'',location.pathname+location.search)}detailHistoryActive=false;document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));document.getElementById('page-title').textContent=titles[id]||titles.home;if(id==='trips')loadJourneyTab(activeJourneyTab,true);window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 let modalType='';
 let activeEditId='';
+let activeEditIsMeeting=false;
 function openModal(type, item=null){
   modalType=type;
   const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');
+  const actions=document.querySelector('#modal-back .modal-actions');
+  actions.replaceChildren();
+  const cancelButton=document.createElement('button');cancelButton.className='btn outline';cancelButton.textContent='Отмена';cancelButton.addEventListener('click',closeModal);
+  const saveButton=document.createElement('button');saveButton.className='btn';saveButton.textContent='Сохранить';saveButton.addEventListener('click',submitModal);
+  actions.append(cancelButton,saveButton);actions.style.display='flex';
   const editing=type==='edit-trip'||type==='edit-community';
-  const trip=type==='trip'||type==='edit-trip';
-  document.getElementById('modal-title').textContent=editing?(trip?'Редактировать путешествие':'Редактировать сообщество'):(trip?'Новое путешествие':'Предложить сообщество');
-  document.getElementById('modal-desc').textContent=trip?'Расскажите, куда собираетесь и кого хотите взять с собой.':'Опишите тему сообщества и людей, которых хотите объединить.';
-  const value=(key)=>escapeHTML(item?.[key]||'');
-  if(trip){
-    fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="Например, выходные у озера"></div><div class="field"><label>Место или маршрут</label><input id="f-place" maxlength="160" value="${value('place')}" placeholder="Регион, город, маршрут"></div><div class="field"><label>Дата</label><input id="f-date" maxlength="100" value="${value('date')}" placeholder="Даты или период"></div><div class="field"><label>Формат</label><select id="f-kind"><option ${item?.kind==='Авторское путешествие'?'selected':''}>Авторское путешествие</option><option ${item?.kind==='Ищу попутчиков'?'selected':''}>Ищу попутчиков</option><option ${item?.kind==='Встреча'?'selected':''}>Встреча</option><option ${item?.kind==='Поход'?'selected':''}>Поход</option><option ${item?.kind==='Автопутешествие'?'selected':''}>Автопутешествие</option><option ${item?.kind==='Природа'?'selected':''}>Природа</option></select></div><div class="field"><label>Короткое описание</label><textarea id="f-desc" maxlength="1200" placeholder="Что планируете?">${value('description')||value('desc')}</textarea></div>`;
+  const route=type==='route',meeting=type==='meeting'||(type==='edit-trip'&&activeEditIsMeeting),destination=type==='destination';
+  const trip=type==='trip'||type==='edit-trip'||meeting;
+  const value=(key)=>escapeHTML(item?.[key]??'');
+  const meetingDateValue=meeting&&item?.date?escapeHTML(String(item.date).split(', ')[0]):'';
+  const meetingTimeValue=meeting&&item?.date&&String(item.date).includes(', ')?escapeHTML(String(item.date).split(', ')[1]):'';
+  const title=document.getElementById('modal-title'),desc=document.getElementById('modal-desc');
+  title.textContent=destination?'Редактировать направление':route?'Создать маршрут':meeting?(editing?'Редактировать встречу':'Создать встречу'):editing?(trip?'Редактировать поездку':'Редактировать сообщество'):trip?'Создать поездку':'Предложить сообщество';
+  desc.textContent=destination?'Изменения будут сохранены в каталоге направлений.':route?'Выберите не менее двух опубликованных точек. Маршрут отправится на модерацию.':meeting?(editing?'Измените место, дату и время встречи.':'Укажите место, дату и время встречи.'):trip?'Опишите поездку, даты, условия и количество мест.':'Опишите тему сообщества и людей, которых хотите объединить.';
+  if(destination){
+    fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}"></div><div class="field"><label>Регион / место</label><input id="f-place" maxlength="160" value="${value('place')}"></div><div class="field"><label>Период</label><input id="f-date" maxlength="100" value="${value('date')}"></div><div class="field"><label>Формат</label><input id="f-kind" maxlength="60" value="${value('kind')}"></div><div class="field"><label>Стоимость / условия</label><input id="f-price" maxlength="120" value="${value('price')}"></div><div class="field"><label>Краткое описание</label><textarea id="f-desc" maxlength="1200">${value('description')}</textarea></div><div class="field"><label>Подробное описание</label><textarea id="f-details" maxlength="3000">${value('details')}</textarea></div>`;
+  }else if(route){
+    const choices=journeyPlaces.map((place,index)=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-weight:500"><input type="checkbox" class="f-route-stop" value="${escapeHTML(place.id)}" style="width:auto;margin-top:3px"><span>${escapeHTML(place.title)} <small style="display:block;color:var(--muted)">${escapeHTML([place.region,place.category].filter(Boolean).join(' · '))}</small></span></label>`).join('');
+    const routeNotice=journeyPlaces.length<2?`<div class="field" style="background:#f4f1e8;padding:12px;border-radius:10px"><strong>Пока доступно точек: ${journeyPlaces.length}.</strong><p style="margin:5px 0 0;color:var(--muted)">Для публикации маршрута нужны минимум две опубликованные точки. Добавьте недостающие на карте, затем вернитесь к созданию маршрута.</p><button class="btn outline" type="button" onclick="closeModal();showView('map')">Добавить точки на карте</button></div>`:'';
+    fields.innerHTML=`${routeNotice}<div class="field"><label>Название маршрута</label><input id="f-title" maxlength="120" placeholder="Например, Тропа к водопаду"></div><div class="field"><label>Описание и особенности</label><textarea id="f-desc" maxlength="3000" placeholder="Протяжённость, сложность, сезонность, что взять с собой"></textarea></div><div class="field"><label>Способ передвижения</label><select id="f-transport"><option value="walking">Пешком</option><option value="car">На автомобиле</option><option value="water">По воде</option><option value="mixed">Смешанный</option></select></div><div class="field"><label>Точки маршрута (выберите минимум две)</label><div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px">${choices||'<p>Пока нет опубликованных точек. Сначала добавьте точки на карте.</p>'}</div></div><div class="field"><label>GPX-трек (необязательно)</label><input id="f-gpx" type="file" accept=".gpx,application/gpx+xml"><small style="color:var(--muted)">Можно добавить GPS-трек. Если его нет, маршрут строится по выбранным точкам.</small></div>`;
+  }else if(trip){
+    const extraFields=meeting?'':`<div class="field"><label>Стоимость / условия участия</label><input id="f-price" maxlength="120" value="${value('price')}" placeholder="Например, 12 000 ₽ или расходы поровну"></div><div class="field"><label>Количество мест (0 = не ограничено)</label><input id="f-capacity" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="3" value="${value('capacity')||'0'}" aria-describedby="f-capacity-help"><small id="f-capacity-help" style="color:var(--muted)">От 0 до 500. Ноль означает без ограничения.</small></div><div class="field"><label>Формат</label><select id="f-kind"><option>Авторское путешествие</option><option>Ищу попутчиков</option><option>Поход</option><option>Автопутешествие</option><option>Водное путешествие</option></select></div>`;
+    fields.innerHTML=`<div class="field"><label>${meeting?'Название встречи':'Название поездки'}</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="${meeting?'Например, прогулка у озера':'Например, выходные на Белом море'}"></div><div class="field"><label>Место / направление</label><input id="f-place" maxlength="160" value="${value('place')}" placeholder="Регион, населённый пункт или место"></div> ${meeting?'<div class="field"><label>Точка встречи на карте</label><button class="btn outline" type="button" id="f-meeting-location-search">Найти место на карте</button><small id="f-meeting-location-status" style="color:var(--muted)">'+(value('lat')&&value('lng')?'Координаты встречи сохранены. Если меняете место, найдите его заново.':'Найдите место, чтобы добавить его на карту.')+'</small><div id="f-meeting-location-results"></div><input type="hidden" id="f-meeting-lat" value="'+value('lat')+'"><input type="hidden" id="f-meeting-lng" value="'+value('lng')+'"></div><div class="field"><label>Дата встречи</label><input id="f-meeting-date" type="date" value="${meetingDateValue}" required></div><div class="field"><label>Время встречи</label><input id="f-meeting-time" type="time" value="${meetingTimeValue}" required></div>':'<div class="field"><label>Дата начала</label><input id="f-start-date" type="date" value="'+value('startDate')+'"></div><div class="field"><label>Дата окончания</label><input id="f-end-date" type="date" value="'+value('endDate')+'"></div><div class="field"><label id="f-duration">Укажите даты начала и окончания</label></div>'}${extraFields}<div class="field"><label>Описание / программа</label><textarea id="f-desc" maxlength="1200" placeholder="${meeting?'Что будем делать и сколько продлится встреча?':'Программа, условия, требования к участникам'}">${value('description')||value('desc')}</textarea></div>`;
   }else{
     fields.innerHTML=`<div class="field"><label>Название</label><input id="f-title" maxlength="120" value="${value('title')}" placeholder="Название сообщества"></div><div class="field"><label>О чём оно</label><textarea id="f-desc" maxlength="1200" placeholder="Кого хотите объединить?">${value('description')}</textarea></div>`;
   }
-  const existingPhotos = Array.isArray(item?.imageUrls) && item.imageUrls.length ? item.imageUrls : (item?.imageUrl ? [item.imageUrl] : []);
-  fields.insertAdjacentHTML('beforeend', `<div class="field"><label>Фотографии</label><input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple><small style="color:var(--muted)">Можно выбрать до 8 фотографий JPG, PNG или WebP. До 5 МБ каждая. При редактировании новые фотографии заменят текущую галерею.</small><div id="f-photo-preview" class="photo-gallery-preview">${existingPhotos.map(url=>`<img alt="Фотография публикации" src="${escapeHTML(url)}">`).join('')}</div></div>`);
+  const existingPhotos=Array.isArray(item?.imageUrls)&&item.imageUrls.length?item.imageUrls:(item?.imageUrl?[item.imageUrl]:[]);
+  if(!route)fields.insertAdjacentHTML('beforeend',`<div class="field"><label>Фотографии</label><div id="f-existing-photo-gallery" class="photo-gallery-preview">${existingPhotos.map((url,index)=>`<label class="photo-remove-option"><input type="checkbox" name="f-remove-photo" value="${escapeHTML(url)}"> Удалить фото ${index+1}<img alt="Фотография публикации" src="${escapeHTML(url)}"></label>`).join('')}</div><input id="f-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple><small style="color:var(--muted)">До 8 фотографий JPG, PNG или WebP, до 15 МБ каждая. Старые фото сохраняются, если не отметить их удаление.</small><div id="f-photo-preview" class="photo-gallery-preview"></div></div>`);
+  document.getElementById('f-meeting-location-search')?.addEventListener('click',searchMeetingLocation);
+  const meetingPlaceInput=document.getElementById('f-place'),originalMeetingPlace=item?.place||'';
+  meetingPlaceInput?.addEventListener('input',()=>{if(meetingPlaceInput.value.trim()!==originalMeetingPlace){document.getElementById('f-meeting-lat').value='';document.getElementById('f-meeting-lng').value='';const status=document.getElementById('f-meeting-location-status');if(status)status.textContent='Место изменено. Найдите новую точку на карте.'}});
+  const startInput=document.getElementById('f-start-date'),endInput=document.getElementById('f-end-date'),durationLabel=document.getElementById('f-duration');
+  const updateDuration=()=>{if(!startInput||!endInput||!durationLabel)return;const start=startInput.value,end=endInput.value;if(!start||!end){durationLabel.textContent='Укажите даты начала и окончания';return}const a=new Date(start+'T00:00:00Z'),b=new Date(end+'T00:00:00Z'),days=Math.round((b-a)/86400000)+1;durationLabel.textContent=days>0?'Продолжительность: '+days+' дн.':'Дата окончания не может быть раньше даты начала'};
+  startInput?.addEventListener('change',updateDuration);endInput?.addEventListener('change',updateDuration);updateDuration();
+  const capacityInput=document.getElementById('f-capacity');capacityInput?.addEventListener('input',()=>{capacityInput.value=capacityInput.value.replace(/\D/g,'').slice(0,3);if(Number(capacityInput.value)>500)capacityInput.value='500'});
   const photoInput=document.getElementById('f-photo');photoInput?.addEventListener('change',()=>previewImageFiles(photoInput,'f-photo-preview'));
   document.querySelector('#modal-back .modal-actions').style.display='flex';
   back.classList.add('show');
 }
-function closeModal(){document.getElementById('modal-back').classList.remove('show');document.querySelector('#modal-back .modal-actions').style.display='flex'}
-function previewImage(input, previewId){const file=input.files?.[0],img=document.getElementById(previewId);if(!file||!img)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){input.value='';toast('Выберите JPG, PNG или WebP до 5 МБ');return}img.src=URL.createObjectURL(file);img.style.display='block'}
-function previewImageFiles(input, previewId){const host=document.getElementById(previewId);if(!host)return;const files=[...(input.files||[])];if(files.length>8){input.value='';toast('Можно добавить не более 8 фотографий');return}if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)){input.value='';toast('Каждое фото должно быть JPG, PNG или WebP до 5 МБ');return}host.replaceChildren(...files.map(file=>{const img=document.createElement('img');img.alt='Предпросмотр фотографии';img.src=URL.createObjectURL(file);return img}))}
-async function uploadImageFile(file){if(!file)return '';if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024)throw new Error('Фото должно быть JPG, PNG или WebP и не больше 5 МБ');const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Не удалось прочитать фото'));reader.readAsDataURL(file)});const result=await telegramApi('/api/uploads/image',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({dataUrl})});return result.imageUrl}
+async function searchMeetingLocation(){
+  const query=document.getElementById('f-place')?.value.trim(),host=document.getElementById('f-meeting-location-results'),button=document.getElementById('f-meeting-location-search'),status=document.getElementById('f-meeting-location-status');
+  if(!query){toast('Сначала укажите место встречи');return}
+  if(!host||!button){toast('Форма поиска места не открыта');return}
+  button.disabled=true;host.replaceChildren();if(status)status.textContent='Ищем координаты места…';
+  try{
+    let results=[];
+    try{
+      const response=await fetch('https://photon.komoot.io/api/?q='+encodeURIComponent(query)+'&limit=6&lang=ru',{headers:{Accept:'application/geo+json'}});
+      if(!response.ok)throw new Error('Photon HTTP '+response.status);
+      const data=await response.json();
+      results=(Array.isArray(data.features)?data.features:[]).map(feature=>{
+        const properties=feature?.properties||{},coordinates=feature?.geometry?.coordinates;
+        const label=[properties.name,properties.street,properties.housenumber,properties.city||properties.locality,properties.district,properties.state,properties.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(', ')||query;
+        return {coordinates,label};
+      }).filter(item=>Array.isArray(item.coordinates)&&item.coordinates.length>=2);
+    }catch(error){console.warn('Photon meeting search failed:',error.message)}
+    if(!results.length){
+      const response=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q='+encodeURIComponent(query),{headers:{Accept:'application/json','Accept-Language':'ru'}});
+      if(!response.ok)throw new Error('Резервный поиск OpenStreetMap временно недоступен');
+      const data=await response.json();
+      results=(Array.isArray(data)?data:[]).map(item=>{
+        const address=item.address||{};
+        const label=[item.name,address.amenity,address.tourism,address.village,address.town,address.city,address.municipality,address.state,address.country].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).join(', ')||item.display_name||query;
+        return {coordinates:[Number(item.lon),Number(item.lat)],label};
+      }).filter(item=>item.coordinates.every(Number.isFinite));
+    }
+    if(!results.length){if(status)status.textContent='Место не найдено. Уточните название или адрес.';return}
+    results.forEach(result=>{
+      const [lng,lat]=result.coordinates;
+      const option=document.createElement('button');option.type='button';option.className='btn outline';option.style.cssText='display:block;width:100%;margin:5px 0;text-align:left';option.textContent=result.label;
+      option.addEventListener('click',()=>{document.getElementById('f-meeting-lat').value=String(Number(lat));document.getElementById('f-meeting-lng').value=String(Number(lng));document.getElementById('f-place').value=result.label;host.replaceChildren();if(status)status.textContent='✓ Место привязано к карте'});
+      host.append(option);
+    });
+  }catch(error){if(status)status.textContent=error.message||'Не удалось найти место'}
+  finally{button.disabled=false}
+}function closeModal(){document.getElementById('modal-back').classList.remove('show');document.querySelector('#modal-back .modal-actions').style.display='flex'}
+function previewImage(input, previewId){const file=input.files?.[0],img=document.getElementById(previewId);if(!file||!img)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024){input.value='';toast('Выберите JPG, PNG или WebP до 15 МБ');return}img.src=URL.createObjectURL(file);img.style.display='block'}
+function previewImageFiles(input, previewId){const host=document.getElementById(previewId);if(!host)return;const files=[...(input.files||[])];if(files.length>8){input.value='';toast('Можно добавить не более 8 фотографий');return}if(files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024)){input.value='';toast('Каждое фото должно быть JPG, PNG или WebP до 15 МБ');return}host.replaceChildren(...files.map(file=>{const img=document.createElement('img');img.alt='Предпросмотр фотографии';img.src=URL.createObjectURL(file);return img}))}
+async function uploadImageFile(file){
+  if(!file)return '';
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15*1024*1024)throw new Error('Фото должно быть JPG, PNG или WebP и не больше 15 МБ');
+  if(typeof createImageBitmap!=='function')throw new Error('Браузер не поддерживает безопасную обработку изображения');
+  const bitmap=await createImageBitmap(file);
+  if(bitmap.width*bitmap.height>25000000){bitmap.close?.();throw new Error('Слишком большое разрешение изображения. Уменьшите фото перед загрузкой');}
+  const scale=Math.min(1,1800/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  const context=canvas.getContext('2d');
+  if(!context){bitmap.close?.();throw new Error('Не удалось обработать фотографию');}
+  context.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();
+  const dataUrl=canvas.toDataURL(file.type,file.type==='image/jpeg'||file.type==='image/webp'?0.84:undefined);
+  if(!dataUrl.startsWith('data:image/'))throw new Error('Не удалось подготовить фотографию к загрузке');
+  const result=await telegramApi('/api/uploads/image',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({dataUrl})});
+  return result.imageUrl;
+}
 document.getElementById('profile-photo')?.addEventListener('change',()=>previewImage(document.getElementById('profile-photo'),'profile-photo-preview'));
 async function submitModal(){
   const title=document.getElementById('f-title')?.value.trim();
   if(!title){toast('Добавьте название');return}
-  if(!window.yugornoTelegramUser || (!window.Telegram?.WebApp?.initData && !window.yugornoLocalDemo)){toast('Откройте Югорно в Telegram или включите локальный режим тестирования');return}
-  const isTrip=modalType==='trip'||modalType==='edit-trip';
-  const editing=modalType==='edit-trip'||modalType==='edit-community';
-  const description=document.getElementById('f-desc').value.trim();
-  if(!isTrip&&!description){toast('Добавьте описание сообщества');return}
-  const payload=isTrip?{title,place:document.getElementById('f-place').value.trim()||'Место уточняется',date:document.getElementById('f-date').value.trim(),kind:document.getElementById('f-kind').value,description}:{title,description};
+  const hasAuthenticatedTransport=Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem('yugorno-session')||window.yugornoLocalDemo);
+  if(!hasAuthenticatedTransport){toast('Откройте Югорно в Telegram или войдите в локальный тестовый режим');return}
+  const description=document.getElementById('f-desc')?.value.trim()||'';
   const selectedPhotos=[...(document.getElementById('f-photo')?.files||[])];
-  try{if(selectedPhotos.length){if(selectedPhotos.length>8)throw new Error('Можно добавить не более 8 фотографий');const imageUrls=[];for(const photo of selectedPhotos)imageUrls.push(await uploadImageFile(photo));payload.imageUrls=imageUrls;payload.imageUrl=imageUrls[0]||''}}catch(error){toast(error.message);return}
-  const endpoint=editing?(isTrip?`/api/my/trips/${encodeURIComponent(activeEditId)}`:`/api/my/communities/${encodeURIComponent(activeEditId)}`):(isTrip?'/api/trips':'/api/communities');
+  const payload={title,description};
   try{
-    const result=await telegramApi(endpoint,{method:editing?'PATCH':'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    if(modalType==='destination'){
+      Object.assign(payload,{place:document.getElementById('f-place').value.trim(),date:document.getElementById('f-date').value.trim(),kind:document.getElementById('f-kind').value.trim(),price:document.getElementById('f-price').value.trim(),details:document.getElementById('f-details').value.trim()});
+    }else if(modalType==='route'){
+      payload.transport=document.getElementById('f-transport').value;
+      payload.stopIds=[...document.querySelectorAll('.f-route-stop:checked')].map(input=>input.value);
+      if(payload.stopIds.length<2){toast('Для маршрута выберите минимум две точки');return}
+      const gpxFile=document.getElementById('f-gpx')?.files?.[0];
+      if(gpxFile){
+        if(gpxFile.size>5*1024*1024){toast('GPX-файл не должен превышать 5 МБ');return}
+        const xml=new DOMParser().parseFromString(await gpxFile.text(),'application/xml');
+        if(xml.querySelector('parsererror')){toast('Не удалось прочитать GPX-файл');return}
+        const nodes=[...xml.getElementsByTagName('trkpt'),...xml.getElementsByTagName('rtept')];
+        payload.trackPoints=nodes.map(node=>({lat:Number(node.getAttribute('lat')),lng:Number(node.getAttribute('lon'))})).filter(point=>Number.isFinite(point.lat)&&Number.isFinite(point.lng));
+        if(payload.trackPoints.length<2){toast('В GPX-треке должно быть не менее двух корректных точек');return}
+      }
+    }else if(modalType==='meeting'||(modalType==='edit-trip'&&activeEditIsMeeting)){
+      payload.place=document.getElementById('f-place').value.trim();
+      const meetingDate=document.getElementById('f-meeting-date')?.value||'',meetingTime=document.getElementById('f-meeting-time')?.value||'';
+      payload.date=meetingDate&&meetingTime?meetingDate+', '+meetingTime:'';
+      payload.kind='Встреча';
+      const meetingLatText=document.getElementById('f-meeting-lat')?.value||'',meetingLngText=document.getElementById('f-meeting-lng')?.value||'';
+      const meetingLat=Number(meetingLatText),meetingLng=Number(meetingLngText);
+      if(!payload.place||!meetingDate||!meetingTime){toast('Укажите место, дату и время встречи');return}
+      if(!meetingLatText||!meetingLngText||!Number.isFinite(meetingLat)||!Number.isFinite(meetingLng)){toast('Найдите место встречи на карте перед сохранением');return}
+      payload.lat=meetingLat;payload.lng=meetingLng;
+    }else if(modalType==='trip'||modalType==='edit-trip'){
+      const place=document.getElementById('f-place').value.trim(),startDate=document.getElementById('f-start-date')?.value||'',endDate=document.getElementById('f-end-date')?.value||'';
+      const capacityText=document.getElementById('f-capacity')?.value??'0',capacity=capacityText===''?0:Number(capacityText);
+      if(!place){toast('Укажите направление поездки');return}
+      if(startDate&&endDate&&endDate<startDate){toast('Дата окончания не может быть раньше даты начала');return}
+      if(!Number.isInteger(capacity)||capacity<0||capacity>500){toast('Количество мест должно быть от 0 до 500');return}
+      Object.assign(payload,{place,date:startDate&&endDate?startDate+' – '+endDate:'',kind:document.getElementById('f-kind').value,startDate,endDate,price:document.getElementById('f-price')?.value.trim()||'',capacity});
+    }
+    const keptExistingPhotos=[...document.querySelectorAll('#f-existing-photo-gallery input[name="f-remove-photo"]:not(:checked)')].map(input=>input.value);
+    const removedExistingPhotos=document.querySelectorAll('#f-existing-photo-gallery input[name="f-remove-photo"]:checked').length>0;
+    if(selectedPhotos.length>8)throw new Error('Можно добавить не более 8 фотографий');
+    const imageUrls=[...keptExistingPhotos];
+    for(const photo of selectedPhotos)imageUrls.push(await uploadImageFile(photo));
+    if(keptExistingPhotos.length+selectedPhotos.length>8)throw new Error('Всего можно сохранить не более 8 фотографий');
+    if(selectedPhotos.length||removedExistingPhotos){payload.imageUrls=imageUrls;payload.imageUrl=imageUrls[0]||''}
+  }catch(error){toast(error.message);return}
+  try{
+    let result;
+    if(modalType==='destination'){
+      result=await telegramApi(`/api/admin/destinations/${encodeURIComponent(activeDestinationSlug)}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      await loadFeaturedDestinations();
+    }else{
+      const isRoute=modalType==='route',isMeeting=modalType==='meeting',isCommunity=modalType==='community'||modalType==='edit-community',isTrip=modalType==='trip'||modalType==='edit-trip';
+      const editing=modalType==='edit-trip'||modalType==='edit-community';
+      const endpoint=isRoute?'/api/routes':isCommunity?(editing?`/api/my/communities/${encodeURIComponent(activeEditId)}`:'/api/communities'):editing?`/api/my/trips/${encodeURIComponent(activeEditId)}`:'/api/trips';
+      result=await telegramApi(endpoint,{method:editing?'PATCH':'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+      if(isRoute){journeyRoutes=[];await loadJourneyTab('routes',true)}
+      else if(isCommunity){await loadPublishedCommunities();await loadMyCommunities()}
+      else{await loadPublishedTrips();await loadMyTrips();journeyTrips=[];await loadJourneyTab(isMeeting?'meetings':'trips',true)}
+    }
     closeModal();
-    if(isTrip){await loadPublishedTrips();await loadMyTrips();showView('trips')}else{await loadPublishedCommunities();await loadMyCommunities();showView('communities')}
-    toast(editing?'Изменения сохранены':(isTrip?'Путешествие опубликовано':'Сообщество опубликовано'));
+    activeEditIsMeeting=false;
+    if(modalType==='destination'){showView('home');toast('Карточка направления обновлена')}
+    else if(modalType==='community'||modalType==='edit-community'){showView('communities');toast('Сообщество сохранено')}
+    else{showView('trips');toast(modalType==='route'?'Маршрут отправлен на модерацию':modalType==='meeting'?'Встреча опубликована':modalType==='edit-trip'?'Изменения сохранены':'Поездка опубликована')}
   }catch(error){toast(error.message||'Ошибка сохранения')}
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),2800)}
@@ -301,7 +499,8 @@ async function saveProfile(){
   const n=document.getElementById('profile-name').value.trim(),c=document.getElementById('profile-city').value.trim(),i=document.getElementById('profile-interest').value;
   let imageUrl=window.yugornoProfileImageUrl||'';
   if(!n){toast('Укажи имя для профиля');return}
-  if(!window.yugornoTelegramUser||(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo)){
+  const hasAuthenticatedTransport=Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem('yugorno-session')||window.yugornoLocalDemo);
+  if(!hasAuthenticatedTransport){
     localStorage.setItem('yugorno-profile',JSON.stringify({n,c,i,imageUrl}));
     renderProfileSummary(n,c,i,imageUrl);renderOwnPeopleProfile({name:n,city:c,interest:i,imageUrl});setProfileEditMode(false);toast('Профиль сохранён в этом браузере');return;
   }
@@ -312,71 +511,34 @@ async function saveProfile(){
   }catch(error){toast(error.message||'Ошибка сохранения')}
 }
 const saved=JSON.parse(localStorage.getItem('yugorno-profile')||'{}');if(saved.n){document.getElementById('profile-name').value=saved.n;document.getElementById('profile-city').value=saved.c||'';document.querySelector('.user span').textContent=saved.n;renderOwnPeopleProfile({name:saved.n,city:saved.c||'',interest:saved.i||'',imageUrl:saved.imageUrl||''})}
-// Telegram Mini App: safe initialization; browser preview remains available outside Telegram.
-(function initTelegramWebApp(){
-  const tg = window.Telegram?.WebApp;
-  if (!tg) return;
-  tg.ready();
-  tg.expand();
-  document.documentElement.style.setProperty('--telegram-viewport-height', `${tg.viewportHeight || window.innerHeight}px`);
-  tg.onEvent?.('viewportChanged', () => document.documentElement.style.setProperty('--telegram-viewport-height', `${tg.viewportHeight || window.innerHeight}px`));
-  if (tg.themeParams?.bg_color) document.documentElement.style.setProperty('--tg-bg', tg.themeParams.bg_color);
-  authenticateTelegram(tg);
-})();
-
-async function authenticateTelegram(tg){
-  if (!tg?.initData) return;
-  try {
-    const response = await fetch('/api/auth/telegram', {
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({initData:tg.initData})
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok || !result.user) throw new Error('Telegram auth failed');
-    const user = result.user;
-    const displayName = [user.first_name,user.last_name].filter(Boolean).join(' ') || (user.username ? `@${user.username}` : 'Путешественник');
-    const userLabel = document.querySelector('.user span');
-    if (userLabel) userLabel.textContent = displayName;
-    const avatar = document.querySelector('.user .avatar');
-    if (avatar) avatar.textContent = (user.first_name || user.username || 'Ю').slice(0,1).toUpperCase();
-    const profileHeading = document.querySelector('#profile .panel h3');
-    const profileNote = document.querySelector('#profile .panel small');
-    if (profileHeading) profileHeading.textContent = displayName;
-    if (profileNote) profileNote.textContent = 'Аккаунт подтверждён Telegram';
-    const profileInput = document.getElementById('profile-name');
-    if (profileInput && !profileInput.value) profileInput.value = displayName;
-    window.yugornoTelegramUser = user;
-    await loadPublishedTrips();
-    await loadPublishedCommunities();
-    await loadServerProfile();
-    await loadMyTrips();
-    await loadMyCommunities();
-  } catch (error) {
-    console.warn('Не удалось подтвердить Telegram-пользователя:', error.message);
-  }
-}
-
-async function telegramApi(path, options={}){
+function yugornoAuthHeaders(){
   const initData=window.Telegram?.WebApp?.initData;
-  if(!initData&&!window.yugornoLocalDemo)throw new Error('Откройте приложение в Telegram');
-  const authHeaders=initData?{'X-Telegram-Init-Data':initData}:{'X-Local-Demo-User':'local-tester'};
+  if(initData)return {'X-Telegram-Init-Data':initData};
+  if(window.yugornoLocalDemo)return {'X-Local-Demo-User':'local-tester'};
+  const sessionToken=localStorage.getItem('yugorno-session');
+  if(sessionToken)return {'X-Yugorno-Session':sessionToken};
+  return {};
+}
+async function telegramApi(path, options={}){
+  const method=String(options.method||'GET').toUpperCase(),authHeaders=yugornoAuthHeaders();
+  if(!Object.keys(authHeaders).length&&!['GET','HEAD'].includes(method))throw new Error('Для этого действия нужно войти в аккаунт');
   const response=await fetch(path,{...options,headers:{...(options.headers||{}),...authHeaders}});
   const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Ошибка запроса');return result;
 }
 async function expressInterest(id){try{const result=await telegramApi(`/api/trips/${encodeURIComponent(id)}/interest`,{method:'POST'});toast(result.result.alreadyInterested?'Вы уже откликались на это путешествие':'Отклик отправлен организатору')}catch(error){toast(error.message||'Не удалось отправить отклик')}}
 async function joinPublishedCommunity(id){try{const result=await telegramApi(`/api/communities/${encodeURIComponent(id)}/join`,{method:'POST'});toast(result.result.alreadyJoined?'Вы уже состоите в сообществе':'Вы присоединились к сообществу')}catch(error){toast(error.message||'Не удалось вступить в сообщество')}}
-async function loadPublishedTrips(){try{const result=await telegramApi('/api/trips');const published=result.items.map(t=>({id:t.id,title:t.title,place:t.place,date:t.date,kind:t.kind,price:'Условия уточняются',desc:t.description,description:t.description,imageUrl:t.imageUrl||t.imageUrls?.[0]||'',imageUrls:t.imageUrls||[],image:'trip-karelia',published:true}));trips.splice(0,trips.length,...trips.filter(t=>!t.published),...published);renderTrips();if(document.getElementById('journey-trip-list')){journeyTrips=result.items;renderJourneyTrips();renderJourneyMeetings();document.getElementById('journey-trip-list').dataset.loaded='true';document.getElementById('journey-meeting-list').dataset.loaded='true'}}catch(error){console.warn('Путешествия не загружены:',error.message)}}
-async function loadPublishedCommunities(){try{const result=await telegramApi('/api/communities');const host=document.querySelector('#communities .grid');const existing=host.querySelectorAll('[data-published-community]');existing.forEach(el=>el.remove());result.items.forEach(c=>{const article=document.createElement('article');article.className='card';article.dataset.publishedCommunity='true';const body=document.createElement('div');body.className='card-body';const heading=document.createElement('h4');heading.textContent=c.title;const desc=document.createElement('p');desc.textContent=c.description;const meta=document.createElement('small');meta.style.color='var(--muted)';meta.textContent=`Участников: ${c.memberCount||0}`;const details=document.createElement('button');details.className='btn outline';details.textContent='Подробнее';details.addEventListener('click',()=>showInfoModal(c.title,`Участников: ${c.memberCount||0}`,[c.description||'Описание пока не добавлено'],{type:'community',id:c.id,title:c.title,subtitle:`Участников: ${c.memberCount||0}`,description:c.description,published:true}));const join=document.createElement('button');join.className='btn outline';join.textContent='Присоединиться';join.addEventListener('click',()=>joinPublishedCommunity(c.id));body.append(heading,desc,meta,details,join);article.append(body);host.append(article)})}catch(error){console.warn('Сообщества не загружены:',error.message)}}
+async function loadPublishedTrips(){try{const result=await telegramApi('/api/trips');const published=result.items.map(t=>({id:t.id,title:t.title,place:t.place,date:t.date,kind:t.kind,price:t.price||'Условия уточняются',startDate:t.startDate||'',endDate:t.endDate||'',capacity:t.capacity||0,desc:t.description,description:t.description,imageUrl:t.imageUrl||t.imageUrls?.[0]||'',imageUrls:t.imageUrls||[],image:'trip-karelia',published:true}));trips.splice(0,trips.length,...trips.filter(t=>!t.published),...published);renderTrips();window.YugornoMap?.refreshMeetings?.();if(document.getElementById('journey-trip-list')){journeyTrips=result.items;renderJourneyTrips();renderJourneyMeetings();document.getElementById('journey-trip-list').dataset.loaded='true';document.getElementById('journey-meeting-list').dataset.loaded='true'}}catch(error){console.warn('Путешествия не загружены:',error.message)}}
+async function loadPublishedCommunities(){try{const result=await telegramApi('/api/communities');const host=document.querySelector('#communities .grid');const existing=host.querySelectorAll('[data-published-community]');existing.forEach(el=>el.remove());result.items.forEach(c=>{const article=document.createElement('article');article.className='card';article.dataset.publishedCommunity='true';const body=document.createElement('div');body.className='card-body';const heading=document.createElement('h4');heading.textContent=c.title;const desc=document.createElement('p');desc.textContent=c.description;const meta=document.createElement('small');meta.style.color='var(--muted)';meta.textContent=`Участников: ${c.memberCount||0}`;const details=document.createElement('button');setCardIconButton(details,'Открыть сообщество '+c.title,'M7 17 17 7M8 7h9v9');details.addEventListener('click',()=>showInfoModal(c.title,`Участников: ${c.memberCount||0}`,[c.description||'Описание пока не добавлено'],{type:'community',id:c.id,title:c.title,subtitle:`Участников: ${c.memberCount||0}`,description:c.description,published:true}));const join=document.createElement('button');join.className='btn outline';join.textContent='Присоединиться';join.addEventListener('click',()=>joinPublishedCommunity(c.id));body.append(heading,desc,meta,details,join);article.append(body);host.append(article)})}catch(error){console.warn('Сообщества не загружены:',error.message)}}
+function setCardIconButton(button,label,path){button.type='button';button.className='card-icon-action';button.title=label;button.setAttribute('aria-label',label);button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>'}
 function askConfirm(message){return new Promise(resolve=>{const tg=window.Telegram?.WebApp;if(typeof tg?.showConfirm==='function')tg.showConfirm(message,resolve);else resolve(window.confirm(message))})}
-async function loadMyTrips(){try{const result=await telegramApi('/api/my/trips');const panel=document.getElementById('my-trips-panel'),host=document.getElementById('my-trip-list');host.replaceChildren();panel.hidden=result.items.length===0;result.items.forEach(trip=>{const row=document.createElement('div');row.className='row-card';const info=document.createElement('div');info.style.flex='1';const title=document.createElement('strong');title.textContent=trip.title;const count=document.createElement('p');count.textContent=`${trip.place} · Откликов: ${trip.interestCount}`;info.append(title,count);const edit=document.createElement('button');edit.className='btn outline';edit.textContent='Изменить';edit.addEventListener('click',()=>editTrip(trip));const button=document.createElement('button');button.className='btn outline';button.textContent='Отклики';button.addEventListener('click',()=>showTripInterests(trip.id,trip.title));const hide=document.createElement('button');hide.className='btn outline';hide.textContent='Снять';hide.addEventListener('click',()=>unpublishTripFromList(trip.id));row.classList.add('manage-row');row.append(info,edit,button,hide);host.append(row)})}catch(error){console.warn('Мои публикации не загружены:',error.message)}}
-async function editTrip(trip){activeEditId=trip.id;openModal('edit-trip',trip)}
-async function unpublishTripFromList(id){if(!await askConfirm('Снять путешествие с публикации? Оно исчезнет из общего списка, но данные сохранятся.'))return;try{await telegramApi(`/api/my/trips/${encodeURIComponent(id)}`,{method:'DELETE'});await loadPublishedTrips();await loadMyTrips();toast('Путешествие снято с публикации')}catch(error){toast(error.message||'Не удалось снять публикацию')}}
-async function loadMyCommunities(){try{const result=await telegramApi('/api/my/communities');const panel=document.getElementById('my-communities-panel'),host=document.getElementById('my-community-list');host.replaceChildren();panel.hidden=result.items.length===0;result.items.forEach(community=>{const row=document.createElement('div');row.className='row-card';const info=document.createElement('div');info.style.flex='1';const title=document.createElement('strong');title.textContent=community.title;const meta=document.createElement('p');meta.textContent=`Участников: ${community.memberCount}`;info.append(title,meta);const edit=document.createElement('button');edit.className='btn outline';edit.textContent='Изменить';edit.addEventListener('click',()=>{activeEditId=community.id;openModal('edit-community',community)});const members=document.createElement('button');members.className='btn outline';members.textContent='Участники';members.addEventListener('click',()=>showCommunityMembers(community.id,community.title));const hide=document.createElement('button');hide.className='btn outline';hide.textContent='Снять';hide.addEventListener('click',()=>unpublishCommunityFromList(community.id));row.classList.add('manage-row');row.append(info,edit,members,hide);host.append(row)})}catch(error){console.warn('Мои сообщества не загружены:',error.message)}}
-async function unpublishCommunityFromList(id){if(!await askConfirm('Снять сообщество с публикации? Его данные и список участников сохранятся.'))return;try{await telegramApi(`/api/my/communities/${encodeURIComponent(id)}`,{method:'DELETE'});await loadPublishedCommunities();await loadMyCommunities();toast('Сообщество снято с публикации')}catch(error){toast(error.message||'Не удалось снять публикацию')}}
+async function loadMyTrips(){try{const result=await telegramApi('/api/my/trips');const panel=document.getElementById('my-trips-panel'),host=document.getElementById('my-trip-list');host.replaceChildren();panel.hidden=result.items.length===0;result.items.forEach(trip=>{const row=document.createElement('div');row.className='row-card';const info=document.createElement('div');info.style.flex='1';const title=document.createElement('strong');title.textContent=trip.title;const count=document.createElement('p');count.textContent=`${trip.place} · Откликов: ${trip.interestCount}`;info.append(title,count);const edit=document.createElement('button');setCardIconButton(edit,'Редактировать поездку '+trip.title,'m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16z');edit.addEventListener('click',()=>editTrip(trip));const button=document.createElement('button');setCardIconButton(button,'Посмотреть отклики на поездку '+trip.title,'M4 5h16v11H8l-4 4V5zm4 4h8m-8 3h5');button.addEventListener('click',()=>showTripInterests(trip.id,trip.title));const hide=document.createElement('button');setCardIconButton(hide,'Переместить поездку в корзину: '+trip.title,'M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6');hide.addEventListener('click',()=>unpublishTripFromList(trip.id));row.classList.add('manage-row');row.append(info,edit,button,hide);host.append(row)})}catch(error){console.warn('Мои публикации не загружены:',error.message)}}
+async function editTrip(trip){activeEditId=trip.id;activeEditIsMeeting=trip.kind==='Встреча';openModal('edit-trip',trip)}
+async function unpublishTripFromList(id){if(!await askConfirm('Переместить путешествие или встречу в корзину? Её можно будет восстановить.'))return;try{await telegramApi(`/api/my/trips/${encodeURIComponent(id)}`,{method:'DELETE'});await loadPublishedTrips();await loadMyTrips();toast('Публикация перемещена в корзину')}catch(error){toast(error.message||'Не удалось снять публикацию')}}
+async function loadMyCommunities(){try{const result=await telegramApi('/api/my/communities');const panel=document.getElementById('my-communities-panel'),host=document.getElementById('my-community-list');host.replaceChildren();panel.hidden=result.items.length===0;result.items.forEach(community=>{const row=document.createElement('div');row.className='row-card';const info=document.createElement('div');info.style.flex='1';const title=document.createElement('strong');title.textContent=community.title;const meta=document.createElement('p');meta.textContent=`Участников: ${community.memberCount}`;info.append(title,meta);const edit=document.createElement('button');setCardIconButton(edit,'Редактировать сообщество '+community.title,'m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16z');edit.addEventListener('click',()=>{activeEditId=community.id;openModal('edit-community',community)});const members=document.createElement('button');setCardIconButton(members,'Участники сообщества '+community.title,'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m7-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8m7 1a4 4 0 0 0 0-8m2 8a4 4 0 0 1 4 4v2');members.addEventListener('click',()=>showCommunityMembers(community.id,community.title));const hide=document.createElement('button');setCardIconButton(hide,'Переместить сообщество в корзину: '+community.title,'M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6');hide.addEventListener('click',()=>unpublishCommunityFromList(community.id));row.classList.add('manage-row');row.append(info,edit,members,hide);host.append(row)})}catch(error){console.warn('Мои сообщества не загружены:',error.message)}}
+async function unpublishCommunityFromList(id){if(!await askConfirm('Переместить сообщество в корзину? Его данные и список участников сохранятся.'))return;try{await telegramApi(`/api/my/communities/${encodeURIComponent(id)}`,{method:'DELETE'});await loadPublishedCommunities();await loadMyCommunities();toast('Сообщество перемещено в корзину')}catch(error){toast(error.message||'Не удалось снять публикацию')}}
 async function showCommunityMembers(id,title){try{const result=await telegramApi(`/api/my/communities/${encodeURIComponent(id)}/members`);const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');document.getElementById('modal-title').textContent=`Участники: ${title}`;document.getElementById('modal-desc').textContent=`Всего участников: ${result.items.length}`;fields.replaceChildren();if(!result.items.length){const empty=document.createElement('p');empty.textContent='Пока никто не присоединился';fields.append(empty)}result.items.forEach(person=>{const row=document.createElement('div');row.className='community';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=person.name;const meta=document.createElement('small');meta.textContent=[person.city,person.interest].filter(Boolean).join(' · ')||'Профиль пока не заполнен';info.append(name,meta);row.append(info);if(person.memberId){const remove=document.createElement('button');remove.className='btn outline';remove.textContent='Убрать';remove.addEventListener('click',()=>removeCommunityMemberFromList(id,person.memberId,title));row.append(remove)}fields.append(row)});document.querySelector('#modal-back .modal-actions').style.display='none';back.classList.add('show')}catch(error){toast(error.message||'Не удалось загрузить участников')}}
 async function removeCommunityMemberFromList(communityId,memberId,title){if(!await askConfirm('Убрать участника из сообщества?'))return;try{await telegramApi(`/api/my/communities/${encodeURIComponent(communityId)}/members/${encodeURIComponent(memberId)}`,{method:'DELETE'});await loadMyCommunities();await showCommunityMembers(communityId,title);toast('Участник удалён из сообщества')}catch(error){toast(error.message||'Не удалось убрать участника')}}
-async function openTripDetails(id){try{const result=await telegramApi(`/api/trips/${encodeURIComponent(id)}`);const trip=result.item;const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');document.getElementById('modal-title').textContent=trip.title;document.getElementById('modal-desc').textContent=[trip.place,trip.date,trip.kind].filter(Boolean).join(' · ');fields.replaceChildren();if(trip.imageUrl){const photo=document.createElement('img');photo.src=trip.imageUrl;photo.alt=trip.title;photo.style.cssText='width:100%;max-height:260px;object-fit:cover;border-radius:14px;margin-bottom:12px';fields.append(photo)}const description=document.createElement('p');description.style.whiteSpace='pre-wrap';description.textContent=trip.description||'Описание пока не добавлено';const count=document.createElement('small');count.style.color='var(--muted)';count.textContent=`Откликов: ${trip.interestCount||0}`;const action=document.createElement('button');action.className='btn';action.textContent='Откликнуться';action.addEventListener('click',()=>expressInterest(id));fields.append(description,count,action);const pageButton=document.createElement('button');pageButton.className='btn outline';pageButton.textContent='Открыть страницу целиком';pageButton.addEventListener('click',()=>{closeModal();openDetailPage({type:'trip',id:trip.id,title:trip.title,subtitle:[trip.place,trip.date,trip.kind].filter(Boolean).join(' · '),description:trip.description,imageUrl:trip.imageUrl,published:true})});const actions=document.querySelector('#modal-back .modal-actions');actions.replaceChildren(pageButton);actions.style.display='flex';back.classList.add('show')}catch(error){toast(error.message||'Не удалось открыть путешествие')}}
+async function openTripDetails(id){try{const result=await telegramApi(`/api/trips/${encodeURIComponent(id)}`);const trip=result.item;const ownTrips=await telegramApi('/api/my/trips').then(result=>result.items||[]).catch(()=>[]);const isOwner=ownTrips.some(item=>item.id===trip.id);const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');document.getElementById('modal-title').textContent=trip.title;document.getElementById('modal-desc').textContent=[trip.place,trip.startDate&&trip.endDate?`${trip.startDate} – ${trip.endDate}`:trip.date,trip.kind,trip.price,trip.capacity?`Мест: ${trip.capacity}`:'' ].filter(Boolean).join(' · ');fields.replaceChildren();const tripPhotos=trip.imageUrls?.length?trip.imageUrls:(trip.imageUrl?[trip.imageUrl]:[]);if(tripPhotos.length){const gallery=document.createElement('div');gallery.className='detail-gallery';tripPhotos.forEach((url,index)=>{const photo=document.createElement('img');photo.src=url;photo.alt=trip.title+' · фото '+(index+1);gallery.append(photo)});fields.append(gallery)}const description=document.createElement('p');description.style.whiteSpace='pre-wrap';description.textContent=trip.description||'Описание пока не добавлено';const count=document.createElement('small');count.style.color='var(--muted)';count.textContent=`Откликов: ${trip.interestCount||0}${trip.capacity?` · Мест всего: ${trip.capacity}`:''}`;const action=document.createElement('button');action.className='btn';action.textContent=trip.kind==='Встреча'?'Присоединиться':'Откликнуться';action.addEventListener('click',()=>expressInterest(id));fields.append(description,count,action);const pageButton=document.createElement('button');pageButton.className='btn outline';pageButton.textContent='Открыть страницу целиком';pageButton.addEventListener('click',()=>{closeModal();openDetailPage({type:'trip',id:trip.id,title:trip.title,subtitle:[trip.place,trip.startDate&&trip.endDate?`${trip.startDate} – ${trip.endDate}`:trip.date,trip.kind].filter(Boolean).join(' · '),description:trip.description,imageUrl:trip.imageUrl||trip.imageUrls?.[0]||'',kind:trip.kind,published:true})});const actions=document.querySelector('#modal-back .modal-actions');actions.replaceChildren();if(isOwner){const editButton=document.createElement('button');editButton.className='btn outline';editButton.textContent='Изменить';editButton.addEventListener('click',()=>{closeModal();editTrip(trip)});const deleteButton=document.createElement('button');deleteButton.className='btn outline';deleteButton.textContent='В корзину';deleteButton.addEventListener('click',()=>unpublishTripFromList(id));actions.append(editButton,deleteButton)}actions.append(pageButton);actions.style.display='flex';back.classList.add('show')}catch(error){toast(error.message||'Не удалось открыть путешествие')}}
 async function showTripInterests(id,title){try{const result=await telegramApi(`/api/my/trips/${encodeURIComponent(id)}/interests`);const back=document.getElementById('modal-back'),fields=document.getElementById('modal-fields');document.querySelector('#modal-back .modal-actions').style.display='none';document.getElementById('modal-title').textContent=`Отклики: ${title}`;document.getElementById('modal-desc').textContent=`Участников: ${result.items.length}`;fields.replaceChildren();if(!result.items.length){const empty=document.createElement('p');empty.textContent='Пока никто не откликнулся';fields.append(empty)}result.items.forEach(person=>{const row=document.createElement('div');row.className='community';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=person.name;const meta=document.createElement('small');meta.textContent=[person.city,person.interest].filter(Boolean).join(' · ')||'Профиль пока не заполнен';info.append(name,meta);row.append(info);fields.append(row)});back.classList.add('show')}catch(error){toast(error.message||'Не удалось загрузить отклики')}}
 function renderOwnPeopleProfile(profile={}){
   const name=profile.name||'Ваш профиль',city=profile.city||'',interest=profile.interest||'',imageUrl=profile.imageUrl||'';
@@ -402,17 +564,105 @@ async function loadServerProfile(){
   }
 }
 
-async function initLocalDemoMode(){
-  if(window.Telegram?.WebApp?.initData){await loadJourneyTab('points');return}
+function renderAccountState(role='guest',user=null,authMethod=''){
+  const labels={guest:'Гость',user:'Участник',moderator:'Модератор',admin:'Администратор'};
+  const state=document.getElementById('account-state'),controls=document.getElementById('account-login-controls'),logout=document.getElementById('account-logout-button'),topButton=document.getElementById('account-access-button'),localLogin=document.getElementById('local-demo-login');
+  const name=[user?.first_name,user?.last_name].filter(Boolean).join(' ')||(user?.username?'@'+user.username:'');
+  const isGuest=role==='guest';
+  if(state)state.textContent=isGuest?'Вы просматриваете Югорно как гость. Публичные материалы доступны без входа.':`Вход выполнен: ${name||'аккаунт'} · ${labels[role]||labels.user}`;
+  if(controls)controls.hidden=!isGuest;
+  if(logout)logout.hidden=isGuest||authMethod==='telegram';
+  if(topButton)topButton.textContent=isGuest?'Войти':authMethod==='telegram'?'Telegram':labels[role]||'Аккаунт';
+  if(localLogin)localLogin.hidden=!isGuest||!window.yugornoLocalDemoAvailable;
+  const whatsappControls=document.getElementById('whatsapp-login-controls');
+  if(whatsappControls)whatsappControls.hidden=!isGuest||!window.yugornoWhatsappAuthAvailable;
+  const requestButton=document.getElementById('account-request-code');if(requestButton)requestButton.disabled=!window.yugornoWhatsappAuthAvailable;
+  const note=document.getElementById('account-login-note');
+  if(note)note.textContent=window.yugornoWhatsappAuthAvailable?'На номер будет отправлен одноразовый код WhatsApp.':'Вход по WhatsApp отключён или не настроен администратором. В Telegram Mini App вход выполняется автоматически.';
+  const profileNote=document.getElementById('profile-account-note');
+  if(profileNote)profileNote.textContent=isGuest?'Гостевой просмотр':authMethod==='telegram'?'Аккаунт подтверждён Telegram':authMethod==='local-demo'?'Локальный тестовый режим':labels[role]||'Аккаунт подтверждён';
+  window.yugornoRole=role;window.yugornoAuthMethod=authMethod;window.yugornoIsModerator=role==='admin'||role==='moderator';
+  const adminPanel=document.getElementById('profile-admin-tools');if(adminPanel)adminPanel.hidden=!window.yugornoIsModerator;
+  const whatsappAdmin=document.getElementById('admin-whatsapp-settings');if(whatsappAdmin)whatsappAdmin.hidden=role!=='admin';
+  if(window.yugornoIsModerator)window.YugornoMap?.refreshModeratorAccess?.();
+  if(role==='admin')loadAdminSettings();
+}
+async function loadAdminSettings(){
+  if(window.yugornoRole!=='admin')return;
   try{
-    const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)return;
-    const status=await response.json();if(!status.localDemoEnabled)return;
-    window.yugornoLocalDemo=true;window.yugornoTelegramUser={id:'local-tester',first_name:'КУНДЫШ',username:'local-admin'};
-    const label=document.querySelector('.user span');if(label)label.textContent='КУНДЫШ';
-    const profileHeading=document.querySelector('#profile .panel h3');if(profileHeading)profileHeading.textContent='КУНДЫШ';const profileAvatar=document.querySelector('#profile .panel .avatar');if(profileAvatar)profileAvatar.textContent='К';
-    const note=document.querySelector('#profile .panel small');if(note)note.textContent='Локальный режим проверки. Данные хранятся только на этом компьютере.';
-    await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();await loadJourneyTab('points');
-  }catch(error){console.warn('Локальный режим недоступен:',error.message)}
+    const [settingsResponse,statusResponse]=await Promise.all([telegramApi('/api/admin/settings'),fetch('/api/status',{cache:'no-store'})]);
+    const status=await statusResponse.json();
+    window.yugornoWhatsappLoginEnabled=Boolean(settingsResponse.settings?.whatsappLoginEnabled);
+    window.yugornoWhatsappAuthAvailable=Boolean(status.whatsappAuthAvailable);
+    const toggle=document.getElementById('admin-whatsapp-toggle');if(toggle)toggle.checked=window.yugornoWhatsappLoginEnabled;
+    const note=document.getElementById('admin-whatsapp-note');
+    if(note)note.textContent=window.yugornoWhatsappLoginEnabled?(window.yugornoWhatsappAuthAvailable?'WhatsApp включён. Telegram остаётся основным способом входа.':'Переключатель включён, но провайдер WhatsApp ещё не настроен на сервере.'):'WhatsApp скрыт и отключён. Администратор может включить его здесь.';
+  }catch(error){console.warn('Настройки администратора не загружены:',error.message)}
+}
+async function saveWhatsAppLoginSetting(){
+  const toggle=document.getElementById('admin-whatsapp-toggle');if(!toggle)return;
+  toggle.disabled=true;
+  try{
+    const result=await telegramApi('/api/admin/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({whatsappLoginEnabled:toggle.checked})});
+    window.yugornoWhatsappLoginEnabled=Boolean(result.settings?.whatsappLoginEnabled);
+    if(!window.yugornoWhatsappLoginEnabled)localStorage.removeItem('yugorno-session');
+    const status=await fetch('/api/status',{cache:'no-store'}).then(response=>response.json());
+    window.yugornoWhatsappAuthAvailable=Boolean(status.whatsappAuthAvailable);
+    renderAccountState(window.yugornoRole,window.yugornoTelegramUser,window.yugornoAuthMethod||'telegram');
+    toast(window.yugornoWhatsappLoginEnabled?'Вход через WhatsApp включён администратором':'Вход через WhatsApp отключён');
+  }catch(error){toggle.checked=!toggle.checked;toast(error.message||'Не удалось сохранить настройку')}
+  finally{toggle.disabled=false}
+}
+function openModerationFromProfile(){
+  showView('map');
+  if(window.YugornoMap?.openModeration){window.YugornoMap.openModeration();return}
+  setTimeout(()=>window.YugornoMap?.openModeration?.(),350);
+}
+function openAccountAccess(){showView('profile');document.getElementById('account-phone')?.focus()}
+async function requestWhatsappCode(){
+  const phone=document.getElementById('account-phone').value.trim();if(!phone){toast('Укажите номер телефона в международном формате');return}
+  try{const response=await fetch('/api/auth/whatsapp/send-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Не удалось отправить код');document.getElementById('account-code-field').hidden=false;document.getElementById('account-verify-button').hidden=false;toast('Код отправлен в WhatsApp')}catch(error){toast(error.message||'Вход по телефону недоступен')}
+}
+async function verifyWhatsappCode(){
+  const phone=document.getElementById('account-phone').value.trim(),code=document.getElementById('account-code').value.trim();
+  try{const response=await fetch('/api/auth/whatsapp/verify-code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,code})});const result=await response.json();if(!response.ok||!result.ok||!result.sessionToken)throw new Error(result.error||'Неверный код');localStorage.setItem('yugorno-session',result.sessionToken);window.yugornoTelegramUser=result.user;window.yugornoLocalDemo=false;await refreshAuthenticatedUI('whatsapp');toast('Вход выполнен')}catch(error){toast(error.message||'Не удалось войти')}
+}
+async function loginLocalDemo(){if(!window.yugornoLocalDemoAvailable)return;localStorage.removeItem('yugorno-session');window.yugornoLocalDemo=true;window.yugornoTelegramUser={id:'local-tester',first_name:'Локальный тестировщик',username:'local-admin'};await refreshAuthenticatedUI('local-demo');toast('Выполнен вход в локальный тестовый режим')}
+async function logoutAccount(){
+  if(window.Telegram?.WebApp?.initData){toast('Telegram Mini App использует активный аккаунт Telegram. Для смены аккаунта переключите профиль в Telegram.');return}
+  localStorage.removeItem('yugorno-session');window.yugornoLocalDemo=false;window.yugornoTelegramUser=null;window.yugornoRole='guest';window.yugornoIsModerator=false;
+  document.getElementById('my-trip-list')?.replaceChildren();document.getElementById('my-community-list')?.replaceChildren();document.getElementById('my-trips-panel')?.setAttribute('hidden','');document.getElementById('my-communities-panel')?.setAttribute('hidden','');
+  renderAccountState('guest');await loadFeaturedDestinations();await loadPublishedTrips();await loadPublishedCommunities();await loadJourneyTab('points');toast('Вы вышли из аккаунта');
+}
+async function refreshAuthenticatedUI(authMethod=''){
+  const response=await fetch('/api/session',{headers:yugornoAuthHeaders(),cache:'no-store'}),session=await response.json();
+  if(!response.ok||!session.authenticated){renderAccountState('guest');return false}
+  window.yugornoTelegramUser=session.user;renderAccountState(session.role,session.user,authMethod||session.user.authMethod);
+  const displayName=[session.user.first_name,session.user.last_name].filter(Boolean).join(' ')||(session.user.username?'@'+session.user.username:'Путешественник');
+  const profileHeading=document.getElementById('profile-display-name');if(profileHeading)profileHeading.textContent=displayName;
+  await loadPublishedTrips();await loadPublishedCommunities();await loadServerProfile();await loadMyTrips();await loadMyCommunities();await loadFeaturedDestinations();await loadJourneyTab('points');return true;
+}
+async function authenticateTelegram(tg){
+  if(!tg?.initData)return;
+  try{const response=await fetch('/api/auth/telegram',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tg.initData})});const result=await response.json();if(!response.ok||!result.ok||!result.user)throw new Error('Telegram auth failed');window.yugornoTelegramUser=result.user;await refreshAuthenticatedUI('telegram')}
+  catch(error){console.warn('Не удалось подтвердить Telegram-пользователя:',error.message)}
+}
+(function initTelegramWebApp(){
+  const tg=window.Telegram?.WebApp;if(!tg)return;tg.ready();tg.expand();
+  document.documentElement.style.setProperty('--telegram-viewport-height',`${tg.viewportHeight||window.innerHeight}px`);
+  tg.onEvent?.('viewportChanged',()=>document.documentElement.style.setProperty('--telegram-viewport-height',`${tg.viewportHeight||window.innerHeight}px`));
+  if(tg.themeParams?.bg_color)document.documentElement.style.setProperty('--tg-bg',tg.themeParams.bg_color);
+  authenticateTelegram(tg);
+})();
+async function initLocalDemoMode(){
+  try{
+    const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)return;const status=await response.json();
+    window.yugornoLocalDemoAvailable=Boolean(status.localDemoEnabled);window.yugornoWhatsappLoginEnabled=Boolean(status.whatsappLoginEnabled);window.yugornoWhatsappAuthAvailable=Boolean(status.whatsappAuthAvailable);
+    if(window.Telegram?.WebApp?.initData){await loadFeaturedDestinations();await loadJourneyTab('points');return}
+    const sessionToken=localStorage.getItem('yugorno-session');
+    if(sessionToken){if(await refreshAuthenticatedUI('whatsapp'))return;localStorage.removeItem('yugorno-session')}
+    renderAccountState('guest');await loadFeaturedDestinations();await loadPublishedTrips();await loadPublishedCommunities();await loadJourneyTab('points');
+  }catch(error){console.warn('Не удалось инициализировать гостевой режим:',error.message)}
 }
 initLocalDemoMode();
 

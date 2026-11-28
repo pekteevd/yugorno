@@ -11,7 +11,9 @@ const css=`
 #yugorno-map{height:clamp(390px,62vh,680px);min-height:360px;border-radius:16px;overflow:hidden;background:#e4e9df;border:1px solid var(--line);z-index:1}
 .map-side{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0;max-height:680px;overflow:auto}
 .map-side h4{margin:0 0 10px}.map-place{padding:10px 0;border-top:1px solid var(--line)}.map-place:first-of-type{border-top:0}
-.map-place button{border:0;background:none;color:var(--forest);font-weight:750;text-align:left;padding:0}.map-place-photo{display:block;width:100%;height:112px;object-fit:cover;border-radius:10px;margin:0 0 9px;background:#e8ece4}.map-place-card{display:grid;gap:4px}
+.map-place button{border:0;background:none;color:var(--forest);font-weight:750;text-align:left;padding:0}.map-card-media{position:relative;width:100%;height:112px;overflow:hidden;border-radius:10px;background:#e8ece4}.map-card-open{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;cursor:pointer}.map-card-media .map-place-photo,.map-card-media .map-card-preview,.map-card-media .map-route-preview{height:112px;border-radius:0}.map-place-card .map-card-media{height:clamp(150px,32vw,220px);min-height:150px;max-height:220px;border-radius:12px}.map-place-card .map-card-media .map-place-photo,.map-place-card .map-card-media .map-card-preview,.map-place-card .map-card-media .map-route-preview{width:100%;height:100%;border-radius:0;object-fit:cover}
+.map-card-preview{display:block;width:100%;height:112px;border:0;border-radius:10px;background:#e8ece4}.map-route-preview{display:block;width:100%;height:112px;border-radius:10px;background:#e9eee5}
+.map-place-photo{display:block;width:100%;height:112px;object-fit:cover;border-radius:10px;margin:0 0 9px;background:#e8ece4}.map-place-card{display:grid;gap:4px}.map-card-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}.map-card-title-row strong{min-width:0;overflow-wrap:anywhere}.map-place .map-card-title-row .card-icon-action,.map-place .map-card-actions .card-icon-action{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--forest)}.map-place .map-card-title-row .card-icon-action svg,.map-place .map-card-actions .card-icon-action svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.map-card-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:7px}.map-owner-action{width:auto!important;height:auto!important;min-height:34px;padding:7px 10px!important;border:1px solid var(--line)!important;border-radius:9px!important;background:#fff!important;font-size:12px!important;white-space:nowrap}.map-owner-action-danger{color:#8b352b!important;border-color:#ead6d2!important}.map-owner-description{margin:4px 0 8px;font-size:13px;line-height:1.5;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}.map-side-controls{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px}.map-side-controls button{border:1px solid var(--line);border-radius:10px;padding:8px 11px;background:var(--paper);color:var(--forest);font-weight:700}
 .map-muted{color:var(--muted);font-size:12px}.map-chip{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 9px;background:#edf0e8;font-size:12px}
 .map-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--paper)}
 .map-form label{display:grid;gap:5px;font-size:12px;color:var(--muted)}.map-form input,.map-form select,.map-form textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;color:var(--ink)}.map-form textarea{min-height:68px}.map-form .wide{grid-column:1/-1}
@@ -66,7 +68,7 @@ root.innerHTML=`
 <div class="map-muted" style="margin-top:12px">Новые места и впечатления сначала проходят модерацию. В первой версии карта работает онлайн.</div>
 `;
 const categories=["Природа","Красивые места","Деревни и города","История и культура","Люди и ремёсла","Еда","Ночлег","Активный отдых","Другое"];
-let map=null,layerControl=null,markers=null,routeLine=null,places=[],routes=[],activeMode="map",activeLayer="standard",currentPlace=null,leafletReady=false;
+let map=null,layerControl=null,markers=null,routeLine=null,places=[],routes=[],meetings=[],activeMode="map",activeLayer="standard",currentPlace=null,leafletReady=false;
 let placePickerMap=null,placePickerMarker=null,placePickerClickHandler=null,selectedPlaceLocation=null,geocoderLastRequest=0;
 const geocoderCache=new Map();
 const tileLayers={
@@ -74,8 +76,31 @@ const tileLayers={
  satellite:{url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",attr:'Tiles © <a href="https://www.esri.com/">Esri</a>'},
  terrain:{url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",attr:'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, style © <a href="https://opentopomap.org/">OpenTopoMap</a>'}
 };
-function api(path,options={}){const initData=window.Telegram?.WebApp?.initData;const headers={...(options.headers||{})};if(initData)headers["X-Telegram-Init-Data"]=initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
+function api(path,options={}){const headers={...(options.headers||{})};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");return fetch(path,{...options,headers}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok){const matches=data.matches?.map(item=>item.title).filter(Boolean).join(", ");throw new Error((data.error||"Ошибка запроса")+(matches?" Возможные совпадения: "+matches:""))}return data})}
 function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function showToast(message){if(typeof window.toast==="function")window.toast(message);else console.info(message)}
+function hasOwnerSession(){return Boolean(window.Telegram?.WebApp?.initData||localStorage.getItem("yugorno-session")||window.yugornoLocalDemo)}
+function requireOwnerSession(){if(hasOwnerSession())return true;showToast("Чтобы открыть корзину и управлять публикациями, войдите в аккаунт.");return false}
+async function askUserConfirmation(message){if(typeof window.askConfirm==="function")return window.askConfirm(message);return window.confirm(message)}
+
+function miniMapPreview(latValue,lngValue,label){
+ if(latValue===null||latValue===undefined||latValue===""||lngValue===null||lngValue===undefined||lngValue==="")return '<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">📍</div>';
+ const lat=Number(latValue),lng=Number(lngValue);if(!Number.isFinite(lat)||!Number.isFinite(lng))return '<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">📍</div>';
+ const padLat=.003,padLng=Math.max(.003,.006/Math.max(.2,Math.cos(lat*Math.PI/180)));
+ const bbox=[lng-padLng,lat-padLat,lng+padLng,lat+padLat].map(value=>value.toFixed(6)).join(",");
+ const src="https://www.openstreetmap.org/export/embed.html?bbox="+bbox+"&layer=mapnik&marker="+lat.toFixed(6)+","+lng.toFixed(6);
+ return '<iframe class="map-card-preview" src="'+safe(src)+'" title="Карта: '+safe(label||"место")+'" loading="lazy" referrerpolicy="no-referrer"></iframe>';
+}
+function mapCardMedia(content,kind,id,label){const attr=kind==="place"?"data-place":kind==="route"?"data-route":"data-meeting";return '<div class="map-card-media">'+content+'<button type="button" class="map-card-open" '+attr+'="'+safe(id)+'" aria-label="Открыть публикацию: '+safe(label||"")+'"></button></div>'}
+function routeSchematic(route){
+ const source=Array.isArray(route.trackPoints)&&route.trackPoints.length>1?route.trackPoints:(route.stops||[]).filter(stop=>Number.isFinite(Number(stop.lat))&&Number.isFinite(Number(stop.lng)));
+ const pts=source.map(p=>({lat:Number(p.lat),lng:Number(p.lng)})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lng));if(pts.length<2)return "";
+ const minLat=Math.min(...pts.map(p=>p.lat)),maxLat=Math.max(...pts.map(p=>p.lat)),minLng=Math.min(...pts.map(p=>p.lng)),maxLng=Math.max(...pts.map(p=>p.lng)),dLat=Math.max(.0001,maxLat-minLat),dLng=Math.max(.0001,maxLng-minLng);
+ const xy=pts.map(p=>({x:12+(p.lng-minLng)/dLng*276,y:12+(maxLat-p.lat)/dLat*88}));
+ const path=xy.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ");
+ return '<svg class="map-route-preview" viewBox="0 0 300 112" role="img" aria-label="Схема маршрута по координатам"><rect width="300" height="112" rx="10" fill="#e9eee5"/><path d="M0 28H300M0 56H300M0 84H300M75 0V112M150 0V112M225 0V112" stroke="#cbd5c8" stroke-dasharray="3 5"/><path d="'+path+'" fill="none" stroke="#315548" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+xy[0].x.toFixed(1)+'" cy="'+xy[0].y.toFixed(1)+'" r="5" fill="#d87945" stroke="#fff" stroke-width="2"/><circle cx="'+xy[xy.length-1].x.toFixed(1)+'" cy="'+xy[xy.length-1].y.toFixed(1)+'" r="5" fill="#d87945" stroke="#fff" stroke-width="2"/></svg>';
+}
+
 function showToast(message){if(typeof window.toast==="function")window.toast(message);else console.info(message)}
 async function askUserConfirmation(message){if(typeof window.askConfirm==="function")return window.askConfirm(message);return window.confirm(message)}
 function loadScript(src){return new Promise((resolve,reject)=>{const s=document.createElement("script");s.src=src;s.onload=resolve;s.onerror=()=>reject(new Error("Не удалось загрузить библиотеку карты"));document.head.append(s)})}
@@ -84,22 +109,54 @@ function initMap(){if(map||!window.L)return;map=L.map("yugorno-map",{zoomControl
 function setLayer(name){if(!map||!tileLayers[name])return;activeLayer=name;map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});const conf=tileLayers[name];L.tileLayer(conf.url,{attribution:conf.attr,maxZoom:name==="terrain"?17:19,crossOrigin:true}).addTo(map);document.querySelectorAll("[data-layer]").forEach(b=>b.classList.toggle("active",b.dataset.layer===name));}
 function iconFor(category){const icons={"Природа":"🌿","Красивые места":"⛰️","Деревни и города":"🏡","История и культура":"🏛️","Люди и ремёсла":"🧶","Еда":"🍲","Ночлег":"🛏️","Активный отдых":"🥾","Другое":"📍"};return icons[category]||"📍"}
 function markerIcon(category){return L.divIcon({className:"",html:'<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#315548;border:2px solid #fff;box-shadow:0 2px 8px #0004;display:grid;place-items:center"><span style="transform:rotate(45deg);font-size:16px">'+iconFor(category)+'</span></div>',iconSize:[34,34],iconAnchor:[17,34]})}
-function renderPlaces(){if(!markers)return;markers.clearLayers();places.forEach(p=>{if(!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lng)))return;const marker=L.marker([p.lat,p.lng],{icon:markerIcon(p.category)}).bindPopup('<b>'+safe(p.title)+'</b><br>'+safe(p.category)+'<br><button type="button" data-open-place="'+safe(p.id)+'">Подробнее</button>');marker.on("popupopen",()=>{const el=document.querySelector('[data-open-place="'+CSS.escape(p.id)+'"]');el?.addEventListener("click",()=>openPlace(p.id),{once:true})});marker.addTo(markers)});renderSide()}
+function renderPlaces(){
+ if(markers){
+  markers.clearLayers();
+  places.forEach(p=>{
+   if(!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lng)))return;
+   const marker=L.marker([p.lat,p.lng],{icon:markerIcon(p.category)}).bindPopup('<b>'+safe(p.title)+'</b><br>'+safe(p.category)+'<br><button type="button" class="map-popup-open" data-open-place="'+safe(p.id)+'" aria-label="Открыть место">↗</button>');
+   marker.on("popupopen",()=>{const el=document.querySelector('[data-open-place="'+CSS.escape(p.id)+'"]');el?.addEventListener("click",()=>openPlace(p.id),{once:true})});
+   marker.addTo(markers);
+  });
+  meetings.forEach(item=>{
+   if(item.lat===null||item.lat===undefined||item.lat===""||item.lng===null||item.lng===undefined||item.lng===""||!Number.isFinite(Number(item.lat))||!Number.isFinite(Number(item.lng)))return;
+   const icon=L.divIcon({className:"",html:'<div style="width:34px;height:34px;border-radius:50%;background:#d87945;border:2px solid #fff;box-shadow:0 2px 8px #0004;display:grid;place-items:center;font-size:17px">🤝</div>',iconSize:[34,34],iconAnchor:[17,17]});
+   const marker=L.marker([item.lat,item.lng],{icon}).bindPopup('<b>'+safe(item.title)+'</b><br>Встреча · '+safe(item.date||"")+'<br><button type="button" class="map-popup-open" data-open-meeting="'+safe(item.id)+'" aria-label="Открыть встречу">↗</button>');
+   marker.on("popupopen",()=>{const el=document.querySelector('[data-open-meeting="'+CSS.escape(item.id)+'"]');el?.addEventListener("click",()=>window.openTripDetails?.(item.id),{once:true})});
+   marker.addTo(markers);
+  });
+ }
+ renderSide();
+}
 function renderSide(){
  const host=document.getElementById("map-side-content");
+ if(!host)return;
  if(activeMode==="routes"){
   document.getElementById("map-side-title").textContent="Опубликованные маршруты";
-  host.innerHTML=routes.length?routes.map(r=>{const cover=r.stops?.find(stop=>stop.photoUrls?.[0])?.photoUrls?.[0];return '<article class="map-place map-place-card">'+(cover?'<img class="map-place-photo" src="'+safe(cover)+'" alt="'+safe(r.title)+'" loading="lazy">':'<div class="map-place-photo" aria-hidden="true" style="display:grid;place-items:center;font-size:30px">🧭</div>')+'<button type="button" data-route="'+safe(r.id)+'">'+safe(r.title)+'</button><div class="map-muted">'+safe(r.transport)+' · '+(r.stopIds?.length||0)+' остановок'+(r.trackPoints?.length?' · GPS-трек':'')+'</div><p>'+safe((r.stops||[]).map(s=>s.title).join(" → "))+'</p><p>'+safe(r.description)+'</p><div class="map-toolbar"><button type="button" data-export-gpx="'+safe(r.id)+'">Экспорт GPX</button></div></article>'}).join(""):'<div class="map-empty">Пока нет опубликованных маршрутов. Создать маршрут можно после добавления мест.</div>';
+  host.innerHTML=routes.length?routes.map(r=>{
+   const cover=r.stops?.find(stop=>stop.photoUrls?.[0])?.photoUrls?.[0];
+   const preview=cover?'<img class="map-place-photo" src="'+safe(cover)+'" alt="'+safe(r.title)+'" loading="lazy">':routeSchematic(r);
+   return '<article class="map-place map-place-card">'+mapCardMedia(preview||'<div class="map-place-photo" aria-hidden="true" style="display:grid;place-items:center;font-size:30px">🧭</div>',"route",r.id,r.title)+'<div class="map-card-title-row"><strong>'+safe(r.title)+'</strong><button type="button" class="card-icon-action" data-route="'+safe(r.id)+'" aria-label="Открыть маршрут '+safe(r.title)+'" title="Открыть маршрут"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div><div class="map-muted">'+safe(r.transport)+' · '+(r.stopIds?.length||0)+' остановок'+(r.trackPoints?.length?' · GPS-трек':'')+'</div><p>'+safe((r.stops||[]).map(s=>s.title).join(" → "))+'</p><p>'+safe(r.description)+'</p><div class="map-card-actions"><button type="button" class="card-icon-action" data-export-gpx="'+safe(r.id)+'" aria-label="Экспортировать GPX: '+safe(r.title)+'" title="Экспорт GPX"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 20h16"/></svg></button></div></article>';
+  }).join(""):'<div class="map-empty">Пока нет опубликованных маршрутов. Создать маршрут можно после добавления мест.</div>';
   host.querySelectorAll("[data-route]").forEach(b=>b.onclick=()=>{const route=routes.find(r=>r.id===b.dataset.route);if(route)renderRouteOnMap(route)});
   host.querySelectorAll("[data-export-gpx]").forEach(b=>b.onclick=()=>{const route=routes.find(r=>r.id===b.dataset.exportGpx);if(route)downloadGPX(route)});
   return;
  }
  document.getElementById("map-side-title").textContent=activeMode==="list"?"Список мест":"Места на карте";
- host.innerHTML=places.length?places.map(p=>'<article class="map-place map-place-card">'+(p.photoUrls?.[0]?'<img class="map-place-photo" src="'+safe(p.photoUrls[0])+'" alt="'+safe(p.title)+'" loading="lazy">':'<div class="map-place-photo" aria-hidden="true" style="display:grid;place-items:center;font-size:30px">🌿</div>')+'<button type="button" data-place="'+safe(p.id)+'">'+safe(p.title)+'</button><div class="map-muted">'+iconFor(p.category)+' '+safe(p.category)+(p.region?' · '+safe(p.region):'')+'</div><p>'+safe(p.description||"Описание пока не добавлено")+'</p></article>').join(""):'<div class="map-empty">Пока нет опубликованных мест. Добавь первое открытие Югорно.</div>';
+ host.innerHTML=places.length?places.map(p=>'<article class="map-place map-place-card">'+mapCardMedia(p.photoUrls?.[0]?'<img class="map-place-photo" src="'+safe(p.photoUrls[0])+'" alt="'+safe(p.title)+'" loading="lazy">':miniMapPreview(p.lat,p.lng,p.title),"place",p.id,p.title)+'<div class="map-card-title-row"><strong>'+safe(p.title)+'</strong><button type="button" class="card-icon-action" data-place="'+safe(p.id)+'" aria-label="Открыть место '+safe(p.title)+'" title="Открыть место"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div><div class="map-muted">'+iconFor(p.category)+' '+safe(p.category)+(p.region?' · '+safe(p.region):'')+'</div><p>'+safe(p.description||"Описание пока не добавлено")+'</p></article>').join(""):(meetings.length?'':'<div class="map-empty">Пока нет опубликованных мест или встреч. Добавь первое открытие Югорно.</div>');
  host.querySelectorAll("[data-place]").forEach(b=>b.addEventListener("click",()=>openPlace(b.dataset.place)));
+ if(meetings.length){
+  host.insertAdjacentHTML("beforeend",meetings.map(item=>{
+   const cover=item.imageUrl||item.imageUrls?.[0],preview=cover?'<img class="map-place-photo" src="'+safe(cover)+'" alt="'+safe(item.title)+'" loading="lazy">':miniMapPreview(item.lat,item.lng,item.title);
+   return '<article class="map-place map-place-card">'+mapCardMedia(preview||'<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">🤝</div>',"meeting",item.id,item.title)+'<div class="map-card-title-row"><strong>'+safe(item.title)+'</strong><button type="button" class="card-icon-action" data-meeting="'+safe(item.id)+'" aria-label="Открыть встречу '+safe(item.title)+'" title="Открыть встречу"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div><div class="map-muted">🤝 Встреча · '+safe(item.date||"")+'</div><p>'+safe(item.place||"")+'</p></article>';
+  }).join(""));
+  host.querySelectorAll("[data-meeting]").forEach(button=>button.onclick=()=>window.openTripDetails?.(button.dataset.meeting));
+ }
 }
+
 async function loadPlaces(){try{const params=new URLSearchParams();const q=document.getElementById("map-search").value.trim(),cat=document.getElementById("map-category").value;if(q)params.set("q",q);if(cat)params.set("category",cat);if(map&&activeMode==="map"){const b=map.getBounds();params.set("west",b.getWest());params.set("east",b.getEast());params.set("south",b.getSouth());params.set("north",b.getNorth())}const data=await api("/api/places?"+params);places=data.items;renderPlaces()}catch(e){document.getElementById("map-side-content").innerHTML='<div class="map-empty">Не удалось загрузить места. '+safe(e.message)+'</div>'}}
-async function loadRoutes(){try{routes=(await api("/api/routes")).items;renderSide();if(window.Telegram?.WebApp?.initData||window.yugornoLocalDemo){const b=document.createElement("button");b.className="btn";b.textContent="＋ Создать маршрут";b.onclick=showRouteForm;document.getElementById("map-side-content").prepend(b)}}catch(e){showToast("Маршруты пока недоступны: "+e.message)}}
+async function loadMeetings(){try{meetings=((await api("/api/trips")).items||[]).filter(item=>item.kind==="Встреча")}catch{meetings=[]}renderPlaces()}
+async function loadRoutes(){try{routes=(await api("/api/routes")).items;renderSide();if(window.Telegram?.WebApp?.initData||localStorage.getItem("yugorno-session")||window.yugornoLocalDemo){const b=document.createElement("button");b.className="btn";b.textContent="＋ Создать маршрут";b.onclick=showRouteForm;document.getElementById("map-side-content").prepend(b)}}catch(e){showToast("Маршруты пока недоступны: "+e.message)}}
 async function showRouteForm(){
  try{
   places=(await api("/api/places")).items;
@@ -132,8 +189,8 @@ function selectPlaceLocation(lat,lng,label){
  lat=Number(lat);lng=Number(lng);
  if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat< -90||lat>90||lng< -180||lng>180)throw new Error("Не удалось определить корректную точку");
  selectedPlaceLocation={lat,lng,label:String(label||"Выбранная точка")};
- const form=document.getElementById("new-place-form");
- if(form){form.elements.lat.value=String(lat);form.elements.lng.value=String(lng)}
+ const form=document.getElementById("new-place-form")||document.getElementById("owner-edit-form");
+ if(form?.elements.lat&&form?.elements.lng){form.elements.lat.value=String(lat);form.elements.lng.value=String(lng)}
  const status=document.getElementById("place-location-status");
  if(status)status.textContent="✓ "+selectedPlaceLocation.label;
  if(placePickerMap){
@@ -229,10 +286,10 @@ function useDeviceLocation(){
   finally{button.disabled=false}
  },error=>{button.disabled=false;showToast(error.code===1?"Разреши доступ к местоположению в браузере":error.code===2?"Не удалось определить местоположение":"Истекло время ожидания GPS")},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
-function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon с резервным OpenStreetMap Nominatim. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотографии места (до 8 файлов, JPEG, PNG или WebP, каждый до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-track-note" id="new-place-photo-gps">GPS фотографий проверяется на этом устройстве. Если координат нет, приложение предложит указать место на карте или через поиск.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
+function formMarkup(){return '<form class="map-form" id="new-place-form"><label>Название места<input name="title" maxlength="120" required placeholder="Например, озеро или смотровая площадка"></label><label>Категория<select name="category">'+categories.map(c=>'<option>'+safe(c)+'</option>').join("")+'</select></label><div class="wide"><strong>Где находится место?</strong><div class="map-muted">Найди его по названию или адресу, отметь точку на карте либо используй GPS.</div></div><div class="wide map-muted">Поиск через Photon с резервным OpenStreetMap Nominatim. Данные OpenStreetMap: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>.</div><div class="wide map-toolbar"><input id="place-location-query" type="search" placeholder="Название места, деревни или адрес" aria-label="Поиск места или адреса"><button class="btn outline" type="button" id="place-location-search">Найти</button><button class="btn outline" type="button" id="place-location-gps">Моё местоположение</button></div><div class="wide" id="place-location-results" aria-live="polite"></div><div class="wide" id="place-location-map" role="application" aria-label="Выбор точки на карте" style="height:260px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div class="wide map-track-note" id="place-location-status" aria-live="polite">Точка ещё не выбрана. Нажми на карту или выбери результат поиска.</div><input type="hidden" name="lat"><input type="hidden" name="lng"><label>Регион<input name="region" maxlength="120" placeholder="Республика Марий Эл"></label><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000" placeholder="Что здесь интересного?"></textarea></label><label class="wide">Фотографии места (до 8 файлов, JPEG, PNG или WebP, каждый до 15 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-track-note" id="new-place-photo-gps">GPS фотографий проверяется на этом устройстве. Если координат нет, приложение предложит указать место на карте или через поиск.</div><button class="btn outline wide" type="button" id="new-place-use-gps" hidden>Выбрать точку из фотографии</button><div class="wide map-muted">Публикация появится на общей карте после проверки. Для уязвимых природных объектов выбирай приблизительные координаты. EXIF будет удалён до загрузки фотографии.</div><button class="btn" type="submit">Отправить на проверку</button><button class="btn outline" type="button" id="map-form-cancel">Отмена</button></form>'}
 function bindAdd(){
  document.getElementById("map-add-btn").addEventListener("click",()=>{
-  if(!window.Telegram?.WebApp?.initData&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}
+  if(!window.Telegram?.WebApp?.initData&&!localStorage.getItem("yugorno-session")&&!window.yugornoLocalDemo){showToast("Добавление мест доступно после входа в Telegram");return}
   const host=document.getElementById("map-form-host");destroyPlacePicker();host.innerHTML=formMarkup();
   const form=document.getElementById("new-place-form"),photoInput=form.querySelector('input[name="photo"]'),gpsStatus=document.getElementById("new-place-photo-gps"),useGps=document.getElementById("new-place-use-gps");
   const locationSearch=document.getElementById("place-location-search"),locationQuery=document.getElementById("place-location-query");
@@ -284,7 +341,7 @@ async function openPlace(id){
   const data=await api("/api/places/"+encodeURIComponent(id)),p=data.item;currentPlace=p;
   const impressions=data.impressions||[];
   const placePhotoHtml=(p.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография места" loading="lazy"></a>').join("");
-  const impressionHtml=impressions.map(i=>'<div class="map-place">'+(i.text?'<p>'+safe(i.text)+'</p>':'')+(i.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография впечатления" loading="lazy"></a>').join("")+'</div>').join("");
+  const impressionHtml=impressions.map(i=>'<div class="map-place">'+(i.text?'<p>'+safe(i.text)+'</p>':'')+((i.photoUrls||[]).length?(i.photoUrls||[]).map(url=>'<a href="'+safe(url)+'" target="_blank" rel="noopener"><img class="map-impression-photo" src="'+safe(url)+'" alt="Фотография впечатления" loading="lazy"></a>').join(""):miniMapPreview(p.lat,p.lng,p.title))+'</div>').join("");
   const actions='<button type="button" class="btn outline" id="save-place">Сохранить</button><button type="button" class="btn outline" id="copy-coords">Координаты</button><button type="button" class="btn outline" id="open-nav">Навигатор</button>';
   document.getElementById("map-side-title").textContent=p.title;
   document.getElementById("map-side-content").innerHTML='<div class="map-chip">'+iconFor(p.category)+' '+safe(p.category)+'</div><p>'+safe(p.description||"Описание пока не добавлено")+'</p><div class="map-muted">'+safe(p.region||"")+' · '+safe(p.author||"Автор")+'</div><div class="map-toolbar">'+actions+'</div><h4>Фотографии места</h4>'+(placePhotoHtml?'<div class="map-moderation-gallery">'+placePhotoHtml+'</div>':'<div class="map-muted">Фотографии места не добавлены</div>')+'<h4>Впечатления</h4>'+(impressionHtml||'<div class="map-muted">Пока нет опубликованных впечатлений</div>');
@@ -292,7 +349,7 @@ async function openPlace(id){
   document.getElementById("copy-coords").onclick=()=>navigator.clipboard?.writeText(p.lat+", "+p.lng).then(()=>showToast("Координаты скопированы"));
   document.getElementById("open-nav").onclick=()=>window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(p.lat+","+p.lng),"_blank","noopener");
   const form=document.createElement("form");form.className="map-form";
-  form.innerHTML='<label class="wide">Добавить впечатление<textarea name="text" maxlength="3000" placeholder="Совет, наблюдение или история"></textarea></label><label class="wide">Фотография (JPEG, PNG или WebP, до 5 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="impression-photo-gps">EXIF проверяется на устройстве; перед загрузкой GPS-метаданные удаляются.</div><button class="btn" type="submit">Отправить на проверку</button>';
+  form.innerHTML='<label class="wide">Добавить впечатление<textarea name="text" maxlength="3000" placeholder="Совет, наблюдение или история"></textarea></label><label class="wide">Фотография (JPEG, PNG или WebP, до 15 МБ)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"></label><div class="wide map-track-note" id="impression-photo-gps">EXIF проверяется на устройстве; перед загрузкой GPS-метаданные удаляются.</div><button class="btn" type="submit">Отправить на проверку</button>';
   form.onsubmit=async e=>{
    e.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
    try{
@@ -308,7 +365,7 @@ async function openPlace(id){
 }
 async function uploadImage(file){
  if(!file||!/^image\/(jpeg|png|webp)$/.test(file.type))throw new Error("Поддерживаются JPEG, PNG и WebP");
- if(file.size>5*1024*1024)throw new Error("Файл больше 5 МБ");
+ if(file.size>15*1024*1024)throw new Error("Файл больше 15 МБ");
  if(typeof createImageBitmap!=="function")throw new Error("Браузер не поддерживает безопасную обработку изображения");
  const bitmap=await createImageBitmap(file);
  if(bitmap.width*bitmap.height>25000000){bitmap.close?.();throw new Error("Слишком большое разрешение изображения. Уменьшите фото перед загрузкой");}
@@ -362,9 +419,12 @@ function renderRouteOnMap(route){
 async function checkModerator(){
  try{
   await api("/api/moderation/places");
-  const button=document.createElement("button");button.type="button";button.textContent="Модерация";
-  button.onclick=loadModeration;document.getElementById("map-add-btn").after(button);
- }catch{}
+  const anchor=document.getElementById("map-add-btn");
+  let button=document.getElementById("map-moderation-btn");
+  if(anchor&&!button){button=document.createElement("button");button.id="map-moderation-btn";button.type="button";button.textContent="Модерация";anchor.after(button)}
+  if(button)button.onclick=loadModeration;
+  return true;
+ }catch{document.getElementById("map-moderation-btn")?.remove();return false}
 }
 async function loadModeration(){
  try{
@@ -391,22 +451,164 @@ async function loadModeration(){
    const parent=parentDetails.get(item.placeId),parentTitle=parent?.title||"Место из каталога";
    return '<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Впечатление · ожидает решения</span><span class="map-muted">'+safe(item.author||"Автор не указан")+'</span></div><strong class="map-moderation-title">'+safe(parentTitle)+'</strong><p class="map-moderation-description">'+safe(item.text||"Автор добавил фотографию без текста.")+'</p>'+imageMarkup(item.photoUrls)+'<div class="map-moderation-meta">'+(parent?.region?'<span>'+safe(parent.region)+'</span>':'')+'</div>'+actionMarkup("impressions",item.id)+'</article>';
   });
-  const routeCards=pendingRoutes.map(item=>'<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Маршрут · ожидает решения</span></div><strong class="map-moderation-title">'+safe(item.title||"Без названия")+'</strong><p class="map-moderation-description">'+safe(item.description||"Автор не добавил описание.")+'</p>'+(item.stops?.length?'<div class="map-moderation-note">Остановки: '+safe(item.stops.map(stop=>stop.title).join(" → "))+'</div>':'')+actionMarkup("routes",item.id)+'</article>');
+  const routeCards=pendingRoutes.map(item=>'<article class="map-moderation"><div class="map-moderation-head"><span class="map-moderation-kind">Маршрут · ожидает решения</span></div><strong class="map-moderation-title">'+safe(item.title||"Без названия")+'</strong><p class="map-moderation-description">'+safe(item.description||"Автор не добавил описание.")+'</p>'+(item.stops?.length?'<div class="map-moderation-note">Остановки: '+safe(item.stops.map((stop,index)=>(index+1)+'. '+stop.title).join(" → "))+'</div>':'<div class="map-moderation-note">Остановки не указаны.</div>')+'<button type="button" data-mod-preview-route="'+safe(item.id)+'">Просмотреть маршрут на карте</button>'+actionMarkup("routes",item.id)+'</article>');
   const cards=[...placeCards,...looseImpressions,...routeCards];
   document.getElementById("map-side-title").textContent="Очередь модерации · "+cards.length;
   host.innerHTML=cards.length?cards.join(""):'<div class="map-empty">Очередь пуста. Новых материалов на проверке нет.</div>';
   for(const img of host.querySelectorAll("img[data-private-image]")){
-   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}else{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Фото недоступно для просмотра</span>');img.closest("a")?.remove()}}catch{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Не удалось загрузить фото</span>');img.closest("a")?.remove()}
+   try{const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";const response=await fetch(img.dataset.privateImage,{headers});if(response.ok){const objectUrl=URL.createObjectURL(await response.blob());img.src=objectUrl;img.dataset.objectUrl=objectUrl}else{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Фото недоступно для просмотра</span>');img.closest("a")?.remove()}}catch{img.closest("a")?.insertAdjacentHTML("afterend",'<span class="map-muted">Не удалось загрузить фото</span>');img.closest("a")?.remove()}
   }
+  host.querySelectorAll("[data-mod-preview-route]").forEach(button=>button.onclick=()=>{const route=pendingRoutes.find(item=>item.id===button.dataset.modPreviewRoute);if(route)renderRouteOnMap(route)});
   host.querySelectorAll("[data-mod-status]").forEach(button=>button.onclick=async()=>{
    button.disabled=true;
-   try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});const published=button.dataset.modStatus==="published";showToast(button.dataset.modKind==="places"?(published?"Место и все его фотографии опубликованы":"Заявка на место и связанные материалы отклонены"):(published?"Материал опубликован":"Материал отклонён"));loadModeration()}
+   try{await api("/api/moderation/"+button.dataset.modKind+"/"+encodeURIComponent(button.dataset.modId),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:button.dataset.modStatus})});const published=button.dataset.modStatus==="published";showToast(button.dataset.modKind==="places"?(published?"Место и все его фотографии опубликованы":"Заявка на место и связанные материалы отклонены"):(published?"Материал опубликован":"Материал отклонён"));await loadModeration();if(published&&button.dataset.modKind==="places"){await loadPlaces();await window.loadJourneyTab?.("points",true)}else if(published&&button.dataset.modKind==="routes"){await loadRoutes();await window.loadJourneyTab?.("routes",true)}}
    catch(error){button.disabled=false;showToast(error.message)}
   });
  }catch(error){showToast("Не удалось открыть очередь модерации: "+error.message)}
 }
-function bindControls(){const saved=document.createElement("button");saved.type="button";saved.textContent="Сохранённое";saved.onclick=async()=>{try{const data=await api("/api/my/saved-places");document.getElementById("map-side-title").textContent="Сохранённые места";document.getElementById("map-side-content").innerHTML=data.items.length?data.items.map(p=>'<div class="map-place"><button type="button" data-place="'+safe(p.id)+'">'+safe(p.title)+'</button><div class="map-muted">'+safe(p.category)+'</div></div>').join(""):'<div class="map-empty">Пока ничего не сохранено</div>';document.getElementById("map-side-content").querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>openPlace(b.dataset.place))}catch(e){showToast(e.message)}};document.getElementById("map-add-btn").after(saved);document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));document.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>setLayer(b.dataset.layer)));document.getElementById("map-search-btn").onclick=loadPlaces;document.getElementById("map-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadPlaces()});document.getElementById("map-category").onchange=loadPlaces}
-window.YugornoMap={openPlace:id=>{if(typeof window.showView==="function")window.showView("map");setTimeout(()=>openPlace(id),140)},showRoute:async id=>{try{routes=(await api("/api/routes")).items;const route=routes.find(item=>item.id===id);if(!route)return;if(typeof window.showView==="function")window.showView("map");setTimeout(()=>renderRouteOnMap(route),180)}catch(error){showToast("Не удалось открыть маршрут: "+error.message)}},refreshPlaces:()=>loadPlaces()};
-async function boot(){try{await ensureLeaflet();if(!window.L.markerClusterGroup){for(const [key,url] of [["mc","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"],["mcd","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"]]){const link=document.createElement("link");link.rel="stylesheet";link.href=url;link.dataset[key]="1";document.head.append(link)}await loadScript("https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")}initMap();bindControls();bindAdd();checkModerator();setLayer("standard");await loadPlaces();document.querySelector('[data-mode="map"]').classList.add("active");document.querySelectorAll('.nav button[data-view="map"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>{map?.invalidateSize();loadPlaces()},100)));}catch(e){document.getElementById("yugorno-map").innerHTML='<div class="map-empty">Не удалось загрузить карту. Проверь подключение к интернету.</div>';console.error(e)}}
+
+async function trashOwnerPublication(kind,id,title,button=null){
+ if(!requireOwnerSession())return;
+ if(!await askUserConfirmation('Переместить «'+title+'» в корзину? Её можно будет восстановить.'))return;
+ if(button){button.disabled=true;button.setAttribute("aria-busy","true")}
+ try{
+  await api('/api/my/publications/'+encodeURIComponent(kind)+'/'+encodeURIComponent(id),{method:'DELETE'});
+  const refreshes=await Promise.allSettled([loadPlaces(),api("/api/routes").then(data=>{routes=data.items||[];if(activeMode==="routes")renderSide()}),window.loadJourneyTab?.("points",true),window.loadJourneyTab?.("routes",true)]);
+  refreshes.forEach(result=>{if(result.status==="rejected")console.warn("После переноса публикации не обновился один из списков:",result.reason?.message||result.reason)});
+  await loadMyTrash();
+  showToast('Публикация перемещена в корзину');
+ }catch(error){
+  showToast('Не удалось переместить в корзину: '+error.message);
+  if(button){button.disabled=false;button.removeAttribute("aria-busy")}
+ }
+}
+async function loadMyTrash(){
+ if(!requireOwnerSession())return;
+ try{
+  const data=await api('/api/my/trash'),items=Array.isArray(data.items)?data.items:[],host=document.getElementById('map-side-content');
+  if(!host)throw new Error("Не найден список корзины");
+  releaseOwnerImages(host);
+  document.getElementById('map-side-title').textContent='Корзина · '+items.length;
+  host.innerHTML=items.length?items.map(item=>'<article class="map-place map-place-card"><strong>'+safe(item.title)+'</strong><div class="map-muted">'+safe(({place:'Точка',route:'Маршрут',impression:'Впечатление',trip:'Путешествие или встреча',community:'Сообщество'})[item.kind]||item.kind)+' · '+safe(item.deletedAt?new Date(item.deletedAt).toLocaleString('ru-RU'):'')+'</div><div class="map-card-actions"><button type="button" class="card-icon-action" data-trash-restore="'+safe(item.kind)+'" data-trash-id="'+safe(item.id)+'" aria-label="Восстановить '+safe(item.title)+'" title="Восстановить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 7v5l3 2"/></svg></button></div></article>').join(''):'<div class="map-empty">Корзина пуста.</div>';
+  host.querySelectorAll('[data-trash-restore]').forEach(button=>button.onclick=async()=>{
+   const kind=button.dataset.trashRestore;button.disabled=true;
+   try{
+    await api('/api/my/trash/'+encodeURIComponent(kind)+'/'+encodeURIComponent(button.dataset.trashId)+'/restore',{method:'POST'});
+    const refreshes=[loadMyPublications(),loadPlaces(),api('/api/routes').then(result=>{routes=result.items||[];if(activeMode==="routes")renderSide()})];
+    if(kind==='trip')refreshes.push(window.loadPublishedTrips?.(),window.loadMyTrips?.());
+    else if(kind==='community')refreshes.push(window.loadPublishedCommunities?.(),window.loadMyCommunities?.());
+    await Promise.allSettled(refreshes);
+    await loadMyTrash();
+    showToast('Публикация восстановлена');
+   }catch(error){button.disabled=false;showToast('Не удалось восстановить публикацию: '+error.message)}
+  });
+ }catch(error){showToast('Не удалось открыть корзину: '+error.message)}
+}
+
+async function loadMyPublications(){
+ if(!requireOwnerSession())return;
+ try{
+  const [p,r,i]=await Promise.all([api("/api/my/places"),api("/api/my/routes"),api("/api/my/impressions")]);
+  const items=[
+   ...(p.items||[]).map(item=>({...item,ownerKind:"place"})),
+   ...(r.items||[]).map(item=>({...item,ownerKind:"route"})),
+   ...(i.items||[]).map(item=>({...item,ownerKind:"impression"}))
+  ].sort((a,b)=>String(b.updatedAt||b.createdAt||"").localeCompare(String(a.updatedAt||a.createdAt||"")));
+  const host=document.getElementById("map-side-content");
+  releaseOwnerImages(host);
+  document.getElementById("map-side-title").textContent="Мои публикации · "+items.length;
+  host.innerHTML=items.length?items.map(item=>{
+   const cover=item.ownerKind==="place"?item.photoUrls?.[0]:item.ownerKind==="impression"?item.photoUrls?.[0]:item.stops?.find(stop=>stop.photoUrls?.[0])?.photoUrls?.[0];
+   const kind={place:"Точка",route:"Маршрут",impression:"Впечатление"}[item.ownerKind];
+   const fallback=item.ownerKind==="impression"?miniMapPreview(item.placeLat,item.placeLng,item.placeTitle):"";
+   const image=cover?'<img class="map-place-photo" data-owner-private-image="'+safe(cover)+'" alt="'+safe(item.title||item.placeTitle||kind)+'" loading="lazy">':(fallback||'<div class="map-place-photo" style="display:grid;place-items:center;font-size:28px">'+(item.ownerKind==="route"?"🧭":item.ownerKind==="impression"?"📷":"📍")+'</div>');
+   const title=item.title||item.placeTitle||"Впечатление";
+   const description=item.ownerKind==="place"?item.description:item.ownerKind==="route"?(item.description||(item.stops||[]).map(stop=>stop.title).join(" → ")):item.text;
+   return '<article class="map-place map-place-card">'+image+'<strong>'+safe(title)+'</strong><div class="map-muted">'+kind+' · Статус: '+safe(item.status||"")+'</div>'+(description?'<p class="map-owner-description">'+safe(description)+'</p>':'<p class="map-owner-description">Описание пока не добавлено</p>')+'<div class="map-card-actions">'+((item.status==="hidden"||item.status==="archived")?'':'<button type="button" class="map-owner-action" data-owner-edit="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'" aria-label="Редактировать '+safe(title)+'" title="Редактировать">Редактировать</button>')+'<button type="button" class="map-owner-action map-owner-action-danger" data-owner-trash="'+safe(item.ownerKind)+'" data-owner-id="'+safe(item.id)+'" data-owner-title="'+safe(title)+'" aria-label="Переместить в корзину: '+safe(title)+'" title="В корзину">В корзину</button></div></article>';
+  }).join(""):'<div class="map-empty">Пока нет собственных публикаций.</div>';
+  hydrateOwnerImages(host);
+  host.querySelectorAll("[data-owner-trash]").forEach(button=>button.onclick=event=>{event.preventDefault();trashOwnerPublication(button.dataset.ownerTrash,button.dataset.ownerId,button.dataset.ownerTitle,button)});
+  host.querySelectorAll("[data-owner-edit]").forEach(button=>button.onclick=()=>{
+   const kind=button.dataset.ownerEdit,id=button.dataset.ownerId,item=items.find(entry=>entry.ownerKind===kind&&entry.id===id);
+   if(!item)return;
+   if(kind==="place")editOwnPlace(item);
+   else if(kind==="route")editOwnRoute(item);
+   else editOwnImpression(item);
+  });
+ }catch(error){showToast("Не удалось загрузить ваши публикации: "+error.message)}
+}
+function releaseOwnerImages(host){host?.querySelectorAll("img[data-owner-object-url]").forEach(img=>URL.revokeObjectURL(img.dataset.ownerObjectUrl))}
+async function hydrateOwnerImages(host){
+ for(const img of host.querySelectorAll("img[data-owner-private-image]")){
+  try{
+   const headers={};if(window.Telegram?.WebApp?.initData)headers["X-Telegram-Init-Data"]=window.Telegram.WebApp.initData;else if(localStorage.getItem("yugorno-session"))headers["X-Yugorno-Session"]=localStorage.getItem("yugorno-session");else if(window.yugornoLocalDemo)headers["X-Local-Demo-User"]="local-tester";
+   const response=await fetch(img.dataset.ownerPrivateImage,{headers});
+   if(!response.ok)throw new Error("Фото недоступно");
+   const url=URL.createObjectURL(await response.blob());img.src=url;img.dataset.ownerObjectUrl=url;
+  }catch{img.alt="Не удалось загрузить фотографию"}
+ }
+}
+function ownerEditor(title,body,onSubmit){
+ const host=document.getElementById("map-form-host");
+ releaseOwnerImages(host);
+ host.innerHTML='<form class="map-form" id="owner-edit-form"><h4 class="wide">'+safe(title)+'</h4>'+body+'<button class="btn" type="submit">Сохранить изменения</button><button class="btn outline" type="button" id="owner-edit-cancel">Отмена</button></form>';
+ hydrateOwnerImages(host);
+ const form=document.getElementById("owner-edit-form");
+ document.getElementById("owner-edit-cancel").onclick=()=>{destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren()};
+ form.onsubmit=async event=>{event.preventDefault();const submit=form.querySelector('button[type="submit"]');submit.disabled=true;try{await onSubmit(new FormData(form));destroyPlacePicker();releaseOwnerImages(host);host.replaceChildren();await loadMyPublications();await loadPlaces();if(activeMode==="routes"){routes=(await api("/api/routes")).items;renderSide()}window.loadJourneyTab?.("points",true);window.loadJourneyTab?.("routes",true);showToast("Изменения сохранены. Публикация отправлена на проверку.")}catch(error){showToast(error.message)}finally{submit.disabled=false}};
+}
+function editOwnPlace(place){
+ const photos=place.photoUrls||[];
+ destroyPlacePicker();
+ const body='<label>Название<input name="title" maxlength="120" required value="'+safe(place.title)+'"></label><label>Категория<select name="category">'+categories.map(category=>'<option'+(category===place.category?' selected':'')+'>'+safe(category)+'</option>').join("")+'</select></label><label class="wide">Регион<input name="region" maxlength="120" value="'+safe(place.region||"")+'"></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(place.description||"")+'</textarea></label><div class="wide"><strong>Расположение места</strong><div class="map-toolbar"><input id="place-location-query" type="search" placeholder="Название места или адрес"><button type="button" id="place-location-search">Найти</button><button type="button" id="place-location-gps">Моё местоположение</button></div><div id="place-location-results"></div><div id="place-location-map" style="height:230px;border:1px solid var(--line);border-radius:12px;overflow:hidden"></div><div id="place-location-status" class="map-muted">Текущая точка отмечена на карте. Нажмите на карту, чтобы изменить её.</div><input type="hidden" name="lat" value="'+safe(place.lat)+'"><input type="hidden" name="lng" value="'+safe(place.lng)+'"></div><label>Точность координат<select name="coordinateAccuracy"><option value="exact">Точные</option><option value="approximate">Приблизительные</option></select></label><div class="wide map-moderation-gallery">'+photos.map((url,index)=>'<label><input type="checkbox" name="removePhotos" value="'+safe(url)+'"> Удалить фото '+(index+1)+'<img data-owner-private-image="'+safe(url)+'" alt="Текущее фото"></label>').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
+ ownerEditor("Редактировать точку",body,async form=>{
+  const removed=new Set(form.getAll("removePhotos"));const urls=photos.filter(url=>!removed.has(url));const files=[...(form.getAll("photos")||[])].filter(file=>file&&file.size);
+  if(urls.length+files.length>8)throw new Error("Всего можно сохранить не более 8 фотографий");
+  for(const file of files)urls.push(await uploadImage(file));
+  const lat=Number(form.get("lat")),lng=Number(form.get("lng"));if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error("Выберите корректное расположение места на карте");
+  await api("/api/my/places/"+encodeURIComponent(place.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:form.get("title"),category:form.get("category"),region:form.get("region"),description:form.get("description"),lat,lng,coordinateAccuracy:form.get("coordinateAccuracy"),photoUrls:urls})});
+ });
+ const accuracy=document.querySelector('#owner-edit-form select[name="coordinateAccuracy"]');if(accuracy)accuracy.value=place.coordinateAccuracy||"exact";
+ selectedPlaceLocation={lat:Number(place.lat),lng:Number(place.lng),label:"Текущее расположение"};
+ document.getElementById("place-location-search").onclick=searchPlaceLocation;
+ document.getElementById("place-location-gps").onclick=useDeviceLocation;
+ document.getElementById("place-location-query").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();searchPlaceLocation()}};
+ initPlacePickerMap();
+}
+async function editOwnRoute(route){
+ try{
+  const published=(await api("/api/places")).items||[];
+  const byId=new Map(published.map(place=>[place.id,place]));
+  for(const stop of route.stops||[])if(!byId.has(stop.id))byId.set(stop.id,stop);
+  places=[...byId.values()];
+  const selected=new Set(route.stopIds||[]);
+  const routeOrder=new Map((route.stopIds||[]).map((id,index)=>[id,index]));
+  places.sort((a,b)=>(routeOrder.get(a.id)??9999)-(routeOrder.get(b.id)??9999));
+  const body='<label class="wide">Название маршрута<input name="title" maxlength="120" required value="'+safe(route.title)+'"></label><label>Передвижение<select name="transport"><option value="mixed">Смешанное</option><option value="walking">Пешком</option><option value="cycling">Велосипед</option><option value="driving">Автомобиль</option><option value="water">По воде</option></select></label><label class="wide">Описание<textarea name="description" maxlength="3000">'+safe(route.description||"")+'</textarea></label><div class="wide map-muted">Выберите остановки в нужном порядке. Существующий GPS-трек сохранится, если не загружать новый GPX.</div>'+places.map(place=>'<label><span><input type="checkbox" name="stopIds" value="'+safe(place.id)+'" '+(selected.has(place.id)?"checked":"")+'> '+safe(place.title)+'</span></label>').join("")+'<label class="wide">Заменить GPS-трек файлом GPX (необязательно)<input name="gpx" type="file" accept=".gpx,application/gpx+xml"></label>';
+ ownerEditor("Редактировать маршрут",body,async form=>{
+  const stopIds=form.getAll("stopIds");
+  if(stopIds.length<2)throw new Error("В маршруте должно быть не менее двух остановок");
+  const payload={title:form.get("title"),transport:form.get("transport"),description:form.get("description"),stopIds};
+  const file=form.get("gpx");
+  if(file?.size){payload.trackPoints=await parseGPX(file)}
+  await api("/api/my/routes/"+encodeURIComponent(route.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+ });
+  const select=document.querySelector('#owner-edit-form select[name="transport"]');if(select)select.value=route.transport||"mixed";
+ }catch(error){showToast("Не удалось открыть редактор маршрута: "+error.message)}
+}
+function editOwnImpression(item){
+ const photos=item.photoUrls||[];
+ const body='<div class="wide map-muted">Место: '+safe(item.placeTitle||"")+'</div><label class="wide">Текст впечатления<textarea name="text" maxlength="3000">'+safe(item.text||"")+'</textarea></label><div class="wide map-moderation-gallery">'+photos.map((url,index)=>'<label><input type="checkbox" name="removePhotos" value="'+safe(url)+'"> Удалить фото '+(index+1)+'<img data-owner-private-image="'+safe(url)+'" alt="Текущее фото впечатления"></label>').join("")+'</div><label class="wide">Добавить фотографии<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><div class="wide map-muted">Существующие фотографии сохранятся. Новые добавятся к ним.</div>';
+ ownerEditor("Редактировать впечатление",body,async form=>{
+  const urls=[...photos];const files=[...(form.getAll("photos")||[])].filter(file=>file&&file.size);
+  if(urls.length+files.length>8)throw new Error("Всего можно сохранить не более 8 фотографий");
+  for(const file of files)urls.push(await uploadImage(file));
+  await api("/api/my/impressions/"+encodeURIComponent(item.id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({text:form.get("text"),photoUrls:urls})});
+ });
+}
+
+function bindControls(){if(document.getElementById("map-trash-btn"))return;const controls=document.createElement("div");controls.className="map-side-controls";const trash=document.createElement("button");trash.id="map-trash-btn";trash.type="button";trash.textContent="Корзина";trash.onclick=loadMyTrash;const saved=document.createElement("button");saved.id="map-saved-btn";saved.type="button";saved.textContent="Сохранённое";saved.onclick=async()=>{try{const data=await api("/api/my/saved-places");document.getElementById("map-side-title").textContent="Сохранённые места";document.getElementById("map-side-content").innerHTML=data.items.length?data.items.map(p=>'<article class="map-place"><div class="map-card-title-row"><strong>'+safe(p.title)+'</strong><button type="button" class="card-icon-action" data-place="'+safe(p.id)+'" aria-label="Открыть место '+safe(p.title)+'" title="Открыть место"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div><div class="map-muted">'+safe(p.category)+'</div></article>').join(""):'<div class="map-empty">Пока ничего не сохранено</div>';document.getElementById("map-side-content").querySelectorAll("[data-place]").forEach(b=>b.onclick=()=>openPlace(b.dataset.place))}catch(e){showToast(e.message)}};const mine=document.createElement("button");mine.id="map-my-publications-btn";mine.type="button";mine.textContent="Мои публикации";mine.onclick=loadMyPublications;controls.append(mine,saved,trash);document.getElementById("map-side-title").before(controls);document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));document.querySelectorAll("[data-layer]").forEach(b=>b.addEventListener("click",()=>setLayer(b.dataset.layer)));document.getElementById("map-search-btn").onclick=loadPlaces;document.getElementById("map-search").addEventListener("keydown",e=>{if(e.key==="Enter")loadPlaces()});document.getElementById("map-category").onchange=loadPlaces}
+window.YugornoMap={openPlace:id=>{if(typeof window.showView==="function")window.showView("map");setTimeout(()=>openPlace(id),140)},showRoute:async id=>{try{routes=(await api("/api/routes")).items;const route=routes.find(item=>item.id===id);if(!route)return;if(typeof window.showView==="function")window.showView("map");setTimeout(()=>renderRouteOnMap(route),180)}catch(error){showToast("Не удалось открыть маршрут: "+error.message)}},openModeration:async()=>{if(typeof window.showView==="function")window.showView("map");if(!await checkModerator()){showToast("Доступ к модерации не подтверждён для этой учётной записи");return}await loadModeration()},refreshModeratorAccess:()=>checkModerator(),refreshPlaces:()=>loadPlaces(),refreshMeetings:()=>loadMeetings()};
+async function boot(){bindControls();bindAdd();checkModerator();document.querySelectorAll('.nav button[data-view="map"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>{map?.invalidateSize();loadPlaces()},100)));try{await ensureLeaflet();if(!window.L.markerClusterGroup){for(const [key,url] of [["mc","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"],["mcd","https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"]]){const link=document.createElement("link");link.rel="stylesheet";link.href=url;link.dataset[key]="1";document.head.append(link)}await loadScript("https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")}initMap();setLayer("standard");await loadPlaces();await loadMeetings();document.querySelector('[data-mode="map"]').classList.add("active")}catch(e){const mapHost=document.getElementById("yugorno-map");if(mapHost)mapHost.innerHTML='<div class="map-empty">Карта временно недоступна. Список мест, корзина и управление публикациями остаются доступны ниже.</div>';console.error("[Югорно] Карта не загрузилась:",e);await loadPlaces();await loadMeetings()}}
 boot();
 })();

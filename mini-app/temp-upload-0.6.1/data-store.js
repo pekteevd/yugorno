@@ -4,7 +4,12 @@ import path from 'node:path';
 
 const DATA_DIR = path.resolve(process.env.YUGORNO_DATA_DIR || path.join(process.cwd(), 'data'));
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
-const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [] };
+const DEFAULT_FEATURED_DESTINATIONS = [
+  { slug: 'karelia', title: 'Выходные у озера в Карелии', place: 'Карелия', date: 'Планируется', kind: 'Природа', price: 'Даты и стоимость уточняются', description: 'Озёра, лесные дороги и небольшая компания.', details: 'Идея направления: провести несколько дней у воды, гулять по лесным берегам, готовить вместе и встречать вечер у костра. Конкретный маршрут и условия участия будут опубликованы отдельным организатором.', image: 'trip-karelia' },
+  { slug: 'u-ilem', title: 'Первые выходные «У Илем»', place: 'Марий Эл', date: 'Планируется', kind: 'Встреча', price: 'Условия уточняются', description: 'Знакомство с местом, деревенская жизнь и совместные дела.', details: 'Идея встречи: познакомиться с пространством У Илем, провести время у озера, приготовить общую еду и обсудить будущие события. Это не открытый набор и не подтверждённая дата.', image: 'trip-u-ilem' },
+  { slug: 'teriberka', title: 'Дорога к северному морю', place: 'Териберка · Кольский полуостров', date: 'Сезон уточняется', kind: 'Автопутешествие', price: 'Бюджет уточняется', description: 'Северные пейзажи, побережье и остановки в интересных местах.', details: 'Идея маршрута: автомобильное путешествие к побережью Териберки с небольшими прогулками и знакомством с северными местами. Даты, состав группы и стоимость пока не объявлены.', image: 'trip-teriberka' }
+];
+const EMPTY = { trips: [], communities: [], profiles: {}, tripInterests: [], communityMembers: [], places: [], impressions: [], routes: [], savedPlaces: [], featuredDestinations: [], authSettings: { whatsappLoginEnabled: false } };
 let writeQueue = Promise.resolve();
 
 function cleanText(value, max = 500) {
@@ -51,7 +56,10 @@ async function readStore() {
       places: Array.isArray(parsed.places) ? parsed.places : [],
       impressions: Array.isArray(parsed.impressions) ? parsed.impressions : [],
       routes: Array.isArray(parsed.routes) ? parsed.routes : [],
-      savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : []
+      savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : [],
+      featuredDestinations: Array.isArray(parsed.featuredDestinations) ? parsed.featuredDestinations : [],
+      featuredDestinationsInitialized: parsed.featuredDestinationsInitialized === true || (Array.isArray(parsed.featuredDestinations) && parsed.featuredDestinations.length > 0),
+      authSettings: { whatsappLoginEnabled: parsed.authSettings?.whatsappLoginEnabled === true }
     };
   } catch (error) {
     if (error.code === 'ENOENT') return structuredClone(EMPTY);
@@ -99,11 +107,15 @@ export async function updateTrip(userId, tripId, input) {
   return update(store => {
     const trip = store.trips.find(item => item.id === tripId && item.status === 'published' && item.authorId === String(userId));
     if (!trip) return null;
-    const fields = { title: 120, place: 160, date: 100, kind: 60, description: 1200 };
-    for (const [field, max] of Object.entries(fields)) {
-      if (Object.hasOwn(input, field)) trip[field] = cleanText(input[field], max);
+    const fields = { title: 120, place: 160, date: 100, kind: 60, description: 1200, startDate: 40, endDate: 40, price: 120 };
+    for (const [field, max] of Object.entries(fields)) if (Object.hasOwn(input, field)) trip[field] = cleanText(input[field], max);
+    if (Object.hasOwn(input, 'capacity')) trip.capacity = Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0));
     if (Object.hasOwn(input, 'imageUrl')) trip.imageUrl = cleanText(input.imageUrl, 500);
     if (Object.hasOwn(input, 'imageUrls')) { trip.imageUrls = cleanImageUrls(input.imageUrls); trip.imageUrl = trip.imageUrls[0] || ''; }
+    if (Object.hasOwn(input, 'lat') || Object.hasOwn(input, 'lng')) {
+      trip.lat = validCoordinate(input.lat, -90, 90);
+      trip.lng = validCoordinate(input.lng, -180, 180);
+      if (trip.lat === null || trip.lng === null) { trip.lat = null; trip.lng = null; }
     }
     if (!trip.title || !trip.place || !trip.kind) throw new TypeError('title, place and kind are required');
     trip.updatedAt = new Date().toISOString();
@@ -111,21 +123,13 @@ export async function updateTrip(userId, tripId, input) {
   });
 }
 
-export async function unpublishTrip(userId, tripId) {
-  return update(store => {
-    const trip = store.trips.find(item => item.id === tripId && item.status === 'published' && item.authorId === String(userId));
-    if (!trip) return null;
-    trip.status = 'unpublished';
-    trip.unpublishedAt = new Date().toISOString();
-    return { id: trip.id, status: trip.status };
-  });
-}
+export async function unpublishTrip(userId, tripId) { return trashPublication(userId, "trip", tripId); }
 
 export async function createTrip(userId, input) {
   const trip = {
     id: randomUUID(), authorId: String(userId), title: cleanText(input.title, 120),
     place: cleanText(input.place, 160), date: cleanText(input.date, 100),
-    kind: cleanText(input.kind, 60), description: cleanText(input.description, 1200), imageUrl: cleanText(input.imageUrl, 500), imageUrls: cleanImageUrls(input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : [])),
+    kind: cleanText(input.kind, 60), description: cleanText(input.description, 1200), startDate: cleanText(input.startDate, 40), endDate: cleanText(input.endDate, 40), price: cleanText(input.price, 120), capacity: Math.max(0, Math.min(500, Number.parseInt(input.capacity, 10) || 0)), lat: validCoordinate(input.lat, -90, 90), lng: validCoordinate(input.lng, -180, 180), imageUrl: cleanText(input.imageUrl, 500), imageUrls: cleanImageUrls(input.imageUrls?.length ? input.imageUrls : (input.imageUrl ? [input.imageUrl] : [])),
     createdAt: new Date().toISOString(), status: 'published'
   };
   if (!trip.title || !trip.place || !trip.kind) throw new TypeError('title, place and kind are required');
@@ -155,15 +159,7 @@ export async function updateCommunity(userId, communityId, input) {
   });
 }
 
-export async function unpublishCommunity(userId, communityId) {
-  return update(store => {
-    const community = store.communities.find(item => item.id === communityId && item.status === 'published' && item.authorId === String(userId));
-    if (!community) return null;
-    community.status = 'unpublished';
-    community.unpublishedAt = new Date().toISOString();
-    return { id: community.id, status: community.status };
-  });
-}
+export async function unpublishCommunity(userId, communityId) { return trashPublication(userId, "community", communityId); }
 
 export async function listMyCommunities(userId) {
   const store = await readStore();
@@ -247,7 +243,7 @@ export async function joinCommunity(userId, communityId) {
 export async function listMyTrips(userId) {
   const store = await readStore();
   return store.trips.filter(item => item.status === 'published' && item.authorId === String(userId)).map(item => ({
-    id: item.id, title: item.title, place: item.place, date: item.date, kind: item.kind, description: item.description, imageUrl: item.imageUrl || '', imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
+    id: item.id, title: item.title, place: item.place, date: item.date, kind: item.kind, description: item.description, startDate: item.startDate || '', endDate: item.endDate || '', price: item.price || '', capacity: item.capacity || 0, lat: item.lat ?? null, lng: item.lng ?? null, imageUrl: item.imageUrl || '', imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
     createdAt: item.createdAt,
     interestCount: store.tripInterests.filter(entry => entry.tripId === item.id).length
   }));
@@ -287,6 +283,7 @@ function publicRoute(item) {
   return { ...safe, author: item.authorName || "Участник Югорно" };
 }
 function validCoordinate(value, min, max) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= min && number <= max ? number : null;
 }
@@ -324,8 +321,8 @@ export async function getPlace(placeId) {
 }
 export async function listMyPlaces(userId) {
   const store = await readStore();
-  return store.places.filter(item => item.authorId === String(userId))
-    .map(item => ({ ...publicPlace(item), status: item.status }));
+  return store.places.filter(item => item.authorId === String(userId) && item.status !== "deleted")
+    .map(item => ({ ...publicPlace(item), lat: item.exactLat ?? item.lat, lng: item.exactLng ?? item.lng, status: item.status }));
 }
 export async function createPlace(userId, input = {}, authorName = "") {
   const data = cleanPlaceInput(input);
@@ -390,6 +387,26 @@ export async function listImpressions(placeId) {
   const store = await readStore();
   return store.impressions.filter(item => item.placeId === placeId && item.status === "published").slice(0, 100).map(publicImpression);
 }
+export async function listMyImpressions(userId) {
+  const store = await readStore();
+  return store.impressions.filter(item => item.authorId === String(userId) && item.status !== "deleted").map(item => {
+    const place = store.places.find(entry => entry.id === item.placeId);
+    const publicParent = place ? publicPlace(place) : null;
+    return { ...publicImpression(item), status: item.status, placeTitle: place?.title || "Место не найдено", placeLat: publicParent?.lat ?? null, placeLng: publicParent?.lng ?? null };
+  });
+}
+export async function updateImpression(userId, impressionId, input = {}) {
+  return update(store => {
+    const item = store.impressions.find(entry => entry.id === impressionId && entry.authorId === String(userId));
+    if (!item || item.status === "hidden" || item.status === "archived") return null;
+    if (Object.hasOwn(input, "text")) item.text = cleanText(input.text, 3000);
+    if (Object.hasOwn(input, "photoUrls")) item.photoUrls = cleanImageUrls(input.photoUrls);
+    if (!item.text && !(item.photoUrls || []).length) throw new TypeError("Добавьте текст или фотографию впечатления");
+    item.status = "pending";
+    item.updatedAt = new Date().toISOString();
+    return { ...publicImpression(item), status: item.status };
+  });
+}
 export async function moderateImpression(impressionId, status) {
   if (!["published", "rejected", "hidden", "archived"].includes(status)) throw new TypeError("Недопустимый статус публикации");
   return update(store => {
@@ -399,6 +416,40 @@ export async function moderateImpression(impressionId, status) {
     return { ...publicImpression(item), status };
   });
 }
+export async function listFeaturedDestinations() {
+  const store = await readStore();
+  return store.featuredDestinationsInitialized ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+}
+export async function updateFeaturedDestination(slug, input = {}) {
+  const allowed = new Set(DEFAULT_FEATURED_DESTINATIONS.map(item => item.slug));
+  if (!allowed.has(slug)) return null;
+  return update(store => {
+    const current = store.featuredDestinationsInitialized ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+    const index = current.findIndex(item => item.slug === slug);
+    if (index < 0) return null;
+    const limits = { title: 120, place: 160, date: 100, kind: 60, price: 120, description: 1200, details: 3000, imageUrl: 500 };
+    for (const [field, max] of Object.entries(limits)) if (Object.hasOwn(input, field)) current[index][field] = cleanText(input[field], max);
+    if (Object.hasOwn(input, 'image')) current[index].image = ['trip-karelia','trip-u-ilem','trip-teriberka'].includes(input.image) ? input.image : current[index].image;
+    if (!current[index].title || !current[index].place) throw new TypeError('title and place are required');
+    store.featuredDestinations = current;
+    store.featuredDestinationsInitialized = true;
+    return { ...current[index] };
+  });
+}
+export async function deleteFeaturedDestination(slug) {
+  const allowed = new Set(DEFAULT_FEATURED_DESTINATIONS.map(item => item.slug));
+  if (!allowed.has(slug)) return null;
+  return update(store => {
+    const current = store.featuredDestinationsInitialized ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+    const index = current.findIndex(item => item.slug === slug);
+    if (index < 0) return null;
+    const [removed] = current.splice(index, 1);
+    store.featuredDestinations = current;
+    store.featuredDestinationsInitialized = true;
+    return { ...removed };
+  });
+}
+
 export async function listRoutes() {
   const store = await readStore();
   return store.routes.filter(item => item.status === "published").slice(0, 200).map(item => ({ ...publicRoute(item), stops: item.stopIds.map(id => store.places.find(place => place.id === id && place.status === "published")).filter(Boolean).map(publicPlace) }));
@@ -422,6 +473,32 @@ export async function createRoute(userId, input = {}, authorName = "") {
     return { ...publicRoute(route), status: route.status, stops: stops.map(publicPlace) };
   });
 }
+export async function listMyRoutes(userId) {
+  const store = await readStore();
+  return store.routes.filter(route => route.authorId === String(userId) && route.status !== "deleted").map(route => ({
+    ...publicRoute(route),
+    status: route.status,
+    stops: (route.stopIds || []).map(id => store.places.find(place => place.id === id)).filter(Boolean).map(publicPlace)
+  }));
+}
+export async function updateRoute(userId, routeId, input = {}) {
+  return update(store => {
+    const route = store.routes.find(item => item.id === routeId && item.authorId === String(userId));
+    if (!route || ["hidden", "archived"].includes(route.status)) return null;
+    const title = Object.hasOwn(input, "title") ? cleanText(input.title, 120) : route.title;
+    const description = Object.hasOwn(input, "description") ? cleanText(input.description, 3000) : route.description;
+    const transport = Object.hasOwn(input, "transport") ? cleanText(input.transport, 40) || "mixed" : route.transport;
+    const stopIds = Object.hasOwn(input, "stopIds")
+      ? [...new Set((Array.isArray(input.stopIds) ? input.stopIds : []).map(id => cleanText(id, 80)).filter(Boolean))].slice(0, 50)
+      : route.stopIds;
+    const trackPoints = Object.hasOwn(input, "trackPoints") ? cleanTrackPoints(input.trackPoints) : route.trackPoints || [];
+    if (!title || stopIds.length < 2) throw new TypeError("Маршрут должен иметь название и не менее двух мест");
+    const stops = stopIds.map(id => store.places.find(place => place.id === id && (place.status === "published" || place.authorId === String(userId))));
+    if (stops.some(item => !item)) throw new TypeError("Маршрут содержит недоступное место");
+    Object.assign(route, { title, description, transport, stopIds, trackPoints, status: "pending", updatedAt: new Date().toISOString() });
+    return { ...publicRoute(route), status: route.status, stops: stops.map(publicPlace) };
+  });
+}
 export async function savePlace(userId, placeId) {
   return update(store => {
     if (!store.places.some(item => item.id === placeId && item.status === "published")) return null;
@@ -441,6 +518,54 @@ export async function listSavedPlaces(userId) {
   const store = await readStore();
   const ids = new Set(store.savedPlaces.filter(item => item.userId === String(userId)).map(item => item.placeId));
   return store.places.filter(item => ids.has(item.id) && item.status === "published").map(publicPlace);
+}
+
+const PUBLICATION_COLLECTIONS = { place: "places", route: "routes", impression: "impressions", trip: "trips", community: "communities" };
+
+export async function trashPublication(userId, kind, publicationId) {
+  const collection = PUBLICATION_COLLECTIONS[kind];
+  if (!collection) throw new TypeError("Неизвестный тип публикации");
+  return update(store => {
+    const item = store[collection].find(entry => entry.id === publicationId && entry.authorId === String(userId) && entry.status !== "deleted");
+    if (!item) return null;
+    if (kind === "place") {
+      const linkedRoutes = store.routes.filter(route => route.status !== "deleted" && (route.stopIds || []).includes(publicationId));
+      const linkedImpressions = store.impressions.filter(impression => impression.status !== "deleted" && impression.placeId === publicationId);
+      if (linkedRoutes.length || linkedImpressions.length) throw new TypeError("Это место связано с " + linkedRoutes.length + " маршрутами и " + linkedImpressions.length + " впечатлениями. Сначала переместите связанные публикации в корзину.");
+    }
+    item.deletedFromStatus = item.status || "pending";
+    item.status = "deleted";
+    item.deletedAt = new Date().toISOString();
+    return { id: item.id, kind, status: item.status, deletedAt: item.deletedAt };
+  });
+}
+
+export async function restorePublication(userId, kind, publicationId) {
+  const collection = PUBLICATION_COLLECTIONS[kind];
+  if (!collection) throw new TypeError("Неизвестный тип публикации");
+  return update(store => {
+    const item = store[collection].find(entry => entry.id === publicationId && entry.authorId === String(userId) && entry.status === "deleted");
+    if (!item) return null;
+    item.status = item.deletedFromStatus || "pending";
+    delete item.deletedFromStatus;
+    delete item.deletedAt;
+    item.updatedAt = new Date().toISOString();
+    return { id: item.id, kind, status: item.status };
+  });
+}
+
+export async function listMyTrash(userId) {
+  const store = await readStore();
+  const items = [];
+  for (const [kind, collection] of Object.entries(PUBLICATION_COLLECTIONS)) {
+    for (const item of store[collection]) {
+      if (item.authorId !== String(userId) || item.status !== "deleted") continue;
+      items.push({ id: item.id, kind, title: item.title || (kind === "impression" ? "Впечатление" : "Без названия"),
+        deletedAt: item.deletedAt || null, previousStatus: item.deletedFromStatus || "pending",
+        placeTitle: kind === "impression" ? (store.places.find(place => place.id === item.placeId)?.title || "Место не найдено") : undefined });
+    }
+  }
+  return items.sort((a, b) => String(b.deletedAt || "").localeCompare(String(a.deletedAt || "")));
 }
 
 export async function listMapModerationQueue(kind = 'places') {
@@ -478,4 +603,17 @@ export async function canViewMapUpload(userId, filename, isModerator = false) {
   const impression = store.impressions.find(item => (item.photoUrls || []).includes(url));
   if (!impression) return false;
   return impression.status === "published" || impression.authorId === String(userId || "") || isModerator;
+}
+
+
+export async function getAuthSettings() {
+  const store = await readStore();
+  return { whatsappLoginEnabled: store.authSettings?.whatsappLoginEnabled === true };
+}
+
+export async function setWhatsAppLoginEnabled(enabled) {
+  return update(store => {
+    store.authSettings = { ...(store.authSettings || {}), whatsappLoginEnabled: enabled === true };
+    return { whatsappLoginEnabled: store.authSettings.whatsappLoginEnabled };
+  });
 }

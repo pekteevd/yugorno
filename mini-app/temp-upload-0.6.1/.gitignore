@@ -1,0 +1,4 @@
+# Local-only Yugorno test environment
+.yugorno-test-data/
+.yugorno-test-uploads/
+.yugorno-test-private-uploads/
