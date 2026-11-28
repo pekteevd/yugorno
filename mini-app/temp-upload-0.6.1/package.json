@@ -10,7 +10,8 @@
     "test": "node --test",
     "test:browser": "node scripts/run-browser-tests.mjs",
     "test:all": "npm test && npm run test:browser",
-    "reset:local-publications": "node scripts/clean-local-publications.js"
+    "reset:local-publications": "node scripts/clean-local-publications.js",
+    "test:server": "node scripts/start-test-server.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
