@@ -37,6 +37,20 @@ try {
   assert.equal(response?.status(), 200, "Mini App should return HTTP 200");
   await page.locator('[data-view="map"]').click();
   await page.locator("#yugorno-map.leaflet-container").waitFor({ state: "attached", timeout: 15000 });
+  const mapDebug = await page.evaluate(() => {
+    const mapView = document.getElementById("map");
+    const addButton = document.getElementById("map-add-btn");
+    return {
+      mapClass: mapView?.className,
+      mapDisplay: mapView ? getComputedStyle(mapView).display : null,
+      addHidden: addButton?.hidden,
+      addDisplay: addButton ? getComputedStyle(addButton).display : null,
+      addParentDisplay: addButton?.parentElement ? getComputedStyle(addButton.parentElement).display : null,
+      showViewType: typeof window.showView,
+      activeViews: [...document.querySelectorAll(".view.active")].map(node => node.id)
+    };
+  });
+  process.stdout.write("MAP DEBUG " + JSON.stringify(mapDebug) + "\\n");
   await page.locator("#map-add-btn").click();
   const picker = page.locator("#place-location-map.leaflet-container");
   await picker.waitFor({ state: "visible", timeout: 15000 });
