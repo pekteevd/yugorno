@@ -11,7 +11,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.on("pageerror", error => pageErrors.push(error.message));
   page.on("console", message => {
-    if (message.type() === "error" && !/401\\s*\\(Unauthorized\\)/i.test(message.text())) unexpectedConsoleErrors.push(message.text());
+    if (message.type() === "error" && !/401\s*\(Unauthorized\)/i.test(message.text())) unexpectedConsoleErrors.push(message.text());
   });
   page.on("response", response => {
     const url = response.url();
