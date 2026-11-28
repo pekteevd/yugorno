@@ -58,6 +58,7 @@ async function readStore() {
       routes: Array.isArray(parsed.routes) ? parsed.routes : [],
       savedPlaces: Array.isArray(parsed.savedPlaces) ? parsed.savedPlaces : [],
       featuredDestinations: Array.isArray(parsed.featuredDestinations) ? parsed.featuredDestinations : [],
+      featuredDestinationsInitialized: parsed.featuredDestinationsInitialized === true || (Array.isArray(parsed.featuredDestinations) && parsed.featuredDestinations.length > 0),
       authSettings: { whatsappLoginEnabled: parsed.authSettings?.whatsappLoginEnabled === true }
     };
   } catch (error) {
@@ -417,13 +418,13 @@ export async function moderateImpression(impressionId, status) {
 }
 export async function listFeaturedDestinations() {
   const store = await readStore();
-  return store.featuredDestinations.length ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+  return store.featuredDestinationsInitialized ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
 }
 export async function updateFeaturedDestination(slug, input = {}) {
   const allowed = new Set(DEFAULT_FEATURED_DESTINATIONS.map(item => item.slug));
   if (!allowed.has(slug)) return null;
   return update(store => {
-    const current = store.featuredDestinations.length ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+    const current = store.featuredDestinationsInitialized ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
     const index = current.findIndex(item => item.slug === slug);
     if (index < 0) return null;
     const limits = { title: 120, place: 160, date: 100, kind: 60, price: 120, description: 1200, details: 3000, imageUrl: 500 };
@@ -431,7 +432,21 @@ export async function updateFeaturedDestination(slug, input = {}) {
     if (Object.hasOwn(input, 'image')) current[index].image = ['trip-karelia','trip-u-ilem','trip-teriberka'].includes(input.image) ? input.image : current[index].image;
     if (!current[index].title || !current[index].place) throw new TypeError('title and place are required');
     store.featuredDestinations = current;
+    store.featuredDestinationsInitialized = true;
     return { ...current[index] };
+  });
+}
+export async function deleteFeaturedDestination(slug) {
+  const allowed = new Set(DEFAULT_FEATURED_DESTINATIONS.map(item => item.slug));
+  if (!allowed.has(slug)) return null;
+  return update(store => {
+    const current = store.featuredDestinationsInitialized ? store.featuredDestinations : structuredClone(DEFAULT_FEATURED_DESTINATIONS);
+    const index = current.findIndex(item => item.slug === slug);
+    if (index < 0) return null;
+    const [removed] = current.splice(index, 1);
+    store.featuredDestinations = current;
+    store.featuredDestinationsInitialized = true;
+    return { ...removed };
   });
 }
 
